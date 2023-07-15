@@ -4,33 +4,37 @@ from typing import List
 
 class City:
     def __init__(self, name):
-        self.__rate_of_life = 100
-        self.__shield = 0
-        self.__name = name
+        #self.__rate_of_life = 57  # уровень жизни, в начале игры у каждого города по 57%
+        self.__development = 60   # развитие города
+        self.__shield = False     # наличие щита
+        self.__name = name        # название города
         
-    def build_shield(self): # построение щита
-        self.__shield += 1
+    def build_shield(self): # постановка щита
+        self.__shield = True
 
-    def attacked(self):
-        if self.__shield != 0:
-            self.__shield -= 1
+    def name(self): 
+        return self.__name
+    
+    def attacked(self): # если на город нападут
+        if self.__shield:
+            self.__shield = False
         else:
-            self.__rate_of_life = 0
+            self.__development -= 20
     
-    def develop_rate(self):
-        self.__rate_of_life += 25
+    def develop(self): # развитие города
+        self.__development += 20
     
-    def rate_of_life(self):
-        return self.__rate_of_life
+    def rate_of_life(self, eco_rate: int):
+        return self.__development * eco_rate 
         
 
 class Planet:
-    def __init__(self, name, cities: List[City] = []):
+    def __init__(self, name, cities: List[City]):
         self.__name = name
         self.__city = cities
-        self.sanctions = []
+        self.__sanctions = []
         self.__balance = 1000
-        self.__eco_rate = 100
+        self.__eco_rate = 100 # должна быть статичной
         self.__metiorites = 0
         self.__is_invented = False
     
@@ -58,22 +62,30 @@ class Planet:
 
     def stats(self): # та, стата, которая должна показываться всем
         rate_of_life_in_cities = {}
+        total_rate_of_life = reduce(lambda x, y: x.rate_of_life() + y.rate_of_life(), self.__city) # здесь ошибка, неправильно видимо использую reduce
         for i in range(len(self.__city)):
-            rate_of_life_in_cities[self.__city[i].name()] = self.__city[i].rate_of_life()
-        return {'cities': len(self.__city), 'rate_of_life_in_cities': rate_of_life_in_cities, 'total_rate_of_life': reduce(lambda x, y: x.rate_of_life() + y.rate_of_life(), self.__city), 'ecology_rate': self.__eco_rate}
+            rate_of_life_in_cities[self.__city[i]] = self.__city[i].rate_of_life()
+        return {'cities': len(self.__city), 'rate_of_life_in_cities': rate_of_life_in_cities, 'total_rate_of_life': total_rate_of_life, 'ecology_rate': self.__eco_rate}
 
+    def info(self):
+        pass
+  
+      
 class Game:
-    def __init__(self, planets_quantity):
+    def __init__(self, planets_quantity: int):
         self.planets_quantity = planets_quantity
-        self.planet = []
+        self.planets = []
         with open('preset.txt', "r") as file:
             lines = file.readlines()[:planets_quantity + 1]
             for line in lines:
-                self.planet.append(Planet(line.split()[0]), line.split()[1:])
-        self.raund = 0
+                cities = []
+                for i in range(4):
+                    cities.append(City(line.split()[i]))
+                self.planets.append(Planet(line.split()[0], cities))
+        self.round = 0
+        self.total_eco_rate = [100] # индекс == номер раунда
+        # self.total_eco_rate[0] = 100 
         self.stats = {}
-        self.total_eco_rate = [] # индекс == номер раунда
-        self.total_eco_rate[0] = 100 
         for i in range(planets_quantity):
-            self.stats[self.planet[i].name()] = self.planet[i].stats()
-            
+            self.stats[self.planets[i]] = self.planets[i].stats()
+    
