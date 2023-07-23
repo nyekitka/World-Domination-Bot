@@ -211,8 +211,13 @@ class Game:
         info['rate_of_life'] = self.__planet[planet_name].rate_of_life()
         info['balance'] = self.__planet[planet_name].balance()
         info['eco_rate'] = Planet.eco_rate
-                
-            
+    
+    def info(self):
+        info = dict()
+        for planet in self.__planet:
+            info[planet] = self.__planet[planet].rate_of_life()
+        info['eco_rate'] = Planet.eco_rate
+                    
             
 
         
