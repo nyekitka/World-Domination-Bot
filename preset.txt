@@ -1,2 +1,12 @@
-Planet1 P1City1 P1City2 P1City3 P1City4
-Planet2 P2City1 P2City2 P2City3 P2City4
+Набу Сity1 City2 City3 City4
+Корусант Сity1 City2 City3 City4
+Мандалор Сity1 City2 City3 City4
+Татуин Сity1 City2 City3 City4
+Мустафар Сity1 City2 City3 City4
+Альдераан Сity1 City2 City3 City4
+Джакку Сity1 City2 City3 City4
+Джеонозис Сity1 City2 City3 City4
+Камино Сity1 City2 City3 City4
+Эндор Сity1 City2 City3 City4
+Явин Сity1 City2 City3 City4
+Дагоба Сity1 City2 City3 City4
