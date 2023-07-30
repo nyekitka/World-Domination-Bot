@@ -82,3 +82,4 @@ number_of_planets_keyboard.add(*[InlineKeyboardButton(text=str(i), callback_data
 
 #Клавиатура админа в игре
 ingame_admin_keyboard = ReplyKeyboardMarkup([[KeyboardButton('Начать игру')], [KeyboardButton('Выйти из игры')]])
+conversations_admin_keyboard = ReplyKeyboardMarkup([[KeyboardButton('Начать следующий раунд')]])

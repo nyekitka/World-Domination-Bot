@@ -1,0 +1,101 @@
+@font-face {
+	font-family: 'Musticapro';
+	src: url('./fonts/MusticaproSemibold.eot');
+	src: local('☺'), url('./fonts/MusticaproSemibold.woff') format('woff'), url('./fonts/MusticaproSemibold.ttf') format('truetype'), url('./fonts/MusticaproSemibold.svg') format('svg');
+	font-weight: 600;
+	font-style: normal;
+    width: 72%;
+}
+
+.title{
+    font-size: 48px;
+    margin: 0 0 0 20px;
+}
+
+.name{
+    font-size: 36px;
+    margin: 20px 0 0 0;
+}
+
+.hist-name{
+    font-size: 36px;
+    text-align: left;
+    margin-top: 30px;
+    margin-left: 20px;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: MusticaPro;
+}
+
+.wrapper {
+    display: flex;
+    align-items: flex-start;
+    overflow-x: hidden;
+    padding: 20px;
+}
+
+.lower-half {
+    background-color: #2f2f2f;
+    height: 50%;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    align-items: center;
+}
+
+.city, .percentage {
+    text-align: center;
+    padding: 5px;
+}
+
+.chart-wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
+.chart {
+    display: flex;
+    width: 700px;
+    height: 600px;
+    background-color: #f0f0f0;
+    border-radius: 10px;
+    justify-content: space-between;
+    padding: 20px;
+    align-items: flex-end;
+    margin-left: 20px;
+}
+
+.bar {
+    width: 20%;
+    background-color: #007BFF;
+    position: relative;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    border-radius: 5px;
+    margin: 5px;
+}
+
+.value, .label {
+    color: #fff;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.label {
+    font-size: 12px;
+}
+
+.eco {
+    font-size: 36px;
+    text-align: left;
+    margin-left: 20px;
+}
+
+.dead-city, .dead-percentage {
+    text-align: center;
+    color: gray;
+    padding: 5px;
+}

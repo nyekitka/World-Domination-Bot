@@ -1,0 +1,4 @@
+                <div class="bar" style="height: {0}%;">
+                    <span class="value">{1}%</span>
+                    <span class="label">{2}</span>
+                </div>

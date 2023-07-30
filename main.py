@@ -1,11 +1,13 @@
 import logging
 from aiogram import Dispatcher, executor, Bot, types
+from aiogram.types import InputFile
 from aiogram.dispatcher import FSMContext
 from keyboards import *
 from aiogram.dispatcher.filters.state import StatesGroup, State
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from random import shuffle
-import asyncio, pymorphy3
+import asyncio, pymorphy3, os
+from zipfile import ZipFile
 
 class BotStates(StatesGroup):
     planets_numbers = State()
@@ -44,14 +46,16 @@ _{3}_\t\\(Развитие: _{4} %_; Уровень жизни: _{5} %_; Дох�
 _{7}_\t\\(Развитие: _{8} %_; Уровень жизни: _{9} %_; Доход: _{10}_ 💵\\)
 _{11}_\t\\(Развитие: _{12} %_; Уровень жизни: _{13} %_; Доход: _{14}_ 💵\\)
 _{15}_\t\\(Развитие: _{16} %_; Уровень жизни: _{17} %_; Доход: _{18}_ 💵\\)""",
-'sanctions_info' : "*Санкции:*\n_{0}_",
-'eco_info' : '*Венерианская аномалия*\nУровень аномалии: _{0} %_',
-'other_planet' : """"*{0}*
+    'sanctions_info' : "*Санкции:*\n_{0}_",
+    'eco_info' : '*Венерианская аномалия*\nУровень аномалии: _{0} %_',
+    'other_planet' : """"*{0}*
 {1}\t\\(Развитие: _{2} %_\\)
 {3}\t\\(Развитие: _{4} %_\\)
 {5}\t\\(Развитие: _{6} %_\\)
 {7}\t\\(Развитие: _{8} %_\\)""",
-'no_enough_money' : 'У вас недостаточно средств для выполнения этого действия. Отмените предыдущие и попробуйте заново.'
+    'no_enough_money' : 'У вас недостаточно средств для выполнения этого действия. Отмените предыдущие и попробуйте заново.',
+    'round_results' : '{0} раунд закончен!\nВ следующем архиве представлены результаты раунда. Откройте в архиве html-файл.',
+    'end_of_round' : '_*{0} раунд закончен\\!*_\nОтправляйтесь на межпланетные переговоры, чтобы увидеть результаты раунда и обсудить их\\.'
 }
 
 common_users = dict()   #обычные пользователи
@@ -59,7 +63,7 @@ users_online = dict()   #пользователи онлайн (ключ - ло�
 admins = []             #список админов
 admin_ids = set()       #айдишники админов
 available_logins = []   #оставшиеся логины
-games = []              #созданные игры: список списков, каждый список: [игра, список админов игры, словарь: планета -> словарь с информацией для бота]
+games = []              #созданные игры: список списков, каждый список: [игра, список админов игры (их айдишников), словарь: планета -> словарь с информацией для бота]
 
 with open('admins.txt', 'r') as file:
     admins = [line.strip() for line in file]
@@ -73,19 +77,100 @@ dp = Dispatcher(bot, storage=storage)
 
 ############################################ Вспомогательные функции ##################################################
 
+def html_page_generator(gameid: int, game: Game):
+    os.chdir("round results")
+    file = open(f'results_{gameid}{game.show_round()}.html', 'w', encoding='UTF-8')
+    with open('presets\\head.txt', encoding='UTF-8') as head:
+        file.write(''.join(head.readlines()).format(gameid))
+    i = 1
+    for planet in game.planets().values():
+        cities = planet.cities()
+        names_of_cities = [c.name() for c in cities]
+        percentages = [c.rate_of_life(game.eco_rate) for c in cities]
+        s = None
+        with open('presets\\planet panel.txt', encoding='UTF-8') as panel:
+            s = ''.join(panel.readlines())
+            args = [planet.name(), i]
+            for j in range(len(names_of_cities)):
+                args.extend(
+                    ['', names_of_cities[j]] if percentages[j] != 0 else ['dead-', f'<s>{names_of_cities[j]}</s>'])
+            for j in range(len(names_of_cities)):
+                args.extend(['dead-' if percentages[j] == 0 else '', percentages[j]])
+            s = s.format(*args)
+            file.write(s)
+        i += 1
+    with open('presets\\chart begin preset.txt', encoding='UTF-8') as chart:
+        file.write(''.join(chart.readlines()))
+    rates_of_life = [planet.rate_of_life() for planet in game.planets().values()]
+    max_rate = max(rates_of_life)
+    planets = list(game.planets().keys())
+    bar_preset = None
+    with open('presets\\bar preset.txt', encoding='UTF-8') as bar:
+        bar_preset = ''.join(bar.readlines())
+    for j in range(len(planets)):
+        file.write(bar_preset.format(rates_of_life[j] / 100 * max_rate, rates_of_life[j], planets[j]))
+    with open('presets\\ending preset.txt', encoding='UTF-8') as end:
+        file.write(''.join(end.readlines()).format(100 - game.eco_rate))
+    file.close()
+    os.chdir("..")
+
+def css_generator(gameid: int, n: int):
+    colors = ('green', 'red', 'blue', 'orange', 'purple', 'yellowgreen', 'darkred', 'darkblue')
+    os.chdir("round results")
+    file = open(f'style{gameid}.css', 'w', encoding='UTF-8')
+    preset = open(f'presets\\style.css', 'r', encoding='UTF-8')
+    file.write(''.join(preset.readlines()))
+    preset.close()
+    file.write('.panel-1')
+    for i in range(2, n + 1):
+        file.write(f', .panel-{i}')
+    with open('presets\\panel settings.txt') as sets:
+        file.write(''.join(sets.readlines()))
+    file.write('.upper-half-1')
+    for i in range(2, n + 1):
+        file.write(f', .upper-half-{i}')
+    with open('presets\\upper-half settings.txt') as sets:
+        file.write(''.join(sets.readlines()))
+    for i in range(n):
+        file.write(f""".upper-half-{i + 1} {{
+    background-color: {colors[i]};
+}}\n\n""")
+    file.close()
+    os.chdir("..")
+        
+
 async def timer(n: int):
-    await asyncio.sleep(300)
+    await asyncio.sleep(10)
     for user in games[n][0].active_users():
         await bot.send_message(users_online[user], Messages['5 minutes left'])
     for user in games[n][1]:
         await bot.send_message(user, Messages['5 minutes left'])
-    await asyncio.sleep(240)
+    await asyncio.sleep(10)
     for user in games[n][0].active_users():
         await bot.send_message(users_online[user], Messages['1 minute left'])
     for user in games[n][1]:
         await bot.send_message(user, Messages['1 minute left'])
-    await asyncio.sleep(60)
+    await asyncio.sleep(10)
     games[n][0].end_this_round()
+    round = games[n][0].show_round()
+    for user in games[n][0].active_users():
+        await bot.send_message(users_online[user], Messages['end_of_round'].format(round), 'MarkdownV2')
+    if round == 1:
+        css_generator(n, games[n][0].number_of_planets())
+    html_page_generator(n, games[n][0])
+    os.chdir("round results")
+    with ZipFile(f'{n + 1} game {round} round results.zip', 'w') as zfile:
+        zfile.write(f'style{n}.css')
+        zfile.write(f'results_{n}{round}.html')
+        for file in os.listdir('fonts'):
+            zfile.write(f'fonts\\{file}')
+    for admin in games[n][1]:
+        await bot.send_document(admin, 
+                                InputFile(f'{n + 1} game {round} round results.zip'),
+                                caption=Messages['round_results'].format(round),
+                                reply_markup=conversations_admin_keyboard)
+    os.chdir('..')
+        
 
 def city_stats_message(planet: Planet) -> str:
     all_info = [planet.name(),
@@ -98,7 +183,7 @@ def city_stats_message(planet: Planet) -> str:
             addition = ' 🛡️'
         elif city.development() == 0:
             addition = ' ❌'
-        all_info.extend([city.name() + addition, city.development(), city.rate_of_life(planet.game().eco_rate()), city.income()])
+        all_info.extend([city.name() + addition, city.development(), city.rate_of_life(planet.game().eco_rate), city.income()])
     return Messages['city_info'].format(*all_info)
 
 def sanctions_message(planet: Planet) -> str:
@@ -117,7 +202,7 @@ def meteorites_message(planet: Planet) -> str:
         return '*Метеориты:*\n_У вас не разработана технология отправки метеоритов_'
 
 def eco_message(game: Game) -> str:
-    return Messages['eco_info'].format(game.eco_rate())
+    return Messages['eco_info'].format(game.eco_rate)
 
 def other_planets_message(planet: Planet) -> str:
     args = [planet.name()]
@@ -136,7 +221,7 @@ async def method_executor(method, id : int, *args):
     try:
         method(*args)
     except ArithmeticError:
-        bot.answer_callback_query(id, Messages['no_enough_money'], True)
+        await bot.answer_callback_query(id, Messages['no_enough_money'], True)
         return False
     return True
         

@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Результаты раунда</title>
+    <link rel="stylesheet" href="style{0}.css">
+</head>
+<body>
+    <h3 class="title"><strong>Космическое господcтво 🚀</strong></h3>
+    <div class="wrapper">
+        <div class="panels">

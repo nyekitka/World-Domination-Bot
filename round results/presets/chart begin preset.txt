@@ -1,0 +1,4 @@
+        </div>
+        <div class="chart-wrapper">
+            <div class="hist-name"> Уровень жизни на планетах</div>
+            <div class="chart">

@@ -170,7 +170,7 @@ class Planet:
         self.__game.eco_rate += 20
 
     def rate_of_life(self): # для вывода статистики
-        return int(sum((city.rate_of_life(self.__game.eco_rate()) for city in self.__city))/4)
+        return int(sum((city.rate_of_life(self.__game.eco_rate) for city in self.__city))/4)
 
     def income(self):  # доход
         sanc_coef = len(self.__sanctions) * 0.1
@@ -245,7 +245,7 @@ class Planet:
       
 class Game:
     def __init__(self, planets_quantity: int, logins: list[str]):
-        self.__eco_rate = 95
+        self.eco_rate = 95
         self.__active_players = [None]*planets_quantity
         self.__state = 'inactive'                               # inactive/passive/active/conversations
         self.__planets_quantity = planets_quantity              # количество планет
@@ -269,9 +269,6 @@ class Game:
         if login in self.__active_players and login is not None:
             self.__active_players.remove(login)
             self.__active_players.append(None)
-            
-    def eco_rate(self):
-        return self.__eco_rate
     
     def planets(self):
         return self.__planet
@@ -376,7 +373,7 @@ class Game:
             info = dict()
             for planet in self.__planet:
                 info[planet] = self.__planet[planet].rate_of_life()
-            info['eco_rate'] = self.__eco_rate
+            info['eco_rate'] = self.eco_rate
             return info
         else:
             info = dict()
@@ -385,5 +382,5 @@ class Game:
             info['is_invented'] = self.__planet[planet_name].is_invented()
             info['rate_of_life'] = self.__planet[planet_name].rate_of_life()
             info['balance'] = self.__planet[planet_name].balance()
-            info['eco_rate'] = self.__eco_rate
+            info['eco_rate'] = self.eco_rate
             return info

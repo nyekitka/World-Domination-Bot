@@ -1,0 +1,12 @@
+{
+    width: 700px;
+    height: 100px;
+    background-color: #2f2f2f;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    color: #fff;
+    overflow: hidden;
+    font-size: 28px;
+    margin-top: 10px;
+}

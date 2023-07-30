@@ -1,0 +1,15 @@
+            <p class="name"><strong>{0}</strong></p>
+            <div class="panel-{1}">
+                <div class="upper-half-{1}">
+                    <div class="{2}city">{3}</div>
+                    <div class="{4}city">{5}</div>
+                    <div class="{6}city">{7}</div>
+                    <div class="{8}city">{9}</div>
+                </div>
+                <div class="lower-half">
+                    <div class="{10}percentage">{11}%</div>
+                    <div class="{12}percentage">{13}%</div>
+                    <div class="{14}percentage">{15}%</div>
+                    <div class="{16}percentage">{17}%</div>
+                </div>
+            </div>

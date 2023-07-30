@@ -19,8 +19,9 @@
 
 .hist-name{
     font-size: 36px;
-    text-align: center;
-    margin-top: 10px;
+    text-align: left;
+    margin-top: 30px;
+    margin-left: 20px;
 }
 
 body {
@@ -36,8 +37,71 @@ body {
     padding: 20px;
 }
 
+.lower-half {
+    background-color: #2f2f2f;
+    height: 50%;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    align-items: center;
+}
+
+.city, .percentage {
+    text-align: center;
+    padding: 5px;
+}
+
+.dead-city, .dead-percentage {
+    text-align: center;
+    color: gray;
+    padding: 5px;
+}
+
+.chart-wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
+.chart {
+    display: flex;
+    width: 700px;
+    height: 600px;
+    background-color: #f0f0f0;
+    border-radius: 10px;
+    justify-content: space-between;
+    padding: 20px;
+    align-items: flex-end;
+    margin-left: 20px;
+}
+
+.bar {
+    width: 20%;
+    background-color: #007BFF;
+    position: relative;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    border-radius: 5px;
+    margin: 5px;
+}
+
+.value, .label {
+    color: #fff;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.label {
+    font-size: 12px;
+}
+
+.eco {
+    font-size: 36px;
+    text-align: left;
+    margin-left: 20px;
+}
+
 .panel-1, .panel-2, .panel-3, .panel-4, .panel-5, .panel-6 {
-    width: 800px;
+    width: 700px;
     height: 100px;
     background-color: #2f2f2f;
     border-radius: 20px;
@@ -78,55 +142,4 @@ body {
 
 .upper-half-6 {
     background-color: yellowgreen;
-}
-
-.lower-half {
-    background-color: #2f2f2f;
-    height: 50%;
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    align-items: center;
-}
-
-.city, .percentage {
-    text-align: center;
-    padding: 5px;
-}
-
-.chart-wrapper {
-    display: flex;
-    flex-direction: column;
-}
-
-.chart {
-    display: flex;
-    width: 800px;
-    height: 600px;
-    background-color: #f0f0f0;
-    border-radius: 10px;
-    justify-content: space-between;
-    padding: 20px;
-    align-items: flex-end;
-    margin-left: 20px;
-}
-
-.bar {
-    width: 20%;
-    background-color: #007BFF;
-    position: relative;
-    display: flex;
-    flex-direction: column-reverse;
-    align-items: center;
-    border-radius: 5px;
-    margin: 5px;
-}
-
-.value, .label {
-    color: #fff;
-    font-weight: bold;
-    margin-bottom: 5px;
-}
-
-.label {
-    font-size: 12px;
 }
