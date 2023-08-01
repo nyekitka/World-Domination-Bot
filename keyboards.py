@@ -11,7 +11,7 @@ def start_city_keyboard(cities: list[City], developed: list[City]) -> InlineKeyb
     kb = InlineKeyboardMarkup(row_width=2)
     for city in cities:
         str1 = ' ✅' if city in developed else ''
-        kb.add(InlineKeyboardButton(text=f'Развить {city.name()} (150 💵){str1}', callback_data=f'develop {city.name()}'))
+        kb.add(InlineKeyboardButton(text=f'📈 {city.name()} (150 💵){str1}', callback_data=f'develop {city.name()}'))
     return kb
 
 def city_keyboard(cities: list[City], under_shield: list[City], developed: list[City]) -> InlineKeyboardMarkup:
@@ -22,16 +22,16 @@ def city_keyboard(cities: list[City], under_shield: list[City], developed: list[
             str1 = ' ✅'
         if city in under_shield:
             str2 = ' ✅'
-        kb.add(InlineKeyboardButton(text=f'Развить {city.name()} (150 💵){str1}', callback_data=f'develop {city.name()}'), InlineKeyboardButton(text=f'Защитить {city.name()} (300 💵){str2} ', callback_data=f'defend {city.name()}'))
+        kb.add(InlineKeyboardButton(text=f'📈 {city.name()} (150 💵){str1}', callback_data=f'develop {city.name()}'), InlineKeyboardButton(text=f'🛡️ {city.name()} (300 💵){str2} ', callback_data=f'defend {city.name()}'))
     return kb
 
-def sanctions_keyboard(planets: list[Planet], under_sanctions: list[Planet]) -> InlineKeyboardMarkup:
+def sanctions_keyboard(planets: list[str], under_sanctions: list[str]) -> InlineKeyboardMarkup:
     kb = InlineKeyboardMarkup(row_width=2)
     for planet in planets:
         if planet in under_sanctions:
-            kb.add(InlineKeyboardButton(text=f'Наложить санкции на {planet.name()} ✅', callback_data=f'sanctions {planet.name()}'))
+            kb.add(InlineKeyboardButton(text=f'Наложить санкции на {planet} ✅', callback_data=f'sanctions {planet}'))
         else:
-            kb.add(InlineKeyboardButton(text=f'Наложить санкции на {planet.name()}', callback_data=f'sanctions {planet.name()}'))
+            kb.add(InlineKeyboardButton(text=f'Наложить санкции на {planet}', callback_data=f'sanctions {planet}'))
     return kb
 
 def invent_meteorites_keyboard(chosen: bool) -> InlineKeyboardMarkup:
@@ -51,17 +51,23 @@ def eco_keyboard(chosen: bool) -> InlineKeyboardMarkup:
     kb.add(InlineKeyboardButton('Отправить метеорит в аномалию ✅' if chosen else 'Отправить метеорит в аномалию', callback_data='eco'))
     return kb
 
-def other_planets_keyboard(planet: Planet, chosen_cities = list[City]) -> InlineKeyboardMarkup:
+def other_planets_keyboard(planet: Planet, chosen_cities: list[City]) -> InlineKeyboardMarkup:
     kb = InlineKeyboardMarkup(row_width=2)
     for city in planet.cities():
         if city.development() > 0:
             if city in chosen_cities:
                 kb.add(InlineKeyboardButton(text=f'Атаковать {city.name()} ✅', callback_data=f'attack {city.name()}'))
             else:
-                kb.add(InlineKeyboardButton(text=f'Атаковать {city.name()} ✅', callback_data=f'attack {city.name()}'))
-    kb.add(text='Запросить переговоры 📞', callback_data=f'conversations {planet.name()}')
-    kb.add(text='Перевести денег 💸', callback_data=f'transaction {planet.name()}')
+                kb.add(InlineKeyboardButton(text=f'Атаковать {city.name()}', callback_data=f'attack {city.name()}'))
+    kb.add(InlineKeyboardButton(text='Запросить переговоры 📞', callback_data=f'conversations {planet.name()}'))
+    kb.add(InlineKeyboardButton(text='Перевести денег 💸', callback_data=f'transaction {planet.name()}'))
     return kb
+
+def negotiations_offer_keyboard(from_planet: Planet):
+    return InlineKeyboardMarkup().add(InlineKeyboardButton('Принять', callback_data=f'accept {from_planet.name()}'), 
+                                      InlineKeyboardButton('Отклонить', callback_data=f'deny {from_planet.name()}'))
+
+end_conversations_keyboard = InlineKeyboardMarkup().add(InlineKeyboardButton('Завершить переговоры', callback_data='end_negotiations'))
 
 #Клавиатура пользователя в игре
 main_player_keyboard = ReplyKeyboardMarkup([[KeyboardButton('Аттака ☄️'), KeyboardButton('Защита 🛡️'), KeyboardButton('Переговоры 📞')],

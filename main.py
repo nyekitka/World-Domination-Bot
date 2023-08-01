@@ -1,4 +1,3 @@
-import logging
 from aiogram import Dispatcher, executor, Bot, types
 from aiogram.types import InputFile
 from aiogram.dispatcher import FSMContext
@@ -6,13 +5,18 @@ from keyboards import *
 from aiogram.dispatcher.filters.state import StatesGroup, State
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from random import shuffle
-import asyncio, pymorphy3, os
+from num2words import num2words
+import asyncio, pymorphy3, os, logging
 from zipfile import ZipFile
+import numpy as np
+import pandas as pd
+from game_classes import AlreadyBuiltShield, NotEnoughMoney, NotEnoughRockets, BusyAtTheMoment, BilateralNegotiations
 
 class BotStates(StatesGroup):
     planets_numbers = State()
     entering_game = State()
     choosing_city_to_develop = State()
+    transaction_state = State()
     
     
 
@@ -38,6 +42,11 @@ Messages = {
     'first_round' : """*Первый раунд начался*
 В течение этого раунда вы должны обсудить в команде свою стратегию на игру\\. 
 Также вы уже можете вложить деньги в разработку технологии отправки метеоритов \\(Разработка ☄️\\) для последующей атаки аномалии или чужих городов либо же вложить их в развитие собственных городов \\(Развитие 📈\\)\\.""",
+    'common_round' : """*{0} раунд начался*
+У вас есть 10 минут, чтобы обсудить действия в этом раунде как внутри своей команды, так и с другими командами на переговорах\\. Не забывайте заполнять приказ\\!
+""",
+    'first_round_for_admins': '*Первый раунд начался*',
+    'round_for_admins': '*{0} раунд начался*\nВам будут приходить запросы на переговоры от игроков\\. Как только придёт запрос, направляйтесь к команде, отправившей запрос и сопроводите дипломата до другой команды\\.',
     'city_info': """*{0}*
 *Доступный бюджет:* _{1}_ 💵
 *Средний уровень жизни на планете:* _{2}%_
@@ -47,15 +56,34 @@ _{7}_\t\\(Развитие: _{8} %_; Уровень жизни: _{9} %_; Дох�
 _{11}_\t\\(Развитие: _{12} %_; Уровень жизни: _{13} %_; Доход: _{14}_ 💵\\)
 _{15}_\t\\(Развитие: _{16} %_; Уровень жизни: _{17} %_; Доход: _{18}_ 💵\\)""",
     'sanctions_info' : "*Санкции:*\n_{0}_",
-    'eco_info' : '*Венерианская аномалия*\nУровень аномалии: _{0} %_',
-    'other_planet' : """"*{0}*
+    'eco_info' : '*Венерианская аномалия*\nУровень аномалии 💥: _{0} %_',
+    'other_planet' : """*{0}*
 {1}\t\\(Развитие: _{2} %_\\)
 {3}\t\\(Развитие: _{4} %_\\)
 {5}\t\\(Развитие: _{6} %_\\)
 {7}\t\\(Развитие: _{8} %_\\)""",
-    'no_enough_money' : 'У вас недостаточно средств для выполнения этого действия. Отмените предыдущие и попробуйте заново.',
+    'not_enough_money' : 'У вас недостаточно средств для выполнения этого действия. Отмените предыдущие и попробуйте заново.',
+    'not_enough_rockets' : 'У вас недостаточно метеоритов для этого действия. Отмените предыдущие действия или закупите метеориты.',
+    'not_enough_for_transaction' : 'У вас недостаточно средств для перевода. Введите меньшую сумму для перевода или 0 для отмены перевода.',
+    'wrong_answer' : 'Неверный ввод. Введите неотрицательное число, обозначающее сумму, которую вы хотите перевести планете.',
+    'successful_transaction' : 'Перевод планете {0} успешно выполнен!',
+    'transaction_notification' : 'Планета {0} перевела вам {1} 💵!',
+    'already_built' : 'Вы не можете поставить щит на этот город, т.к. щит на этом городе уже поставлен.',
     'round_results' : '{0} раунд закончен!\nВ следующем архиве представлены результаты раунда. Откройте в архиве html-файл.',
-    'end_of_round' : '_*{0} раунд закончен\\!*_\nОтправляйтесь на межпланетные переговоры, чтобы увидеть результаты раунда и обсудить их\\.'
+    'game_results' : 'Статистика всей игры',
+    'end_of_round' : '_*{0} раунд закончен\\!*_\nОтправляйтесь на межпланетные переговоры, чтобы увидеть результаты раунда и обсудить их\\.',
+    'how_much_money' : 'Напишите сколько вы готовы перевести планете {0}.',
+    'negotiations_offer' : 'Планета {0} предлагает принять их дипломата для переговоров.',
+    'negotiations_accepted' : 'Планета {0} приняла ваше предложение о переговорах! Ждите организатора, который подойдёт к вам для того, чтобы сопроводить дипломата.',
+    'negotiations_denied' : 'Планета {0} отказалась от вашего предложения о переговорах.',
+    'wait_for_diplomatist' : 'Вы приняли предложение о переговорах с {0}. Ожидайте дипломата. Как только закончите переговоры, нажмите кнопку снизу.',
+    'negotiations_for_admin' : 'Планета {0} хочет принять дипломата от планеты {1}',
+    'negotiations_ended' : 'Переговоры закончены. Ожидайте организатора, который сопроводит дипломата до его планеты.',
+    'negotiations_ended_for_admin' : 'Планета {0} закончила переговоры. Сопроводите дипломата до его планеты.',
+    'busy_at_the_moment' : 'Вы не можете принять к себе дипломата, т.к. на вашей планете уже ведутся переговоры.',
+    'bilateral_negotiations' : 'Вы не можете принять к себе эту планету, т.к. дипломат от вашей планеты уже переговаривает с ней',
+    'wait_for_acception' : 'Запрос на переговоры отправлен! Как только {0} примет решение, вам придёт сообщение.',
+    'end_of_the_game' : '*Игра закончена\\!*\nОтправляйтесь на собрание, чтобы увидеть результаты игры\\.'
 }
 
 common_users = dict()   #обычные пользователи
@@ -64,6 +92,7 @@ admins = []             #список админов
 admin_ids = set()       #айдишники админов
 available_logins = []   #оставшиеся логины
 games = []              #созданные игры: список списков, каждый список: [игра, список админов игры (их айдишников), словарь: планета -> словарь с информацией для бота]
+writers = []            #для того, чтобы сохранять в эксель
 
 with open('admins.txt', 'r') as file:
     admins = [line.strip() for line in file]
@@ -108,7 +137,7 @@ def html_page_generator(gameid: int, game: Game):
     with open('presets\\bar preset.txt', encoding='UTF-8') as bar:
         bar_preset = ''.join(bar.readlines())
     for j in range(len(planets)):
-        file.write(bar_preset.format(rates_of_life[j] / 100 * max_rate, rates_of_life[j], planets[j]))
+        file.write(bar_preset.format(rates_of_life[j] * 100 / max_rate, rates_of_life[j], planets[j]))
     with open('presets\\ending preset.txt', encoding='UTF-8') as end:
         file.write(''.join(end.readlines()).format(100 - game.eco_rate))
     file.close()
@@ -138,23 +167,55 @@ def css_generator(gameid: int, n: int):
     file.close()
     os.chdir("..")
         
-
-async def timer(n: int):
-    await asyncio.sleep(10)
+async def timer(n: int, secs: int = 600):
+    await asyncio.sleep(secs // 2)
     for user in games[n][0].active_users():
         await bot.send_message(users_online[user], Messages['5 minutes left'])
     for user in games[n][1]:
         await bot.send_message(user, Messages['5 minutes left'])
-    await asyncio.sleep(10)
+    await asyncio.sleep(secs // 2 - secs // 10)
     for user in games[n][0].active_users():
         await bot.send_message(users_online[user], Messages['1 minute left'])
     for user in games[n][1]:
         await bot.send_message(user, Messages['1 minute left'])
-    await asyncio.sleep(10)
+    await asyncio.sleep(secs // 10)
+    table = pd.DataFrame(columns=games[n][0].planets().keys(), index=['Развить города', 'Построить щит над', 'Изобрести технологию отправки метеоритов', 'Закупить метеориты', 'Отправить метеорит в аномалию', 'Наложить санкции на', 'Аттаковать'])
+    for planet in games[n][0].planets().values():
+        order = planet.order()
+        if 'develop' in order.keys():
+            table.loc['Развить города', planet.name()] = ','.join([c.name() for c in order['develop']])
+        if 'sanctions' in order.keys():
+            table.loc['Наложить санкции на', planet.name()] = ','.join(order['sanctions'])
+        if 'build_shield' in order.keys():
+            table.loc['Построить щит над', planet.name()] = ','.join([c.name() for c in order['build_shield']])
+        if 'attack' in order.keys():
+            table.loc['Аттаковать', planet.name()] = ', '.join(map(lambda planet, cities: ', '.join(map(lambda c: f'{c.name()} ({planet})', cities)), order['attack'].keys(), order['attack'].values()))
+        if 'eco boost' in order.keys():
+            table.loc['Отправить метеорит в аномалию', planet.name()] = 'Да' if order['eco boost'] else 'Нет'
+        else:
+            table.loc['Отправить метеорит в аномалию', planet.name()] = 'Нет'
+        if 'invent' in order.keys():
+            table.loc['Изобрести технологию отправки метеоритов', planet.name()] = 'Да'
+        else:
+            if planet.is_invented():
+                table.loc['Изобрести технологию отправки метеоритов', planet.name()] = 'Изобретено'
+            else:
+                table.loc['Изобрести технологию отправки метеоритов', planet.name()] = 'Нет'
+        if 'create_meteorites' in order.keys():
+            table.loc['Закупить метеориты', planet.name()] = order['create_meteorites']
+    table.to_excel(writers[n], f'{games[n][0].show_round()} раунд')
     games[n][0].end_this_round()
+    for pl, msgs in games[n][2].items():
+        id = users_online[pl.login()]
+        for type, msg in msgs.items():
+            if type != 'other_planets_info':
+                await bot.delete_message(id, msg.message_id)
+            else:
+                for msg1 in msg.values():
+                    await bot.delete_message(id, msg1.message_id)
     round = games[n][0].show_round()
     for user in games[n][0].active_users():
-        await bot.send_message(users_online[user], Messages['end_of_round'].format(round), 'MarkdownV2')
+        await bot.send_message(users_online[user], Messages['end_of_round'].format(round) if round != 6 else Messages['end_of_the_game'], 'MarkdownV2')
     if round == 1:
         css_generator(n, games[n][0].number_of_planets())
     html_page_generator(n, games[n][0])
@@ -169,7 +230,15 @@ async def timer(n: int):
                                 InputFile(f'{n + 1} game {round} round results.zip'),
                                 caption=Messages['round_results'].format(round),
                                 reply_markup=conversations_admin_keyboard)
+    if round == 6:
+        writers[n].close()
+        games[n][0].end_this_game()
+        for admin in games[n][1]:
+            await bot.send_document(admin,
+                                    InputFile(f'game results {n + 1}.xlsx'),
+                                    caption=Messages['game_results'])
     os.chdir('..')
+        
         
 
 def city_stats_message(planet: Planet) -> str:
@@ -191,7 +260,7 @@ def sanctions_message(planet: Planet) -> str:
     if len(sanctions) == 0:
         return Messages['sanctions_info'].format('Ни одна из планет не наложила на вас санкции')
     else:
-        return Messages['sanctions_info'].format(', '.join(sanctions))
+        return Messages['sanctions_info'].format('На вас наложили санкции: ' + ', '.join(sanctions))
 
 def meteorites_message(planet: Planet) -> str:
     if planet.is_invented():
@@ -202,13 +271,13 @@ def meteorites_message(planet: Planet) -> str:
         return '*Метеориты:*\n_У вас не разработана технология отправки метеоритов_'
 
 def eco_message(game: Game) -> str:
-    return Messages['eco_info'].format(game.eco_rate)
+    return Messages['eco_info'].format(100 - game.eco_rate)
 
 def other_planets_message(planet: Planet) -> str:
     args = [planet.name()]
     for city in planet.cities():
-        args.extend([city.name() + ' ❌' if city.development() == 0 else '', city.development()])
-    return Messages['other_planet'].format(args)
+        args.extend([city.name() + (' ❌' if city.development() == 0 else ''), city.development()])
+    return Messages['other_planet'].format(*args)
         
 
 def gameid_by_login(login: str) -> int:
@@ -220,8 +289,20 @@ def gameid_by_login(login: str) -> int:
 async def method_executor(method, id : int, *args):
     try:
         method(*args)
-    except ArithmeticError:
-        await bot.answer_callback_query(id, Messages['no_enough_money'], True)
+    except NotEnoughMoney:
+        await bot.answer_callback_query(id, Messages['not_enough_money'], True)
+        return False
+    except AlreadyBuiltShield:
+        await bot.answer_callback_query(id, Messages['already_built'], True)
+        return False
+    except NotEnoughRockets:
+        await bot.answer_callback_query(id, Messages['not_enough_rockets'], True)
+        return False
+    except BusyAtTheMoment:
+        await bot.answer_callback_query(id, Messages['busy_at_the_moment'], True)
+        return False
+    except BilateralNegotiations:
+        await bot.answer_callback_query(id, Messages['bilateral_negotiations'], True)
         return False
     return True
         
@@ -256,6 +337,23 @@ async def intializer(message: types.Message):
         for user in games[gameid][1]:
             await bot.send_message(chat_id=user, text=Messages['on_user_joined'].format(planet.name(), game.users_online(), game.number_of_planets()))
         await message.answer(Messages['login'].format(login))
+        if game.state() == 'passive':
+            await bot.send_message(users_online[login], Messages['first_round'], parse_mode='MarkdownV2')
+            games[gameid][2][planet]['city_info'] = await bot.send_message(users_online[login], city_stats_message(planet), reply_markup=start_city_keyboard(planet.cities(), planet.order().get('develop', [])), parse_mode='MarkdownV2')
+            games[gameid][2][planet]['meteorites_info'] = await bot.send_message(users_online[login], meteorites_message(planet), reply_markup=invent_meteorites_keyboard(planet.order().get('invent', False)), parse_mode='MarkdownV2')
+            games[gameid][2][planet]['sanctions_info'] = await bot.send_message(users_online[login], sanctions_message(planet), parse_mode='MarkdownV2')
+            games[gameid][2][planet]['eco_info'] = await bot.send_message(users_online[login], eco_message(game), parse_mode='markdownV2')
+        elif game.state() == 'active':
+            cities = [c for c in planet.cities() if c.development() != 0]
+            games[gameid][2][planet]['city_info'] = await bot.send_message(users_online[login], city_stats_message(planet), reply_markup=city_keyboard(cities, planet.order().get('build_shield', []), planet.order().get('develop', [])), parse_mode='MarkdownV2')
+            games[gameid][2][planet]['meteorites_info'] = await bot.send_message(users_online[login], meteorites_message(planet), reply_markup=meteorites_keyboard(planet.order().get('create_meteorites', 0)) if planet.is_invented() else invent_meteorites_keyboard(planet.order().get('invent', False)), parse_mode='MarkdownV2')
+            planets = list(game.planets().keys())
+            planets.remove(planet.name())
+            games[gameid][2][planet]['sanctions_info'] = await bot.send_message(users_online[login], sanctions_message(planet), parse_mode='MarkdownV2', reply_markup=sanctions_keyboard(planets, planet.order().get('sanctions', [])))
+            games[gameid][2][planet]['eco_info'] = await bot.send_message(users_online[login], eco_message(game), parse_mode='markdownV2', reply_markup=eco_keyboard(planet.order().get('eco boost', False)))
+            for pl in game.planets().values():
+                if pl.name() != planet.name():
+                    games[gameid][2][planet]['other_planets_info'][pl.name()] = await bot.send_message(users_online[login], other_planets_message(pl), 'MarkdownV2', reply_markup=other_planets_keyboard(pl, planet.order().get('attack', dict()).get(pl, [])))
     else:
         users_online[login] = message.from_id
         admin_ids.add(message.from_id)
@@ -331,6 +429,7 @@ async def start_game(message : types.Message):
         await message.answer(Messages['not_enough_players'].format(game.users_online(), game.number_of_planets()), reply_markup=ingame_admin_keyboard)
     else:
         game.start_new_round()
+        await message.answer(Messages['first_round_for_admins'], 'MarkdownV2', reply_markup=types.ReplyKeyboardRemove())
         games[game_id].append(dict())
         for user in game.all_users():
             planet = game.get_homeland(user)
@@ -338,7 +437,9 @@ async def start_game(message : types.Message):
             games[game_id][2][planet] = dict()
             games[game_id][2][planet]['city_info'] = await bot.send_message(users_online[user], city_stats_message(planet), reply_markup=start_city_keyboard(planet.cities(), []), parse_mode='MarkdownV2')
             games[game_id][2][planet]['meteorites_info'] = await bot.send_message(users_online[user], meteorites_message(planet), reply_markup=invent_meteorites_keyboard(False), parse_mode='MarkdownV2')
-        await timer(game_id)
+            games[game_id][2][planet]['sanctions_info'] = await bot.send_message(users_online[user], sanctions_message(planet), parse_mode='MarkdownV2')
+            games[game_id][2][planet]['eco_info'] = await bot.send_message(users_online[user], eco_message(game), parse_mode='markdownV2')
+        await timer(game_id, 60)
     
 @dp.callback_query_handler(state=BotStates.planets_numbers)
 async def set_number_of_planets(call: types.CallbackQuery, state: FSMContext):
@@ -347,6 +448,7 @@ async def set_number_of_planets(call: types.CallbackQuery, state: FSMContext):
     game_logins = available_logins[-number:]
     available_logins = available_logins[:-number]
     games.append([Game(number, game_logins), []])
+    writers.append(pd.ExcelWriter(f'round results\\game results {len(games)}.xlsx'))
     planets = games[-1][0].info()
     message_text = f'Игра {len(games)} на {number} человек успешно создана\\!\nВот логины для входа:\n'
     for planet in planets.keys():
@@ -357,7 +459,7 @@ async def set_number_of_planets(call: types.CallbackQuery, state: FSMContext):
     await call.message.answer(text=message_text, parse_mode='MarkdownV2')
     await state.finish()
 
-@dp.callback_query_handler(state= BotStates.entering_game)
+@dp.callback_query_handler(state=BotStates.entering_game)
 async def choose_lobby(call: types.CallbackQuery, state: FSMContext):
     number = int(call.data)
     games[number - 1][1].append(call.from_user.id)
@@ -366,9 +468,26 @@ async def choose_lobby(call: types.CallbackQuery, state: FSMContext):
 
 
 ################################################# Внутриигровые команды ###################################################
+@dp.callback_query_handler(lambda call: call.data == 'end_negotiations')
+async def end_negotiations(call : types.CallbackQuery, state: FSMContext):
+    message = call.message
+    id = call.from_user.id
+    login = None
+    for ulog, uid in users_online.items():
+        if id == uid:
+            login = ulog
+            break
+    gid = gameid_by_login(login)
+    planet = games[gid][0].get_homeland(login)
+    await method_executor(planet.end_negotiations, call.id)
+    for admin in games[gid][1]:
+        await bot.send_message(admin, Messages['negotiations_ended_for_admin'].format(planet.name()))
+    await message.answer(Messages['negotiations_ended'])
+    await bot.delete_message(id, message.message_id)
+    
 
 @dp.callback_query_handler()
-async def ingame_action(call: types.CallbackQuery):
+async def ingame_action(call: types.CallbackQuery, state: FSMContext):
     print('Начало функции')
     message = call.message
     id = call.from_user.id
@@ -381,10 +500,31 @@ async def ingame_action(call: types.CallbackQuery):
     gid = gameid_by_login(login)
     planet = games[gid][0].get_homeland(login)
     type_message = None
+    if call.data.startswith(('accept', 'deny')):
+        pl = call.data.split()[1]
+        ac_planet = games[gid][0].planets()[pl]
+        if call.data.startswith('accept'):
+            res = await method_executor(planet.accept_diplomatist_from, call.id, ac_planet)
+            if res:
+                await message.answer(Messages['wait_for_diplomatist'].format(ac_planet.name()), reply_markup=end_conversations_keyboard)
+                await bot.delete_message(id, message.message_id)
+                for admin in games[gid][1]:
+                    await bot.send_message(admin, Messages['negotiations_for_admin'].format(planet.name(), ac_planet.name()))
+                await bot.send_message(users_online[ac_planet.login()], Messages['negotiations_accepted'].format(planet.name()))
+            return
+        else:
+            await bot.send_message(users_online[ac_planet.login()], Messages['negotiations_denied'].format(planet.name()))
+            await bot.delete_message(id, message.message_id)
+            return   
     for tp, msg in games[gid][2][planet].items():
         if msg == message:
             type_message = tp
             break
+        elif isinstance(msg, dict):
+            for pl, msg1 in msg.items():
+                if msg1 == message:
+                    type_message = f'other_planets_info {pl}'
+                    break
     print('Извлекли тип сообщения')
     if type_message == 'city_info':
         print('Это city_info')
@@ -415,6 +555,45 @@ async def ingame_action(call: types.CallbackQuery):
             res = await method_executor(planet.create_meteorites, call.id, n)
             if not res: return
             games[gid][2][planet]['meteorites_info'] = await message.edit_text(meteorites_message(planet), 'MarkdownV2', reply_markup=meteorites_keyboard(n))
+    elif type_message == 'eco_info':
+        res = await method_executor(planet.eco_boost, call.id)
+        if res:
+            markup = games[gid][2][planet]['meteorites_info'].reply_markup
+            games[gid][2][planet]['meteorites_info'] = await games[gid][2][planet]['meteorites_info'].edit_text(meteorites_message(planet), 'MarkdownV2', reply_markup=markup)
+            games[gid][2][planet]['eco_info'] = await bot.edit_message_reply_markup(message.chat.id, message.message_id, reply_markup=eco_keyboard(planet.order()['eco boost']))
+        return
+    elif type_message == 'sanctions_info':
+        pl_name = call.data.split()[1]
+        planets = list(games[gid][0].planets().keys())
+        planets.remove(planet.name())
+        await method_executor(planet.send_sanctions, call.id, pl_name)
+        games[gid][2][planet]['sanctions_info'] = await bot.edit_message_reply_markup(message.chat.id, message.message_id, reply_markup=sanctions_keyboard(planets, planet.order()['sanctions']))
+        return
+    elif type_message.startswith('other_planets_info'):
+        pl = type_message.split()[1]
+        ac_planet = games[gid][0].planets()[pl]
+        command, cty = call.data.split()
+        if command == 'attack':
+            ac_city = list(filter(lambda city: city.name() == cty,ac_planet.cities()))[0]
+            res = await method_executor(planet.attack, call.id, ac_city)
+            if res:
+                markup = games[gid][2][planet]['meteorites_info'].reply_markup
+                games[gid][2][planet]['meteorites_info'] = await games[gid][2][planet]['meteorites_info'].edit_text(meteorites_message(planet), 'MarkdownV2', reply_markup=markup)
+                games[gid][2][planet]['other_planets_info'][pl] = await bot.edit_message_reply_markup(message.chat.id, message.message_id, reply_markup=other_planets_keyboard(ac_planet, planet.order()['attack'][ac_planet]))
+            return
+        elif command == 'transaction':
+            async with state.proxy() as data:
+                data['from_planet'] = planet.name()
+                data['to_planet'] = ac_planet.name()
+                data['game_id'] = gid
+            await message.answer(Messages['how_much_money'].format(ac_planet.name()))
+            await BotStates.transaction_state.set()
+            return
+        else:
+            await bot.send_message(users_online[ac_planet.login()], Messages['negotiations_offer'].format(planet.name()), reply_markup=negotiations_offer_keyboard(planet))
+            await message.answer(Messages['wait_for_acception'].format(ac_planet.name()))
+            return
+
     print('Конечная хуйня')
     cities = [c for c in planet.cities() if c.development() != 0]
     developed = planet.order().get('develop', [])
@@ -431,6 +610,64 @@ async def ingame_action(call: types.CallbackQuery):
         else:
             games[gid][2][planet]['city_info'] = await games[gid][2][planet]['city_info'].edit_text(new_msg, parse_mode='MarkdownV2', reply_markup=city_keyboard(cities, us, developed))
 
+@dp.message_handler(lambda message: message.from_id in admin_ids and message.text == 'Начать следующий раунд')
+async def start_next_round(message: types.Message):
+    game_id = None
+    for i in range(len(games)):
+        if message.from_id in games[i][1]:
+            game_id = i
+            break
+    else:
+        await message.answer(Messages['starting_game_not_being_in'], reply_markup=start_admin_keyboard)
+        return
+    game = games[game_id][0]
+    
+    if game.users_online() < game.number_of_planets():
+        await message.answer(Messages['not_enough_players'].format(game.users_online(), game.number_of_planets()), reply_markup=ingame_admin_keyboard)
+    else:
+        game.start_new_round()
+        await message.answer(Messages['round_for_admins'].format(num2words(game.show_round(), lang='ru', to='ordinal').capitalize()), 'MarkdownV2', reply_markup=types.ReplyKeyboardRemove())
+        for user in game.all_users():
+            planet = game.get_homeland(user)
+            await bot.send_message(users_online[user], Messages['common_round'].format(num2words(game.show_round(), lang='ru', to='ordinal').capitalize()), parse_mode='MarkdownV2')
+            cities = [c for c in planet.cities() if c.development() != 0]
+            games[game_id][2][planet]['city_info'] = await bot.send_message(users_online[user], city_stats_message(planet), reply_markup=city_keyboard(cities, [], []), parse_mode='MarkdownV2')
+            games[game_id][2][planet]['meteorites_info'] = await bot.send_message(users_online[user], meteorites_message(planet), reply_markup=meteorites_keyboard(0) if planet.is_invented() else invent_meteorites_keyboard(False), parse_mode='MarkdownV2')
+            planets = list(game.planets().keys())
+            planets.remove(planet.name())
+            games[game_id][2][planet]['sanctions_info'] = await bot.send_message(users_online[user], sanctions_message(planet), parse_mode='MarkdownV2', reply_markup=sanctions_keyboard(planets, []))
+            games[game_id][2][planet]['eco_info'] = await bot.send_message(users_online[user], eco_message(game), parse_mode='markdownV2', reply_markup=eco_keyboard(False))
+            if 'other_planets_info' not in games[game_id][2][planet]: games[game_id][2][planet]['other_planets_info'] = dict()
+            for pl in game.planets().values():
+                if pl.name() != planet.name():
+                    games[game_id][2][planet]['other_planets_info'][pl.name()] = await bot.send_message(users_online[user], other_planets_message(pl), 'MarkdownV2', reply_markup=other_planets_keyboard(pl, []))
+        await timer(game_id, 120)
+
+@dp.message_handler(state=BotStates.transaction_state)
+async def set_amount_of_money(message: types.Message, state: FSMContext):
+    try:
+        amount = int(message.text)
+        if amount == 0:
+            await state.finish()
+            return
+        async with state.proxy() as data:
+            gid = data['game_id']
+            from_planet = games[gid][0].planets()[data['from_planet']]
+            to_planet = games[gid][0].planets()[data['to_planet']]
+            from_planet.transfer(to_planet, amount)
+            markup = games[data['game_id']][2][from_planet]['city_info'].reply_markup
+            games[data['game_id']][2][from_planet]['city_info'] = await games[data['game_id']][2][from_planet]['city_info'].edit_text(city_stats_message(from_planet), reply_markup=markup, parse_mode='MarkdownV2')
+            markup = games[data['game_id']][2][to_planet]['city_info'].reply_markup
+            games[data['game_id']][2][to_planet]['city_info'] = await games[data['game_id']][2][to_planet]['city_info'].edit_text(city_stats_message(to_planet), reply_markup=markup, parse_mode='MarkdownV2')
+            await message.answer(Messages['successful_transaction'].format(to_planet.name()))
+            await bot.send_message(users_online[to_planet.login()], Messages['transaction_notification'].format(from_planet.name(), amount))
+        await state.finish()
+    except NotEnoughMoney:
+        await message.answer(Messages['not_enough_for_transaction'])
+        return
+    except ValueError:
+        await message.answer(Messages['wrong_answer'])
+        return 
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)

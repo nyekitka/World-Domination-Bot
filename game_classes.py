@@ -5,6 +5,46 @@ CityT = TypeVar('CityT', bound='City')
 PlanetT = TypeVar('PlanetT', bound='Planet')
 GameT = TypeVar('GameT', bound='Game')
 
+########################### exceptions ########################################
+
+class AlreadyBuiltShield(Exception):
+    def __init__(self) -> None:
+        pass
+        
+    def __str__(self) -> str:
+        return 'Shield is already built'
+
+
+class NotEnoughMoney(Exception):
+    def __init__(self) -> None:
+        pass
+        
+    def __str__(self) -> str:
+        return 'Not enough money for the operation'
+
+class NotEnoughRockets(Exception):
+    def __init__(self) -> None:
+        pass
+        
+    def __str__(self) -> str:
+        return 'Not enough rockets for the operation'
+    
+class BusyAtTheMoment(Exception):
+    def __init__(self) -> None:
+        pass
+        
+    def __str__(self) -> str:
+        return "You can't accept a diplomatist because your planet has negotiations"
+
+class BilateralNegotiations(Exception):
+    def __init__(self) -> None:
+        pass
+        
+    def __str__(self) -> str:
+        return "You can't have bilateral negotiations"
+
+#############################################################################
+
 class City: # могут ли накладываться санкции на отдельные города?
     def __init__(self, name : str, planet : Optional[PlanetT] = None):
         self.__development = 60                 # развитие города
@@ -51,6 +91,7 @@ class Planet:
         self.__name = name
         self.__game = game
         self.__login = login        # логин владельца планеты
+        self.__guest : Optional[self.__class__] = None
         self.__city = cities        # список городов на планете
         self.__sanctions = set()    # сет санкций на планете
         self.__balance = 1000       # баланс планеты
@@ -72,6 +113,20 @@ class Planet:
     def cities(self) -> list[City]:
         return self.__city
     
+    def accept_diplomatist_from(self, planet: PlanetT):
+        if self.__guest is None and planet.__guest is not self:
+            self.__guest = planet
+        elif self.__guest is not None:
+            raise BusyAtTheMoment
+        else:
+            raise BilateralNegotiations
+    
+    def end_negotiations(self):
+        if self.__guest is not None:
+            self.__guest = None
+        else:
+            raise ValueError
+    
     def invent(self):  # изобретение ядерной разработки
         if self.__balance >= 500 and not self.__is_invented and not self.__order.get('invent'):
             self.__balance -= 500
@@ -80,9 +135,9 @@ class Planet:
             self.__order['invent'] = False
             self.__balance += 500
         elif self.__is_invented:
-            raise ValueError
-        elif self.balance < 500:
-            raise ArithmeticError
+            raise SystemError
+        elif self.__balance < 500:
+            raise NotEnoughMoney
         
     
     def complete_invention(self):
@@ -92,18 +147,18 @@ class Planet:
     def is_invented(self):
         return self.__is_invented
         
-    def create_meteorite(self, n: int): # обработка, если не изобретено
-        if self.__is_invited and 'create_meteorite' in self.__order and self.balance + self.__order['create_meteorites']*150 >= 150*n: 
+    def create_meteorites(self, n: int): # обработка, если не изобретено
+        if self.__is_invented and 'create_meteorites' in self.__order and self.__balance + self.__order['create_meteorites']*150 >= 150*n: 
             # self.__meteorites += n
             self.__balance += 150*(self.__order['create_meteorites'] - n)
-            self.__order['create_meteorite'] = n
-        elif 'create_meteorite' not in self.__order.keys():
+            self.__order['create_meteorites'] = n
+        elif 'create_meteorites' not in self.__order.keys() and self.__is_invented and self.__balance >= 150*n:
             self.__balance -= 150*n
-            self.__order['create_meteorite'] = n
+            self.__order['create_meteorites'] = n
         elif not self.__is_invented:
-            raise ValueError
+            raise SystemError
         else:
-            raise ArithmeticError
+            raise NotEnoughMoney
     
     def complete_creating(self, n: int):
         self.__meteorites += n
@@ -118,17 +173,20 @@ class Planet:
         return self.__meteorites
     
     def attack(self, city: City):
-        if 'attack' not in self.__order and self.__meteorites != 0:
-            self.__order['attack'] = [city]
+        if 'attack' not in self.__order.keys() and self.__meteorites != 0:
+            self.__order['attack'] = {city.planet() : [city]}
             self.__meteorites -= 1
-        elif city in self.__order['attack']:
+        elif self.__meteorites != 0 and city.planet() not in self.__order['attack'].keys():
+            self.__order['attack'][city.planet()] = [city]
+            self.__meteorites -= 1
+        elif self.__meteorites != 0 and city not in self.__order['attack'][city.planet()]:
+            self.__order['attack'][city.planet()].append(city)
+            self.__meteorites -= 1
+        elif self.__meteorites != 0 and city in self.__order['attack'][city.planet()]:
             self.__order.remove(city)
             self.__meteorites += 1
-        elif self.__meteorites == 0:
-            raise ArithmeticError
         else:
-            self.__order.append(city)
-            self.__meteorites -= 1
+            raise NotEnoughRockets
     
     def attacked(self, city_name: str):  # атака города на этой планете
         self.__game.eco_rate -= 2
@@ -145,26 +203,26 @@ class Planet:
                 self.__order['develop'] = [city]
             else:
                 self.__order['develop'].append(city)
-        elif city in self.__order['develop']:
+        elif 'develop' in self.__order.keys() and city in self.__order['develop']:
             self.__order['develop'].remove(city)
             self.__balance += 150
         elif city not in self.__city:
-            raise ValueError
+            raise SystemError
         else:
-            raise ArithmeticError
+            raise NotEnoughMoney
     
     def complete_development(self ,city: City):
         city.develop()
     
     def eco_boost(self):  # сброс бомбы на аномалию
-        if self.__meteorites >= 1 and not self.__order['eco boost']:
+        if self.__meteorites >= 1 and not self.__order.get('eco boost'):
             self.__meteorites -= 1
             self.__order['eco boost'] = True
-        elif self.__order['eco boost']:
+        elif self.__order.get('eco boost'):
             self.__meteorites += 1
             self.__order['eco boost'] = False
         else:
-            raise ArithmeticError
+            raise NotEnoughRockets
     
     def complete_eco_boost(self):
         self.__game.eco_rate += 20
@@ -180,14 +238,13 @@ class Planet:
     def add_money(self, income: int):  # начислить доход
         self.__balance += income
     
-    def send_sactions(self, planets: list):
+    def send_sanctions(self, planet: str):
         if 'sanctions' not in self.__order.keys():
-            self.__order['sanctions'] = []
-        for planet in planets:
-            if planet not in self.__order['sanctions']:
-                self.__order['sanctions'].append(planet)
-            else:
-                self.__order['sanctions'].remove(planet)
+            self.__order['sanctions'] = [planet]
+        elif planet not in self.__order['sanctions']:
+            self.__order['sanctions'].append(planet)
+        else:
+            self.__order['sanctions'].remove(planet)
     
     def get_sanctions(self, planet: str):  # прибавленение санкций, принимает название страны
         self.__sanctions.add(planet)
@@ -205,17 +262,17 @@ class Planet:
                 self.__order['build_shield'] = [city]
             else:
                 self.__order['build_shield'].append(city)
-        elif city not in self.__city:
-            raise ValueError
-        elif city.is_under_shield():
-            raise ValueError
-        elif city in self.__order['build_shield']:
+        elif 'build_shield' in self.__order.keys() and city in self.__order['build_shield']:
             self.__order['build_shield'].remove(city)
             self.__balance += 300
+        elif city not in self.__city:
+            raise SystemError
+        elif city.is_under_shield():
+            raise AlreadyBuiltShield
         elif city.development() == 0:
-            raise ValueError
+            raise SystemError
         else:
-            raise ArithmeticError
+            raise NotEnoughMoney
         
     
     def complete_building(self, city: City):
@@ -223,11 +280,13 @@ class Planet:
             
                 
     def transfer(self, planet : PlanetT, money: int):  # перевод денег
-        if self.__balance >= money:
+        if money < 0:
+            raise ValueError
+        elif self.__balance >= money:
             self.__balance -= money
             planet.__balance += money
         else:
-            raise ArithmeticError
+            raise NotEnoughMoney
     
     def balance(self) -> int:
         return self.__balance
@@ -297,13 +356,13 @@ class Game:
         self.__round += 1
         self.__state = 'passive' if self.__round == 1 else 'active'
         for planet in self.__planet.values():
-            planet.free_sanc_set()
             if self.__round != 1:
                 planet.add_money(planet.income())
     
     def end_this_round(self):
         orders = dict()
         for planet in self.__planet.values():
+            planet.free_sanc_set()
             orders[planet] = planet.order()
         self.get_orders(orders)
         for planet in orders.keys():
@@ -328,9 +387,10 @@ class Game:
         self.__planet[planet_name].show_sanc_set()    
     
     
-    def __attack(self, attack_list: list[City]):
-        for city in attack_list:
-            city.planet.attacked(city.name())
+    def __attack(self, attack_list: dict[Planet, list[City]]):
+        for planet, cities in attack_list.items():
+            for city in cities:
+                planet.attacked(city.name())
     
     def is_under_shield(self, planet_name: str, city_name: str):
         return self.__planet[planet_name].is_under_shield(city_name)
@@ -345,7 +405,7 @@ class Game:
         # 'attack' :  { <планета> : [ <город> ], ... },
         # 'eco_boost' : True/False,
         # 'invent' : True/False,
-        # 'create_meteorite' : N
+        # 'create_meteorites' : N
         # }
         #development
         for planet, order in orders.items():
@@ -361,8 +421,8 @@ class Game:
                 planet.complete_eco_boost()
             if order.get('invent'):
                 planet.complete_invention()
-            if 'create_meteorite' in order:
-                planet.complete_creating(order['create_meteorite'])
+            if 'create_meteorites' in order:
+                planet.complete_creating(order['create_meteorites'])
         
         for planet, order in orders.items():
             if 'attack' in order:
