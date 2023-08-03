@@ -183,7 +183,7 @@ class Planet:
             self.__order['attack'][city.planet()].append(city)
             self.__meteorites -= 1
         elif self.__meteorites != 0 and city in self.__order['attack'][city.planet()]:
-            self.__order.remove(city)
+            self.__order['attack'][city.planet()].remove(city)
             self.__meteorites += 1
         else:
             raise NotEnoughRockets

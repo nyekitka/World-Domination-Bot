@@ -41,7 +41,7 @@ Messages = {
     '1 minute left' : 'Внимание, до конца раунда осталась 1 минута ⌛. Если ещё не заполнили свои приказы, то самое время это сделать, иначе приказы отправятся пустыми.',
     'first_round' : """*Первый раунд начался*
 В течение этого раунда вы должны обсудить в команде свою стратегию на игру\\. 
-Также вы уже можете вложить деньги в разработку технологии отправки метеоритов \\(Разработка ☄️\\) для последующей атаки аномалии или чужих городов либо же вложить их в развитие собственных городов \\(Развитие 📈\\)\\.""",
+Также вы уже можете вложить деньги в разработку технологии отправки метеоритов для последующей атаки аномалии или чужих городов, либо же вложить их в развитие собственных городов \\(Развитие 📈\\)\\.""",
     'common_round' : """*{0} раунд начался*
 У вас есть 10 минут, чтобы обсудить действия в этом раунде как внутри своей команды, так и с другими командами на переговорах\\. Не забывайте заполнять приказ\\!
 """,
@@ -83,7 +83,8 @@ _{15}_\t\\(Развитие: _{16} %_; Уровень жизни: _{17} %_; До
     'busy_at_the_moment' : 'Вы не можете принять к себе дипломата, т.к. на вашей планете уже ведутся переговоры.',
     'bilateral_negotiations' : 'Вы не можете принять к себе эту планету, т.к. дипломат от вашей планеты уже переговаривает с ней',
     'wait_for_acception' : 'Запрос на переговоры отправлен! Как только {0} примет решение, вам придёт сообщение.',
-    'end_of_the_game' : '*Игра закончена\\!*\nОтправляйтесь на собрание, чтобы увидеть результаты игры\\.'
+    'end_of_the_game' : '*Игра закончена\\!*\nОтправляйтесь на собрание, чтобы увидеть результаты игры\\.',
+    'goodbye' : 'Вы автоматически вышли, т.к. ваша игра закончилась.'
 }
 
 common_users = dict()   #обычные пользователи
@@ -168,6 +169,7 @@ def css_generator(gameid: int, n: int):
     os.chdir("..")
         
 async def timer(n: int, secs: int = 600):
+    global games, writers, common_users, available_logins
     await asyncio.sleep(secs // 2)
     for user in games[n][0].active_users():
         await bot.send_message(users_online[user], Messages['5 minutes left'])
@@ -232,12 +234,30 @@ async def timer(n: int, secs: int = 600):
                                 reply_markup=conversations_admin_keyboard)
     if round == 6:
         writers[n].close()
+        writers[n] = None
+        if len(writers) == writers.count(None):
+            writers = []
         games[n][0].end_this_game()
         for admin in games[n][1]:
             await bot.send_document(admin,
                                     InputFile(f'game results {n + 1}.xlsx'),
                                     caption=Messages['game_results'])
+        ac_users = games[n][0].active_users()
+        ads = games[n][1]
+        for login in ac_users:
+            games[n][0].kick_user(login)
+            common_users.pop(login)
+            available_logins.append(login)
+            await bot.send_message(users_online[login], Messages['goodbye'])
+            users_online.pop(login)
+        for admin in ads:
+            games[n][1].remove(admin)
+            await bot.send_message(admin, Messages['goodbye'], reply_markup=ingame_admin_keyboard)
+        games[n] = None
+        if len(games) == games.count(None):
+            games = []    
     os.chdir('..')
+    
         
         
 
@@ -488,7 +508,6 @@ async def end_negotiations(call : types.CallbackQuery, state: FSMContext):
 
 @dp.callback_query_handler()
 async def ingame_action(call: types.CallbackQuery, state: FSMContext):
-    print('Начало функции')
     message = call.message
     id = call.from_user.id
     login = None
@@ -496,7 +515,6 @@ async def ingame_action(call: types.CallbackQuery, state: FSMContext):
         if id == uid:
             login = ulog
             break
-    print('Извлекли логин')
     gid = gameid_by_login(login)
     planet = games[gid][0].get_homeland(login)
     type_message = None
@@ -525,28 +543,21 @@ async def ingame_action(call: types.CallbackQuery, state: FSMContext):
                 if msg1 == message:
                     type_message = f'other_planets_info {pl}'
                     break
-    print('Извлекли тип сообщения')
     if type_message == 'city_info':
-        print('Это city_info')
         command, city_name = call.data.split()
         city = None
         for c in planet.cities():
             if c.name() == city_name:
                 city = c
                 break
-        print('Нашли город')
         if command == 'develop':
-            print('Это develop')
             res = await method_executor(planet.develop_city, call.id, city)
             if not res: return
         else:
-            print('Это defend')
             res = await method_executor(planet.build_shield, call.id, city)
             if not res: return
     elif type_message == 'meteorites_info':
-        print('Это meteorites_info')
         if call.data == 'invent':
-            print('Это invent')
             res = await method_executor(planet.invent, call.id)
             if not res: return
             games[gid][2][planet]['meteorites_info'] = await bot.edit_message_reply_markup(message.chat.id, message.message_id, reply_markup=invent_meteorites_keyboard(planet.order()['invent']))
@@ -594,7 +605,6 @@ async def ingame_action(call: types.CallbackQuery, state: FSMContext):
             await message.answer(Messages['wait_for_acception'].format(ac_planet.name()))
             return
 
-    print('Конечная хуйня')
     cities = [c for c in planet.cities() if c.development() != 0]
     developed = planet.order().get('develop', [])
     us = planet.order().get('build_shield', [])
