@@ -10,7 +10,7 @@ import asyncio, pymorphy3, os, logging
 from zipfile import ZipFile
 import numpy as np
 import pandas as pd
-from game_classes import AlreadyBuiltShield, NotEnoughMoney, NotEnoughRockets, BusyAtTheMoment, BilateralNegotiations
+from game_classes import AlreadyBuiltShield, NotEnoughMoney, NotEnoughRockets, BusyAtTheMoment, BilateralNegotiations, NegotiationsOutside
 
 class BotStates(StatesGroup):
     planets_numbers = State()
@@ -27,7 +27,7 @@ logging.basicConfig(level=logging.INFO)
 Messages = {
     'start' : 'Привет 👋. Для того, чтобы войти используйте команду /login <логин>',
     'login' : 'Добро пожаловать, {0}!',
-    'already_logged' : 'Вы уже вошли в систему. Сначала выйдите с помощью /exit, затем войдите с помощью /login.',
+    'already_logged' : 'Вы уже вошли в систему. Сначала выйдите с помощью /signout, затем войдите с помощью /login.',
     'login_failure' : 'Такого пользователя не существует. Введите свой логин заново с помощью /login <логин>',
     'login_online' : 'Такой пользователь уже в сети. Войдите под другим логином.',
     'entering_game_admin' : 'Вы присоединились к игре {0}. Теперь вам доступна панель администрации игры, а также вся информация о ней',
@@ -46,18 +46,27 @@ Messages = {
 У вас есть 10 минут, чтобы обсудить действия в этом раунде как внутри своей команды, так и с другими командами на переговорах\\. Не забывайте заполнять приказ\\!
 """,
     'first_round_for_admins': '*Первый раунд начался*',
-    'round_for_admins': '*{0} раунд начался*\nВам будут приходить запросы на переговоры от игроков\\. Как только придёт запрос, направляйтесь к команде, отправившей запрос и сопроводите дипломата до другой команды\\.',
-    'city_info': """*{0}*
+    'round_for_admins': '*{0} раунд начался*\n\nВам будут приходить запросы на переговоры от игроков\\. Как только придёт запрос, направляйтесь к команде, отправившей запрос и сопроводите дипломата до другой команды\\.',
+    'city_info': """__*{0}*__
+
 *Доступный бюджет:* _{1}_ 💵
-*Средний уровень жизни на планете:* _{2}%_
-*Города:*
-_{3}_\t\\(Развитие: _{4} %_; Уровень жизни: _{5} %_; Доход: _{6}_ 💵\\)
-_{7}_\t\\(Развитие: _{8} %_; Уровень жизни: _{9} %_; Доход: _{10}_ 💵\\)
-_{11}_\t\\(Развитие: _{12} %_; Уровень жизни: _{13} %_; Доход: _{14}_ 💵\\)
-_{15}_\t\\(Развитие: _{16} %_; Уровень жизни: _{17} %_; Доход: _{18}_ 💵\\)""",
+*Сред\\. ур\\. жизни на планете:* _{2}%_
+
+*{3}*
+\\(Развитие: _{4} %_; Ур\\. жизни: _{5} %_; Доход: _{6}_ 💵\\)
+
+*{7}*
+\\(Развитие: _{8} %_; Ур\\. жизни: _{9} %_; Доход: _{10}_ 💵\\)
+
+*{11}*
+\\(Развитие: _{12} %_; Ур\\. жизни: _{13} %_; Доход: _{14}_ 💵\\)
+
+*{15}*
+\\(Развитие: _{16} %_; Ур\\. жизни: _{17} %_; Доход: _{18}_ 💵\\)""",
     'sanctions_info' : "*Санкции:*\n_{0}_",
     'eco_info' : '*Венерианская аномалия*\nУровень аномалии 💥: _{0} %_',
-    'other_planet' : """*{0}*
+    'other_planet' : """__*{0}*__
+
 {1}\t\\(Развитие: _{2} %_\\)
 {3}\t\\(Развитие: _{4} %_\\)
 {5}\t\\(Развитие: _{6} %_\\)
@@ -78,6 +87,7 @@ _{15}_\t\\(Развитие: _{16} %_; Уровень жизни: _{17} %_; До
     'negotiations_denied' : 'Планета {0} отказалась от вашего предложения о переговорах.',
     'wait_for_diplomatist' : 'Вы приняли предложение о переговорах с {0}. Ожидайте дипломата. Как только закончите переговоры, нажмите кнопку снизу.',
     'negotiations_for_admin' : 'Планета {0} хочет принять дипломата от планеты {1}',
+    'negotiations_outside_the_round' : 'Вы не можете принять дипломата, т.к. находитесь на галактических переговорах.',
     'negotiations_ended' : 'Переговоры закончены. Ожидайте организатора, который сопроводит дипломата до его планеты.',
     'negotiations_ended_for_admin' : 'Планета {0} закончила переговоры. Сопроводите дипломата до его планеты.',
     'busy_at_the_moment' : 'Вы не можете принять к себе дипломата, т.к. на вашей планете уже ведутся переговоры.',
@@ -191,7 +201,7 @@ async def timer(n: int, secs: int = 600):
         if 'build_shield' in order.keys():
             table.loc['Построить щит над', planet.name()] = ','.join([c.name() for c in order['build_shield']])
         if 'attack' in order.keys():
-            table.loc['Аттаковать', planet.name()] = ', '.join(map(lambda planet, cities: ', '.join(map(lambda c: f'{c.name()} ({planet})', cities)), order['attack'].keys(), order['attack'].values()))
+            table.loc['Аттаковать', planet.name()] = ', '.join(map(lambda planet, cities: ', '.join(map(lambda c: f'{c.name()} ({planet.name()})', cities)), order['attack'].keys(), order['attack'].values()))
         if 'eco boost' in order.keys():
             table.loc['Отправить метеорит в аномалию', planet.name()] = 'Да' if order['eco boost'] else 'Нет'
         else:
@@ -210,11 +220,16 @@ async def timer(n: int, secs: int = 600):
     for pl, msgs in games[n][2].items():
         id = users_online[pl.login()]
         for type, msg in msgs.items():
-            if type != 'other_planets_info':
+            if type == 'end_negotiations':
+                await bot.delete_message(id, msg.message_id)
+                pl.end_negotiations()
+            elif type != 'other_planets_info':
                 await bot.delete_message(id, msg.message_id)
             else:
                 for msg1 in msg.values():
                     await bot.delete_message(id, msg1.message_id)
+        if games[n][2][pl].get('end_negotiations'):
+            games[n][2][pl].pop('end_negotiations')
     round = games[n][0].show_round()
     for user in games[n][0].active_users():
         await bot.send_message(users_online[user], Messages['end_of_round'].format(round) if round != 6 else Messages['end_of_the_game'], 'MarkdownV2')
@@ -252,7 +267,7 @@ async def timer(n: int, secs: int = 600):
             users_online.pop(login)
         for admin in ads:
             games[n][1].remove(admin)
-            await bot.send_message(admin, Messages['goodbye'], reply_markup=ingame_admin_keyboard)
+            await bot.send_message(admin, Messages['goodbye'], reply_markup=start_admin_keyboard)
         games[n] = None
         if len(games) == games.count(None):
             games = []    
@@ -323,6 +338,9 @@ async def method_executor(method, id : int, *args):
         return False
     except BilateralNegotiations:
         await bot.answer_callback_query(id, Messages['bilateral_negotiations'], True)
+        return False
+    except NegotiationsOutside:
+        await bot.answer_callback_query(id, Messages['negotiations_outside_the_round'], True)
         return False
     return True
         
@@ -503,6 +521,7 @@ async def end_negotiations(call : types.CallbackQuery, state: FSMContext):
     for admin in games[gid][1]:
         await bot.send_message(admin, Messages['negotiations_ended_for_admin'].format(planet.name()))
     await message.answer(Messages['negotiations_ended'])
+    games[gid][2][planet].pop('end_negotiations')
     await bot.delete_message(id, message.message_id)
     
 
@@ -524,7 +543,7 @@ async def ingame_action(call: types.CallbackQuery, state: FSMContext):
         if call.data.startswith('accept'):
             res = await method_executor(planet.accept_diplomatist_from, call.id, ac_planet)
             if res:
-                await message.answer(Messages['wait_for_diplomatist'].format(ac_planet.name()), reply_markup=end_conversations_keyboard)
+                games[gid][2][planet]['end_negotiations'] = await message.answer(Messages['wait_for_diplomatist'].format(ac_planet.name()), reply_markup=end_conversations_keyboard)
                 await bot.delete_message(id, message.message_id)
                 for admin in games[gid][1]:
                     await bot.send_message(admin, Messages['negotiations_for_admin'].format(planet.name(), ac_planet.name()))
@@ -651,7 +670,7 @@ async def start_next_round(message: types.Message):
             for pl in game.planets().values():
                 if pl.name() != planet.name():
                     games[game_id][2][planet]['other_planets_info'][pl.name()] = await bot.send_message(users_online[user], other_planets_message(pl), 'MarkdownV2', reply_markup=other_planets_keyboard(pl, []))
-        await timer(game_id, 120)
+        await timer(game_id, 90)
 
 @dp.message_handler(state=BotStates.transaction_state)
 async def set_amount_of_money(message: types.Message, state: FSMContext):

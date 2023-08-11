@@ -43,6 +43,13 @@ class BilateralNegotiations(Exception):
     def __str__(self) -> str:
         return "You can't have bilateral negotiations"
 
+class NegotiationsOutside(Exception):
+    def __init__(self) -> None:
+        pass
+        
+    def __str__(self) -> str:
+        return "You can't have negotiations outside the round"
+
 #############################################################################
 
 class City: # могут ли накладываться санкции на отдельные города?
@@ -83,7 +90,7 @@ class City: # могут ли накладываться санкции на о�
         return self.__development
     
     def income(self) -> int:
-        return int(300 * self.__development / 100)
+        return int(300 * self.rate_of_life(self.__planet.game().eco_rate) / 100)
 
 class Planet:
     
@@ -114,6 +121,8 @@ class Planet:
         return self.__city
     
     def accept_diplomatist_from(self, planet: PlanetT):
+        if self.__game.state() == 'conversations':
+            raise NegotiationsOutside
         if self.__guest is None and planet.__guest is not self:
             self.__guest = planet
         elif self.__guest is not None:
