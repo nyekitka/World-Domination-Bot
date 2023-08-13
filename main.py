@@ -94,7 +94,11 @@ Messages = {
     'bilateral_negotiations' : 'Вы не можете принять к себе эту планету, т.к. дипломат от вашей планеты уже переговаривает с ней',
     'wait_for_acception' : 'Запрос на переговоры отправлен! Как только {0} примет решение, вам придёт сообщение.',
     'end_of_the_game' : '*Игра закончена\\!*\nОтправляйтесь на собрание, чтобы увидеть результаты игры\\.',
-    'goodbye' : 'Вы автоматически вышли, т.к. ваша игра закончилась.'
+    'goodbye' : 'Вы автоматически вышли, т.к. ваша игра закончилась.',
+    'ending_outside' : 'Вы не можете закончить никакую игру, т.к. не находитесь ни в одной из них.',
+    'ending_when_not_started' : 'Вы не можете закончить неначавшуюся игру.',
+    'game_interrupted_report' : 'Игра была прервана. Вы автоматически вышли из игры.',
+    'game_interrupted_message' : 'Игра была прервана администратором. О подробностях узнавайте у организаторов.'
 }
 
 common_users = dict()   #обычные пользователи
@@ -181,16 +185,22 @@ def css_generator(gameid: int, n: int):
 async def timer(n: int, secs: int = 600):
     global games, writers, common_users, available_logins
     await asyncio.sleep(secs // 2)
+    if not games or games[n][0] is None:
+        return
     for user in games[n][0].active_users():
         await bot.send_message(users_online[user], Messages['5 minutes left'])
     for user in games[n][1]:
         await bot.send_message(user, Messages['5 minutes left'])
     await asyncio.sleep(secs // 2 - secs // 10)
+    if not games or games[n][0] is None:
+        return
     for user in games[n][0].active_users():
         await bot.send_message(users_online[user], Messages['1 minute left'])
     for user in games[n][1]:
         await bot.send_message(user, Messages['1 minute left'])
     await asyncio.sleep(secs // 10)
+    if not games or games[n][0] is None:
+        return
     table = pd.DataFrame(columns=games[n][0].planets().keys(), index=['Развить города', 'Построить щит над', 'Изобрести технологию отправки метеоритов', 'Закупить метеориты', 'Отправить метеорит в аномалию', 'Наложить санкции на', 'Аттаковать'])
     for planet in games[n][0].planets().values():
         order = planet.order()
@@ -245,8 +255,7 @@ async def timer(n: int, secs: int = 600):
     for admin in games[n][1]:
         await bot.send_document(admin, 
                                 InputFile(f'{n + 1} game {round} round results.zip'),
-                                caption=Messages['round_results'].format(round),
-                                reply_markup=conversations_admin_keyboard)
+                                caption=Messages['round_results'].format(round))
     if round == 6:
         writers[n].close()
         writers[n] = None
@@ -355,10 +364,7 @@ async def start(message : types.Message):
 async def intializer(message: types.Message):
     login = message.get_args()
     if message.from_id in users_online.values():
-        if message.from_id in admin_ids:
-            await message.answer(Messages['already_logged'], reply_markup=start_admin_keyboard)
-        else:
-            await message.answer(Messages['already_logged'])
+        await message.answer(Messages['already_logged'])
     elif login not in admins and login not in common_users.keys():
         await message.answer(Messages['login_failure'])
     elif login in users_online.keys():
@@ -639,7 +645,7 @@ async def ingame_action(call: types.CallbackQuery, state: FSMContext):
         else:
             games[gid][2][planet]['city_info'] = await games[gid][2][planet]['city_info'].edit_text(new_msg, parse_mode='MarkdownV2', reply_markup=city_keyboard(cities, us, developed))
 
-@dp.message_handler(lambda message: message.from_id in admin_ids and message.text == 'Начать следующий раунд')
+@dp.message_handler(lambda message: message.from_id in admin_ids, commands=['snround'])
 async def start_next_round(message: types.Message):
     game_id = None
     for i in range(len(games)):
@@ -697,6 +703,41 @@ async def set_amount_of_money(message: types.Message, state: FSMContext):
     except ValueError:
         await message.answer(Messages['wrong_answer'])
         return 
+
+@dp.message_handler(lambda message: message.from_id in admin_ids, commands=['endgame'])
+async def end_the_game(message: types.Message):
+    global games, users_online, writers
+    gid = None
+    for i in range(len(games)):
+        if message.from_id in games[i][1]:
+            gid = i
+            break
+    if gid is None:
+        await message.answer(Messages['ending_outside'])
+        return
+    elif games[gid][0].state() == 'inactive':
+        await message.answer(Messages['ending_when_not_started'])
+        return
+    else:
+        if len(writers[gid].sheets) == 0:
+            pd.DataFrame([[]]).to_excel(writers[gid], '1')
+        writers[gid].close()
+        writers[gid] = None
+        if len(writers) == writers.count(None):
+            writers = []
+        games[gid][0].end_this_game()
+        ac_users = games[gid][0].active_users() 
+        for login in ac_users:
+            games[gid][0].kick_user(login)
+            common_users.pop(login)
+            available_logins.append(login)
+            await bot.send_message(users_online[login], Messages['game_interrupted_message'])
+            users_online.pop(login)
+        for ad in games[gid][1]:
+            await bot.send_message(ad, Messages['game_interrupted_report'], reply_markup=start_admin_keyboard)
+        games[gid] = None
+        if len(games) == games.count(None):
+            games = []
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
