@@ -429,9 +429,9 @@ async def signout(message : types.Message):
             await bot.send_message(chat_id=user, text=Messages['on_user_left'].format(planet.name(), game.users_online(), game.number_of_planets()))
     await message.answer(Messages['signout'])
 
-@dp.message_handler(commands=['rules'])
-async def rules(message : types.Message):
-    with open('rules.txt', 'r', encoding='UTF-8') as file:
+@dp.message_handler(commands=['help'])
+async def help(message : types.Message):
+    with open('help.txt', 'r', encoding='UTF-8') as file:
         text = ''.join(file.readlines())
         await message.answer(text=text, parse_mode='MarkdownV2')
 
