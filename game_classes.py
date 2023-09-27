@@ -191,11 +191,11 @@ class Planet:
         elif self.__meteorites != 0 and city not in self.__order['attack'][city.planet()]:
             self.__order['attack'][city.planet()].append(city)
             self.__meteorites -= 1
-        elif self.__meteorites != 0 and city in self.__order['attack'][city.planet()]:
+        elif self.__meteorites == 0 and ('attack' not in self.__order.keys() or city.planet() not in self.__order['attack'].keys() or city not in self.__order['attack'][city.planet()]):
+            raise NotEnoughRockets
+        else:
             self.__order['attack'][city.planet()].remove(city)
             self.__meteorites += 1
-        else:
-            raise NotEnoughRockets
     
     def attacked(self, city_name: str):  # атака города на этой планете
         self.__game.eco_rate -= 2
@@ -286,6 +286,7 @@ class Planet:
     
     def complete_building(self, city: City):
         city.build_shield()
+        self.__game.eco_rate -= 2
             
                 
     def transfer(self, planet : PlanetT, money: int):  # перевод денег
@@ -377,6 +378,10 @@ class Game:
         for planet in orders.keys():
             planet.clear_order()
         self.__state = 'conversations'
+        if self.eco_rate > 100:
+            self.eco_rate = 100
+        elif self.eco_rate < 5:
+            self.eco_rate = 5
         
         
     def end_this_game(self):
@@ -426,7 +431,7 @@ class Game:
             if 'build_shield' in order:
                 for city in order['build_shield']:
                     planet.complete_building(city)
-            if order.get('eco_boost'):
+            if order.get('eco boost'):
                 planet.complete_eco_boost()
             if order.get('invent'):
                 planet.complete_invention()

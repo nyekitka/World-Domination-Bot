@@ -64,7 +64,7 @@ Messages = {
 *{15}*
 \\(Развитие: _{16} %_; Ур\\. жизни: _{17} %_; Доход: _{18}_ 💵\\)""",
     'sanctions_info' : "*Санкции:*\n_{0}_",
-    'eco_info' : '*Венерианская аномалия*\nУровень аномалии 💥: _{0} %_',
+    'eco_info' : '*Ванкорская аномалия*\nУровень аномалии 💥: _{0} %_',
     'other_planet' : """__*{0}*__
 
 {1}\t\\(Развитие: _{2} %_\\)
@@ -98,7 +98,12 @@ Messages = {
     'ending_outside' : 'Вы не можете закончить никакую игру, т.к. не находитесь ни в одной из них.',
     'ending_when_not_started' : 'Вы не можете закончить неначавшуюся игру.',
     'game_interrupted_report' : 'Игра была прервана. Вы автоматически вышли из игры.',
-    'game_interrupted_message' : 'Игра была прервана администратором. О подробностях узнавайте у организаторов.'
+    'game_interrupted_message' : 'Игра была прервана администратором. О подробностях узнавайте у организаторов.',
+    'waiting_time_expired' : 'Время ожидания ответа превышено. Перевод отменён.',
+    'already_started' : 'Вы не можете начать игру, т.к. игра уже в процессе.',
+    'skipping_round' : 'Вы не можете начать новый раунд, т.к. не закончился старый.',
+    'start_game_before' : 'Вы не можете использовать эту команду, т.к. игра не запущена. Сначала начните игру, нажав на соответсвующую кнопку.',
+    'ad_message' : '*Космическое господство*\n\nСоздатель бота: [Клинов Никита](https://vk.com/nyekitka)\\.\n\nПоддержать создателя: [тык](https://www.donationalerts.com/r/nyekitkaa)'
 }
 
 common_users = dict()   #обычные пользователи
@@ -226,6 +231,7 @@ async def timer(n: int, secs: int = 600):
         if 'create_meteorites' in order.keys():
             table.loc['Закупить метеориты', planet.name()] = order['create_meteorites']
     table.to_excel(writers[n], f'{games[n][0].show_round()} раунд')
+    
     games[n][0].end_this_round()
     for pl, msgs in games[n][2].items():
         id = users_online[pl.login()]
@@ -282,7 +288,7 @@ async def timer(n: int, secs: int = 600):
             games = []    
     os.chdir('..')
     
-        
+
         
 
 def city_stats_message(planet: Planet) -> str:
@@ -381,6 +387,7 @@ async def intializer(message: types.Message):
         for user in games[gameid][1]:
             await bot.send_message(chat_id=user, text=Messages['on_user_joined'].format(planet.name(), game.users_online(), game.number_of_planets()))
         await message.answer(Messages['login'].format(login))
+        await message.answer(Messages['ad_message'], parse_mode='MarkdownV2')
         if game.state() == 'passive':
             await bot.send_message(users_online[login], Messages['first_round'], parse_mode='MarkdownV2')
             games[gameid][2][planet]['city_info'] = await bot.send_message(users_online[login], city_stats_message(planet), reply_markup=start_city_keyboard(planet.cities(), planet.order().get('develop', [])), parse_mode='MarkdownV2')
@@ -468,7 +475,10 @@ async def start_game(message : types.Message):
         await message.answer(Messages['starting_game_not_being_in'], reply_markup=start_admin_keyboard)
         return
     game = games[game_id][0]
-    
+    if game.state() in ('passive', 'active'):
+        await message.answer(Messages['already_started'])
+        return
+
     if game.users_online() < game.number_of_planets():
         await message.answer(Messages['not_enough_players'].format(game.users_online(), game.number_of_planets()), reply_markup=ingame_admin_keyboard)
     else:
@@ -483,7 +493,11 @@ async def start_game(message : types.Message):
             games[game_id][2][planet]['meteorites_info'] = await bot.send_message(users_online[user], meteorites_message(planet), reply_markup=invent_meteorites_keyboard(False), parse_mode='MarkdownV2')
             games[game_id][2][planet]['sanctions_info'] = await bot.send_message(users_online[user], sanctions_message(planet), parse_mode='MarkdownV2')
             games[game_id][2][planet]['eco_info'] = await bot.send_message(users_online[user], eco_message(game), parse_mode='markdownV2')
-        await timer(game_id, 60)
+            games[game_id][2][planet]['other_planets_info'] = dict()
+            for pl in game.planets().values():
+                if pl.name() != planet.name():
+                    games[game_id][2][planet]['other_planets_info'][pl.name()] = await bot.send_message(users_online[user], other_planets_message(pl), 'MarkdownV2', reply_markup=shrinked_other_planets_keyboard(pl))
+        await timer(game_id, 600)
     
 @dp.callback_query_handler(state=BotStates.planets_numbers)
 async def set_number_of_planets(call: types.CallbackQuery, state: FSMContext):
@@ -568,7 +582,10 @@ async def ingame_action(call: types.CallbackQuery, state: FSMContext):
                 if msg1 == message:
                     type_message = f'other_planets_info {pl}'
                     break
-    if type_message == 'city_info':
+    if type_message is None:
+        print(f'Я словил None. Сигнал от {planet.name()}: {call.data}')
+        return
+    elif type_message == 'city_info':
         command, city_name = call.data.split()
         city = None
         for c in planet.cities():
@@ -624,6 +641,12 @@ async def ingame_action(call: types.CallbackQuery, state: FSMContext):
                 data['game_id'] = gid
             await message.answer(Messages['how_much_money'].format(ac_planet.name()))
             await BotStates.transaction_state.set()
+            await asyncio.sleep(30)
+            current_state = await state.get_state()
+            if current_state is not None:
+                await state.finish()
+                if games[gid][0].state() in ('passive', 'active'):
+                    await message.answer(Messages['waiting_time_expired'])
             return
         else:
             await bot.send_message(users_online[ac_planet.login()], Messages['negotiations_offer'].format(planet.name()), reply_markup=negotiations_offer_keyboard(planet))
@@ -656,7 +679,12 @@ async def start_next_round(message: types.Message):
         await message.answer(Messages['starting_game_not_being_in'], reply_markup=start_admin_keyboard)
         return
     game = games[game_id][0]
-    
+    if game.state() in ('passive', 'active'):
+        await message.answer(Messages['skipping_round'])
+        return
+    elif game.state() == 'inactive':
+        await message.answer(Messages['start_game_before'], reply_markup=ingame_admin_keyboard)
+        return
     if game.users_online() < game.number_of_planets():
         await message.answer(Messages['not_enough_players'].format(game.users_online(), game.number_of_planets()), reply_markup=ingame_admin_keyboard)
     else:
@@ -676,7 +704,7 @@ async def start_next_round(message: types.Message):
             for pl in game.planets().values():
                 if pl.name() != planet.name():
                     games[game_id][2][planet]['other_planets_info'][pl.name()] = await bot.send_message(users_online[user], other_planets_message(pl), 'MarkdownV2', reply_markup=other_planets_keyboard(pl, []))
-        await timer(game_id, 90)
+        await timer(game_id, 600)
 
 @dp.message_handler(state=BotStates.transaction_state)
 async def set_amount_of_money(message: types.Message, state: FSMContext):
@@ -709,7 +737,7 @@ async def end_the_game(message: types.Message):
     global games, users_online, writers
     gid = None
     for i in range(len(games)):
-        if message.from_id in games[i][1]:
+        if games[i] is not None and message.from_id in games[i][1]:
             gid = i
             break
     if gid is None:

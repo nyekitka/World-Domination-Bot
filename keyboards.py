@@ -63,6 +63,12 @@ def other_planets_keyboard(planet: Planet, chosen_cities: list[City]) -> InlineK
     kb.add(InlineKeyboardButton(text='Перевести денег 💸', callback_data=f'transaction {planet.name()}'))
     return kb
 
+def shrinked_other_planets_keyboard(planet: Planet) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardMarkup(row_width=2)
+    kb.add(InlineKeyboardButton(text='Запросить переговоры 📞', callback_data=f'conversations {planet.name()}'))
+    kb.add(InlineKeyboardButton(text='Перевести денег 💸', callback_data=f'transaction {planet.name()}'))
+    return kb
+
 def negotiations_offer_keyboard(from_planet: Planet):
     return InlineKeyboardMarkup().add(InlineKeyboardButton('Принять', callback_data=f'accept {from_planet.name()}'), 
                                       InlineKeyboardButton('Отклонить', callback_data=f'deny {from_planet.name()}'))
@@ -72,7 +78,7 @@ end_conversations_keyboard = InlineKeyboardMarkup().add(InlineKeyboardButton('З
 
 #Клавиатура выбора количества планет в игре
 number_of_planets_keyboard = InlineKeyboardMarkup(row_width=5)
-number_of_planets_keyboard.add(*[InlineKeyboardButton(text=str(i), callback_data=str(i)) for i in range(2, 7)])
+number_of_planets_keyboard.add(*[InlineKeyboardButton(text=str(i), callback_data=str(i)) for i in range(3, 10)])
 
 #Клавиатура админа в игре
 ingame_admin_keyboard = ReplyKeyboardMarkup([[KeyboardButton('Начать игру')], [KeyboardButton('Выйти из игры')]])
