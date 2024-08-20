@@ -1,460 +1,790 @@
-from functools import reduce
-from typing import List, TypeVar, Optional
+import psycopg2
+import json
+from typing import Optional
+import pandas as pd
 
-CityT = TypeVar('CityT', bound='City')
-PlanetT = TypeVar('PlanetT', bound='Planet')
-GameT = TypeVar('GameT', bound='Game')
+__exceptions_file = open('presets\\exception codes.json', encoding='utf-8')
+errors = json.load(__exceptions_file)
 
-########################### exceptions ########################################
-
-class AlreadyBuiltShield(Exception):
-    def __init__(self) -> None:
-        pass
-        
-    def __str__(self) -> str:
-        return 'Shield is already built'
-
-
-class NotEnoughMoney(Exception):
-    def __init__(self) -> None:
-        pass
-        
-    def __str__(self) -> str:
-        return 'Not enough money for the operation'
-
-class NotEnoughRockets(Exception):
-    def __init__(self) -> None:
-        pass
-        
-    def __str__(self) -> str:
-        return 'Not enough rockets for the operation'
+class CDException(Exception):
+    """
+    Special exception for the game.
+    """
+    def __init__(self, code: str) -> None:
+        super().__init__()
+        self.code = code
     
-class BusyAtTheMoment(Exception):
-    def __init__(self) -> None:
-        pass
-        
     def __str__(self) -> str:
-        return "You can't accept a diplomatist because your planet has negotiations"
+        return errors[self.code]
 
-class BilateralNegotiations(Exception):
-    def __init__(self) -> None:
-        pass
-        
-    def __str__(self) -> str:
-        return "You can't have bilateral negotiations"
+class User:
+    """
+    Representation of user and admin in game. Works like a wrapper of sql queries.
+    """
 
-class NegotiationsOutside(Exception):
-    def __init__(self) -> None:
-        pass
-        
-    def __str__(self) -> str:
-        return "You can't have negotiations outside the round"
-
-#############################################################################
-
-class City: # могут ли накладываться санкции на отдельные города?
-    def __init__(self, name : str, planet : Optional[PlanetT] = None):
-        self.__development = 60                 # развитие города
-        self.__shield = False                   # наличие щита
-        self.__name = name                      # название города
-        self.__planet = planet
-        
-    def build_shield(self): # постановка щита
-        self.__shield = True
-
-    def name(self): 
-        return self.__name
+    def __init__(self, id: int, conn: psycopg2.extensions.connection):
+        self.id = id
+        self.__conn = conn
+        self.__cursor = self.__conn.cursor()
     
-    def set_planet(self, planet: PlanetT):
-        self.__planet = planet
-    
-    def planet(self):
-        return self.__planet
-    
-    def attacked(self): # если на город нападут
-        if self.__shield:
-            self.__shield = False
+    @classmethod
+    def init_with_check(cls, id : int, conn: psycopg2.extensions.connection):
+        cursor = conn.cursor()
+        cursor.execute("""SELECT EXISTS(SELECT * FROM "User" WHERE tgid=%s)""", (id,))
+        if cursor.fetchone()[0]:
+            return cls(id, conn)
         else:
-            self.__development = 0
+            cursor.execute("""SELECT EXISTS(SELECT * FROM Admins WHERE tgid=%s)""", (id,))
+            if cursor.fetchone()[0]:
+                return cls(id, conn)
+            else:
+                return None
     
-    def develop(self): # развитие города
-        self.__development += 20
+    @classmethod
+    def make_new_user(cls, id: int, isadmin: bool, conn: psycopg2.extensions.connection):
+        cursor = conn.cursor()
+        if isadmin:
+            cursor.execute("""INSERT INTO Admins(tgid) VALUES (%s)""", (id,))
+        else:
+            cursor.execute("""INSERT INTO "User"(tgid) VALUES (%s)""", (id,))
+        conn.commit()
+        return cls(id, conn)
     
-    def is_under_shield(self):
-        return self.__shield
+    def is_admin(self) -> bool:
+        """
+        Checks whether the user is admin.
+        """
+        self.__cursor.execute("""SELECT EXISTS(SELECT * FROM Admins WHERE tgid=%s)""", (self.id,))
+        return self.__cursor.fetchone()[0]
     
-    def rate_of_life(self, eco_rate: int):
-        return int(self.__development * eco_rate / 100)
+    def game(self):
+        """
+        Returns a game that user is in.
+        """
+        if self.is_admin():
+            self.__cursor.execute("""SELECT gameid FROM Admins WHERE tgid=%s""", (self.id, ))
+        else:
+            self.__cursor.execute("""SELECT gameid FROM "User" WHERE tgid=%s""", (self.id, ))
+        gameid = self.__cursor.fetchone()[0]
+        return gameid if gameid is None else Game(gameid, self.__conn)
+
+    def kick_user(self) -> None:
+        """
+        Kicks user from the lobby
+        """
+        isadmin = self.is_admin()
+        try:
+            if isadmin:
+                self.__cursor.execute("CALL Kick_admin(%s::BIGINT)", (self.id,))
+            else:
+                self.__cursor.execute("CALL Kick_user(%s::BIGINT)", (self.id,))
+            self.__conn.commit()
+        except psycopg2.DatabaseError as ex:
+            self.__conn.rollback()
+            raise CDException(ex.pgcode) from ex
     
-    def development(self):
-        return self.__development
+
+class City:
+    """
+    Representation of city in game. Works like a wrapper of sql queries.
+    """
+
+    def __init__(self, id: int, conn: psycopg2.extensions.connection):
+        self.id = id
+        self.__conn = conn
+        self.__cursor = conn.cursor()
+
+    @classmethod
+    def init_with_check(cls, id : int, conn: psycopg2.extensions.connection):
+        cursor = conn.cursor()
+        cursor.execute("SELECT EXISTS(SELECT * FROM City WHERE id=%s)", (id,))
+        if cursor.fetchone()[0]:
+            return cls(id, conn)
+        else:
+            return None
+
+    @classmethod
+    def make_new_city(cls, name: str, planetid: int, conn: psycopg2.extensions.connection):
+        cursor = conn.cursor()
+        cursor.execute("SELECT COALESCE(MAX(id), 0) FROM City")
+        id = cursor.fetchone()[0] + 1
+        cursor.execute("INSERT INTO City(id, name, planetid) VALUES (%s, %s, %s)", (id, name, planetid))
+        conn.commit()
+        return cls(id, conn)
+
+    def __eq__(self, other):
+        return self.id == other.id
+
+    def build_shield(self) -> None:
+        """
+        Building a shield under the city if it doesn't exists.
+        """
+        self.__cursor.execute("UPDATE city SET isshielded=TRUE WHERE id=%s", (self.id,))
+        self.__conn.commit()
     
-    def income(self) -> int:
-        return int(300 * self.rate_of_life(self.__planet.game().eco_rate) / 100)
+    def name(self) -> str:
+        """
+        Returns name of the city.
+        """
+
+        self.__cursor.execute("SELECT name FROM city WHERE id=%s", (self.id,))
+        return self.__cursor.fetchone()[0]
+
+    def planet(self):
+        """
+        Returns the planet where the city is located.
+        """
+
+        self.__cursor.execute("SELECT planetid FROM city WHERE id=%s", (self.id, ))
+        return Planet(self.__cursor.fetchone()[0], self.__conn)
+    
+    def develop(self) -> None:
+        """
+        Develops the city
+        """
+
+        self.__cursor.execute("UPDATE city SET development=development+20 WHERE id=%s", (self.id,))
+        self.__conn.commit()
+    
+    def is_under_shield(self) -> bool:
+        """
+        Returns whether the city is shielded
+        """
+
+        self.__cursor.execute("SELECT isshielded FROM city WHERE id=%s", (self.id,))
+        return self.__cursor.fetchone()[0]
+    
+    def rate_of_life(self) -> int:
+        """
+        Returns its rate of life
+        """
+
+        self.__cursor.execute("""SELECT Rate_of_life_in_city(%s)""", (self.id, ))
+        return int(self.__cursor.fetchone()[0])
+        
+    def development(self) -> int:
+        """
+        Returns its development
+        """
+
+        self.__cursor.execute("SELECT development FROM city WHERE id = %s", (self.id, ))
+        return int(self.__cursor.fetchone()[0])
+    
+    def income(self) -> None:
+        """
+        Returns its income in the round
+        """
+
+        return 3*self.rate_of_life()
+
 
 class Planet:
+    """
+    Representation of the planet in game. Works like a wrapper of sql queries.
+    """
+
+    def __init__(self, planetid: int, conn: psycopg2.extensions.connection):
+        self.id = planetid
+        self.__conn = conn
+        self.__cursor = conn.cursor()
+
+    @classmethod
+    def init_with_check(cls, id : int, conn: psycopg2.extensions.connection):
+        cursor = conn.cursor()
+        cursor.execute("SELECT EXISTS(SELECT * FROM Planet WHERE id=%s)", (id,))
+        if cursor.fetchone()[0]:
+            return cls(id, conn)
+        else:
+            return None
+
+    @classmethod
+    def make_new_planet(cls, name: str, gameid: int, conn: psycopg2.extensions.connection):
+        cursor = conn.cursor()
+        cursor.execute("SELECT COALESCE(MAX(id), 0) FROM Planet");
+        id = cursor.fetchone()[0] + 1
+        cursor.execute("INSERT INTO Planet(id, name, gameid) VALUES (%s, %s, %s)", (id, name, gameid))
+        conn.commit()
+        return cls(id, conn)
+
+    def __eq__(self, other):
+        return self.id == other.id
+
+    def name(self) -> str:
+        """
+        Returns name of the planet.
+        """
+
+        self.__cursor.execute("SELECT name FROM planet WHERE id=%s", (self.id,))
+        return self.__cursor.fetchone()[0]
     
-    def __init__(self, name : str, login : str, game : GameT, cities: List[City]):
-        self.__name = name
-        self.__game = game
-        self.__login = login        # логин владельца планеты
-        self.__guest : Optional[self.__class__] = None
-        self.__city = cities        # список городов на планете
-        self.__sanctions = set()    # сет санкций на планете
-        self.__balance = 1000       # баланс планеты
-        self.__meteorites = 0       # количество имеющихся метеоритов
-        self.__is_invented = False  # наличие технологии по разработке метеоритов (aka ядерная разработка)
-        self.__order = dict()       # формирующийся приказ
-        for city in cities:
-            city.set_planet(self)
+    def user_id(self) -> int:
+        """
+        Returns id of the owner of the planet.
+        """
+
+        self.__cursor.execute("SELECT ownerid FROM planet WHERE id=%s", (self.id,))
+        return self.__cursor.fetchone()[0]
     
-    def name(self):
-        return self.__name
-    
-    def login(self):
-        return self.__login
-    
-    def game(self) -> GameT :
-        return self.__game
-    
+    def game_id(self) -> int:
+        """
+        Returns id of the game which this planet belongs to.
+        """
+
+        self.__cursor.execute("SELECT gameid FROM planet WHERE id=%s", (self.id,))
+        return self.__cursor.fetchone()[0]
+
     def cities(self) -> list[City]:
-        return self.__city
-    
-    def accept_diplomatist_from(self, planet: PlanetT):
-        if self.__game.state() == 'conversations':
-            raise NegotiationsOutside
-        if self.__guest is None and planet.__guest is not self:
-            self.__guest = planet
-        elif self.__guest is not None:
-            raise BusyAtTheMoment
-        else:
-            raise BilateralNegotiations
-    
-    def end_negotiations(self):
-        if self.__guest is not None:
-            self.__guest = None
-        else:
-            raise ValueError
-    
-    def invent(self):  # изобретение ядерной разработки
-        if self.__balance >= 500 and not self.__is_invented and not self.__order.get('invent'):
-            self.__balance -= 500
-            self.__order['invent'] = True
-        elif self.__order.get('invent'):
-            self.__order['invent'] = False
-            self.__balance += 500
-        elif self.__is_invented:
-            raise SystemError
-        elif self.__balance < 500:
-            raise NotEnoughMoney
-        
-    
-    def complete_invention(self):
-        self.__is_invented = True
-        self.__game.eco_rate -= 2
-    
-    def is_invented(self):
-        return self.__is_invented
-        
-    def create_meteorites(self, n: int): # обработка, если не изобретено
-        if self.__is_invented and 'create_meteorites' in self.__order and self.__balance + self.__order['create_meteorites']*150 >= 150*n: 
-            # self.__meteorites += n
-            self.__balance += 150*(self.__order['create_meteorites'] - n)
-            self.__order['create_meteorites'] = n
-        elif 'create_meteorites' not in self.__order.keys() and self.__is_invented and self.__balance >= 150*n:
-            self.__balance -= 150*n
-            self.__order['create_meteorites'] = n
-        elif not self.__is_invented:
-            raise SystemError
-        else:
-            raise NotEnoughMoney
-    
-    def complete_creating(self, n: int):
-        self.__meteorites += n
-        self.__game.eco_rate -= 2*n
-            
-    # def cancel_meteorite(self): # отменить действие предыдущей функции
-    #     self.__meteorites -= 1
-    #     self.__balance += 150
-    #     Planet.eco_rate += 2
-        
-    def meteorites_count(self):  # колическтво имеющихся метеоритов
-        return self.__meteorites
-    
-    def attack(self, city: City):
-        if 'attack' not in self.__order.keys() and self.__meteorites != 0:
-            self.__order['attack'] = {city.planet() : [city]}
-            self.__meteorites -= 1
-        elif self.__meteorites != 0 and city.planet() not in self.__order['attack'].keys():
-            self.__order['attack'][city.planet()] = [city]
-            self.__meteorites -= 1
-        elif self.__meteorites != 0 and city not in self.__order['attack'][city.planet()]:
-            self.__order['attack'][city.planet()].append(city)
-            self.__meteorites -= 1
-        elif self.__meteorites == 0 and ('attack' not in self.__order.keys() or city.planet() not in self.__order['attack'].keys() or city not in self.__order['attack'][city.planet()]):
-            raise NotEnoughRockets
-        else:
-            self.__order['attack'][city.planet()].remove(city)
-            self.__meteorites += 1
-    
-    def attacked(self, city_name: str):  # атака города на этой планете
-        self.__game.eco_rate -= 2
-        for city in self.__city:
-            if city.name() == city_name:
-                city.attacked()
-                break
-    
-    def develop_city(self, city: City):
-        if city in self.__city and self.__balance >= 150 and ('develop' not in self.__order.keys() or city not in self.__order['develop']):
-            # city.develop()
-            self.__balance -= 150
-            if 'develop' not in self.__order.keys():
-                self.__order['develop'] = [city]
-            else:
-                self.__order['develop'].append(city)
-        elif 'develop' in self.__order.keys() and city in self.__order['develop']:
-            self.__order['develop'].remove(city)
-            self.__balance += 150
-        elif city not in self.__city:
-            raise SystemError
-        else:
-            raise NotEnoughMoney
-    
-    def complete_development(self ,city: City):
-        city.develop()
-    
-    def eco_boost(self):  # сброс бомбы на аномалию
-        if self.__meteorites >= 1 and not self.__order.get('eco boost'):
-            self.__meteorites -= 1
-            self.__order['eco boost'] = True
-        elif self.__order.get('eco boost'):
-            self.__meteorites += 1
-            self.__order['eco boost'] = False
-        else:
-            raise NotEnoughRockets
-    
-    def complete_eco_boost(self):
-        self.__game.eco_rate += 20
-
-    def rate_of_life(self): # для вывода статистики
-        return int(sum((city.rate_of_life(self.__game.eco_rate) for city in self.__city))/4)
-
-    def income(self):  # доход
-        sanc_coef = len(self.__sanctions) * 0.1
-        cities_income = sum((city.income() for city in self.__city))
-        return int(cities_income*(1 - sanc_coef))
-    
-    def add_money(self, income: int):  # начислить доход
-        self.__balance += income
-    
-    def send_sanctions(self, planet: str):
-        if 'sanctions' not in self.__order.keys():
-            self.__order['sanctions'] = [planet]
-        elif planet not in self.__order['sanctions']:
-            self.__order['sanctions'].append(planet)
-        else:
-            self.__order['sanctions'].remove(planet)
-    
-    def get_sanctions(self, planet: str):  # прибавленение санкций, принимает название страны
-        self.__sanctions.add(planet)
-    
-    def show_sanc_set(self):
-        return self.__sanctions
-    
-    def free_sanc_set(self):  # опустошение санкционного сета (перед началом нового раунда)
-        self.__sanctions.clear()
-        
-    def build_shield(self, city: City):  # построение щита
-        if self.__balance >= 300 and city in self.__city and ('build_shield' not in self.__order.keys() or city not in self.__order['build_shield']) and city.development() > 0 and not city.is_under_shield():
-            self.__balance -= 300
-            if 'build_shield' not in self.__order.keys():
-                self.__order['build_shield'] = [city]
-            else:
-                self.__order['build_shield'].append(city)
-        elif 'build_shield' in self.__order.keys() and city in self.__order['build_shield']:
-            self.__order['build_shield'].remove(city)
-            self.__balance += 300
-        elif city not in self.__city:
-            raise SystemError
-        elif city.is_under_shield():
-            raise AlreadyBuiltShield
-        elif city.development() == 0:
-            raise SystemError
-        else:
-            raise NotEnoughMoney
-        
-    
-    def complete_building(self, city: City):
-        city.build_shield()
-        self.__game.eco_rate -= 2
-            
-                
-    def transfer(self, planet : PlanetT, money: int):  # перевод денег
-        if money < 0:
-            raise ValueError
-        elif self.__balance >= money:
-            self.__balance -= money
-            planet.__balance += money
-        else:
-            raise NotEnoughMoney
+        """
+        Returns the list of non-destroyed cities on the planet
+        """
+        self.__cursor.execute("SELECT id FROM city WHERE planetid=%s AND development > 0", (self.id,))
+        ls = self.__cursor.fetchall()
+        return list(map(lambda x: City(x[0], self.__conn), ls))
     
     def balance(self) -> int:
-        return self.__balance
-    
-    def is_under_shield(self, city_name: str) -> bool:
-        for city in self.__city:
-            if city.name() == city_name:
-                return city.is_under_shield()
-    
-    def clear_order(self):
-        self.__order.clear()
-        
-    def order(self) -> dict:
-        return self.__order
-      
-class Game:
-    def __init__(self, planets_quantity: int, logins: list[str]):
-        self.eco_rate = 95
-        self.__active_players = [None]*planets_quantity
-        self.__state = 'inactive'                               # inactive/passive/active/conversations
-        self.__planets_quantity = planets_quantity              # количество планет
-        self.__planet = dict()                                  # список планет {'name': Planet1}
-        with open('preset.txt', "r", encoding='UTF-8') as file: # заполнение списка планет
-            lines = file.readlines()[:planets_quantity]
-            i = 0
-            for line in lines:
-                cities = []
-                for city_name in line.split()[1:]:
-                    cities.append(City(city_name))
-                self.__planet[line.split()[0]] = Planet(line.split()[0], logins[i], self, cities)
-                i += 1
-        self.__round = 0                                        # номер раунда
-    
-    def join_user(self, login : str):
-        if None in self.__active_players and login not in self.__active_players:
-            self.__active_players[self.__active_players.index(None)] = login
-            
-    def kick_user(self, login : str):
-        if login in self.__active_players and login is not None:
-            self.__active_players.remove(login)
-            self.__active_players.append(None)
-    
-    def planets(self):
-        return self.__planet
-    
-    def number_of_planets(self):
-        return self.__planets_quantity
-    
-    def active_users(self):
-        return [login for login in self.__active_players if login is not None]
-    
-    def users_online(self) -> int:
-        return self.__planets_quantity - self.__active_players.count(None)
-    
-    def all_users(self):
-        return [planet.login() for planet in self.__planet.values()]
+        """
+        Returns balance of the planet
+        """
 
-    def get_homeland(self, login):
-        for planet in self.__planet.values():
-            if login == planet.login():
-                return planet
+        self.__cursor.execute("SELECT balance FROM Planet WHERE id=%s", (self.id,))
+        return int(self.__cursor.fetchone()[0])
     
-    def show_round(self):
-        return self.__round
+    def game(self):
+        """
+        Returns a game that the planet belongs to
+        """
+        self.__cursor.execute("SELECT gameid FROM Planet WHERE id=%s", (self.id, ))
+        gameid = self.__cursor.fetchone()[0]
+        return Game(gameid, self.__conn)
+
+    def is_invented(self) -> bool:
+        """
+        Returns balance of the planet
+        """
+
+        self.__cursor.execute("SELECT isinvented FROM Planet WHERE id=%s", (self.id,))
+        return self.__cursor.fetchone()[0]
+
+    def accept_diplomatist_from(self, planet) -> None:
+        """
+        Checks if it's possible for the planet to accept diplomatists from provided planet.
+        If it's not then an exception is raised. Else state of the planet changes.
+        """
+        game_id = self.game_id()
+        try:
+            self.__cursor.execute("INSERT INTO Negotiations(GameID, PlanetFrom, PlanetTo) VALUES (%s, %s, %s)",
+                              (game_id, planet.id, self.id))
+            self.__conn.commit()
+        except psycopg2.DatabaseError as err:
+            self.__conn.rollback()
+            if 'gamestatechecker' in err.pgerror:
+                raise CDException('NEO') from err
+            elif 'bilateralconstraint' in err.pgerror:
+                raise CDException('BLN') from err
+            elif 'business' in err.pgerror:
+                raise CDException('BAM') from err
     
-    def start_new_round(self):
-        self.__round += 1
-        self.__state = 'passive' if self.__round == 1 else 'active'
-        for planet in self.__planet.values():
-            if self.__round != 1:
-                planet.add_money(planet.income())
+    def end_negotiations(self) -> None:
+        """
+        Ends negotiations that are taking place in this planet.
+        """
+        self.__cursor.execute("DELETE FROM Negotiations WHERE PlanetTo = %s", (self.id, ))
+        self.__cursor.execute("DELETE FROM PlanetMessages WHERE ownerid=%s AND mtype=%s", (self.id, 'Negotiations'))
+        self.__conn.commit()
+
+    def invent(self) -> None:
+        """
+        Adding to order of the planet invention of nuclear development
+        """
+        try:
+            self.__cursor.execute("CALL INVENT(%s)", (self.id, ))
+            self.__conn.commit()
+        except psycopg2.DatabaseError as ex:
+            self.__conn.rollback()
+            raise CDException(ex.pgcode) from ex
+
+    def is_invent_in_order(self) -> bool:
+        """
+        Checks whether invention of meteorites is in the order.
+        """
+        self.__cursor.execute("SELECT EXISTS(SELECT * FROM Orders WHERE action='Invent' AND planetid=%s AND round=%s)", (self.id, self.game().show_round()))
+        return self.__cursor.fetchone()[0]
+
+    def meteorites(self) -> int:
+        """
+        Returns the number of meteorites that the planet has.
+        """
+
+        self.__cursor.execute("SELECT meteorites FROM Planet WHERE id=%s", (self.id,))
+        return int(self.__cursor.fetchone()[0])
+
+    def create_meteorites(self, n: int) -> None:
+        """
+        Adds creation of n meteorites to the order if it's possible
+        """
+        try:
+            self.__cursor.execute("CALL Create_Meteorites(%s, %s)", (self.id, n))
+            self.__conn.commit()
+        except psycopg2.DatabaseError as ex:
+            self.__conn.rollback()
+            raise CDException(ex.pgcode) from ex
     
-    def end_this_round(self):
-        orders = dict()
-        for planet in self.__planet.values():
-            planet.free_sanc_set()
-            orders[planet] = planet.order()
-        self.get_orders(orders)
-        for planet in orders.keys():
-            planet.clear_order()
-        self.__state = 'conversations'
-        if self.eco_rate > 100:
-            self.eco_rate = 100
-        elif self.eco_rate < 5:
-            self.eco_rate = 5
-        
-        
-    def end_this_game(self):
-        self.__state = 'inactive'
+    def number_of_ordered_meteorites(self) -> int:
+        """
+        Returns a number of ordered meteorites.
+        """
+        nround = self.game().show_round()
+        self.__cursor.execute("SELECT COALESCE((SELECT argument FROM Orders o WHERE planetid=%s AND action='Create Meteorites' AND o.round=%s), 0)", 
+                              (self.id, nround))
+        return int(self.__cursor.fetchone()[0])
     
-    def state(self):
-        return self.__state
+    def attack(self, city_id: int) -> None:
+        """
+        Adds to the order attack on the provided city
+        """
+        try:
+            self.__cursor.execute("CALL Attack(%s, %s)", (self.id, city_id))
+            self.__conn.commit()
+        except psycopg2.DatabaseError as ex:
+            self.__conn.rollback()
+            raise CDException(ex.pgcode) from ex
     
-    def balance(self, planet_name: str):
-        return self.__planet[planet_name].balance()
-    
-    def __get_sanctions(self, from_planet: str, planets_list: List[str]):
-        for planet in planets_list:
-            self.__planet[planet].get_sanctions(from_planet)
-    
-    def show_sanc_set(self, planet_name: str):
-        self.__planet[planet_name].show_sanc_set()    
-    
-    
-    def __attack(self, attack_list: dict[Planet, list[City]]):
-        for planet, cities in attack_list.items():
-            for city in cities:
-                planet.attacked(city.name())
-    
-    def is_under_shield(self, planet_name: str, city_name: str):
-        return self.__planet[planet_name].is_under_shield(city_name)
-    
-    def get_orders(self, orders : dict[Planet, dict]):
-        # Структура order:
-        # {
-        # 'develop' : [<город1>, ... ]
-        # 'transfer' : ( <кому> , <сколько> ),
-        # 'sanctions' : [ <планета1>, ... , <планетаN> ],    ''' список стран, на которые planet_name накладывает санкции '''
-        # 'build_shield' : [ <город1>, ... , <городN> ],
-        # 'attack' :  { <планета> : [ <город> ], ... },
-        # 'eco_boost' : True/False,
-        # 'invent' : True/False,
-        # 'create_meteorites' : N
-        # }
-        #development
-        for planet, order in orders.items():
-            if 'develop' in order:
-                for city in order['develop']:
-                    planet.complete_development(city)
-            if 'sanctions' in order:
-                self.__get_sanctions(planet.name(), order['sanctions'])
-            if 'build_shield' in order:
-                for city in order['build_shield']:
-                    planet.complete_building(city)
-            if order.get('eco boost'):
-                planet.complete_eco_boost()
-            if order.get('invent'):
-                planet.complete_invention()
-            if 'create_meteorites' in order:
-                planet.complete_creating(order['create_meteorites'])
-        
-        for planet, order in orders.items():
-            if 'attack' in order:
-                self.__attack(order['attack'])
-            
-    def info(self, planet_name = None):
-        if planet_name is None:
-            info = dict()
-            for planet in self.__planet:
-                info[planet] = self.__planet[planet].rate_of_life()
-            info['eco_rate'] = self.eco_rate
-            return info
+    def ordered_attack_cities(self, other_planet) -> list[City]:
+        """
+        Returns a list of all cities of provided planet that are in order for attack.
+        """
+        nround = self.game().show_round()
+        self.__cursor.execute("""SELECT c.id FROM City c
+                              JOIN Orders o ON o.argument=c.id
+                              WHERE o.action='Attack' AND o.planetid=%s AND c.planetid=%s AND o.round=%s""", 
+                              (self.id, other_planet.id, nround))
+        result = self.__cursor.fetchall()
+        if result is None:
+            return []
         else:
-            info = dict()
-            info['login'] = self.__planet[planet_name].login()
-            info['meteorites_count'] = self.__planet[planet_name].meteorites_count()
-            info['is_invented'] = self.__planet[planet_name].is_invented()
-            info['rate_of_life'] = self.__planet[planet_name].rate_of_life()
-            info['balance'] = self.__planet[planet_name].balance()
-            info['eco_rate'] = self.eco_rate
-            return info
+            return list(map(lambda x: City(x[0], self.__conn), result))
+    
+    def ordered_shield_cities(self) -> list[City]:
+        nround = self.game().show_round()
+        self.__cursor.execute("SELECT c.id FROM City c JOIN Orders o ON c.id = o.argument WHERE o.action = 'Shield' AND o.round = %s", (nround,))
+        results = self.__cursor.fetchall()
+        if results is None:
+            return []
+        else:
+            return list(map(lambda x: City(x[0], self.__conn), results))
+
+    def develop_city(self, city_id: int):
+        """
+        Adding development of the provided city to the order
+        """
+        try:
+            self.__cursor.execute("CALL Develop(%s, %s)", (self.id, city_id))
+            self.__conn.commit()
+        except psycopg2.DatabaseError as ex:
+            self.__conn.rollback()
+            raise CDException(ex.pgcode) from ex
+
+    def developed_cities(self) -> list[City]:
+        """
+        Returns a list of cities that are ordered to develop
+        """
+        nround = self.game().show_round()
+        self.__cursor.execute("SELECT c.id FROM City c JOIN Orders o ON c.id = o.argument WHERE o.action = 'Develop' AND o.round=%s", (nround, ))
+        results = self.__cursor.fetchall()
+        if results is None:
+            return []
+        else:
+            return list(map(lambda x: City(x[0], self.__conn), results))
+    
+    def eco_boost(self):
+        """
+        Adds to the order sending a meteorite to the anomaly.
+        """
+        try:
+            self.__cursor.execute("CALL EcoBoost(%s)", (self.id,))
+            self.__conn.commit()
+        except psycopg2.DatabaseError as ex:
+            self.__conn.rollback()
+            raise CDException(ex.pgcode) from ex
+    
+    def is_planned_eco_boost(self):
+        """
+        Checks whether the eco boost is ordered.
+        """
+        self.__cursor.execute("SELECT EXISTS(SELECT * FROM Orders WHERE action='Eco boost' AND planetid=%s AND round=%s)", (self.id, self.game().show_round()))
+        return self.__cursor.fetchone()[0]
+
+    def rate_of_life(self) -> int:
+        """
+        Returns the rate of life on the planet which is average of rates of life in cities of the planet.
+        """
+        self.__cursor.execute("SELECT Rate_of_life_in_planet(%s)", (self.id,))
+        return int(self.__cursor.fetchone()[0])
+
+    def income(self) -> int:  # доход
+        """
+        Returns the income of the planet for the round
+        """
+        self.__cursor.execute("SELECT Planet_income(%s)", (self.id,))
+        return int(self.__cursor.fetchone()[0])
+    
+    def add_money(self, income: int) -> None:
+        """
+        Adding income to the planet's balance
+        """
+        self.__cursor.execute("UPDATE Planet SET balance = balance + %s WHERE id = %s", (income, self.id))
+        self.__conn.commit()
+    
+    def send_sanctions(self, planet_id: int) -> None:
+        """
+        Sending sanctions from one planet to another.
+        """
+        try:
+            self.__cursor.execute("CALL Send_Sanctions(%s, %s)", (self.id, planet_id))
+            self.__conn.commit()
+        except psycopg2.DatabaseError as ex:
+            self.__conn.rollback()
+            raise CDException(ex.pgcode) from ex
+    
+    def get_sanc_set(self) -> list[str]:
+        """
+        Returns a list of all planets that applied sanctions to the planet in the previous round.
+        """
+        self.__cursor.execute("SELECT p.name FROM Sanctions s JOIN Planet p ON p.id=s.planetfrom WHERE s.PlanetTo = %s",
+                              (self.id,))
+        result = self.__cursor.fetchall()
+        if result is None:
+            return []
+        else:
+            return [x[0] for x in result]
+    
+    def ordered_sanctions_list(self):
+        """
+        Returns a list of all planets that will be sanctioned.
+        """
+        self.__cursor.execute("""SELECT argument FROM Orders WHERE action='Sanctions' AND
+                              planetid=%s AND round=%s""", (self.id, self.game().show_round()))
+        results = self.__cursor.fetchall()
+        if results is None:
+            return []
+        else:
+            return list(map(lambda x: City(x[0], self.__conn), results))
+
+    def build_shield(self, city_id: int) -> None:
+        """
+        Adds to order building a shield under the city if it's possible
+        """
+        try:
+            self.__cursor.execute("CALL Build_Shield(%s, %s)", (self.id, city_id))
+            self.__conn.commit()
+        except psycopg2.DatabaseError as ex:
+            self.__conn.rollback()
+            raise CDException(ex.pgcode) from ex
+    
+    def shielded_cities(self) -> list[City]:
+        """
+        Returns a list of all shielded cities.
+        """
+        self.__cursor.execute("SELECT id FROM City WHERE planetid=%s AND isshielded", (self.id, ))
+        result = self.__cursor.fetchall()
+        if result is None:
+            return []
+        else:
+            return list(map(lambda x: City(x[0], self.__conn), result))
+                
+    def transfer(self, planet_id : int, money: int) -> None:
+        """
+        Transfers provided amount of money from the planet to given
+        """
+        try:
+            self.__cursor.execute("CALL Transfer(%s, %s, %s)", (self.id, planet_id, money))
+            self.__conn.commit()
+        except psycopg2.DatabaseError as ex:
+            self.__conn.rollback()
+            raise CDException(ex.pgcode) from ex
+
+
+class Game:
+    """
+    Representation of the lobby in game. Works like a wrapper of sql queries.
+    """
+
+    def __init__(self, id: int, conn: psycopg2.extensions.connection):
+        self.id = id
+        self.__conn = conn
+        self.__cursor = conn.cursor()
+    
+    @classmethod
+    def init_with_check(cls, id : int, conn: psycopg2.extensions.connection):
+        cursor = conn.cursor()
+        cursor.execute("SELECT EXISTS(SELECT * FROM Game WHERE id=%s)", (id,))
+        if cursor.fetchone()[0]:
+            return cls(id, conn)
+        else:
+            return None
+        
+    @classmethod
+    def make_new_game(cls, planets: int, conn: psycopg2.extensions.connection):
+        cursor = conn.cursor()
+        cursor.execute("SELECT COALESCE(MAX(id), 0) FROM Game")
+        id = cursor.fetchone()[0] + 1
+        cursor.execute("INSERT INTO Game(id, planets) VALUES (%s, %s)", (id, planets))
+        conn.commit()
+        return cls(id, conn)
+
+    @classmethod
+    def all_games(cls, conn: psycopg2.extensions.connection):
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM Game")
+        result = cursor.fetchall()
+        if result is None:
+            return []
+        else:
+            return [Game(x[0], conn) for x in result]
+
+    def __eq__(self, other):
+        return self.id == other.id
+
+    def join_user(self, user_id: int) -> None:
+        """
+        Adds given user to the game
+        """
+        try:
+            self.__cursor.execute("CALL Join_User(%s, %s)", (user_id, self.id))
+            self.__conn.commit()
+        except psycopg2.DatabaseError as ex:
+            self.__conn.rollback()
+            raise CDException(ex.pgcode) from ex
+    
+    def join_admin(self, user_id: int) -> None:
+        """
+        Adds given user to the game
+        """
+        try:
+            self.__cursor.execute("CALL Join_Admin(%s, %s)", (self.id, user_id))
+            self.__conn.commit()
+        except psycopg2.DatabaseError as ex:
+            self.__conn.rollback()
+            raise CDException(ex.pgcode) from ex
+
+    def admins_list(self) -> list[User]:
+        """
+        Returns a list of all admins of the game.
+        """
+        self.__cursor.execute("""SELECT tgid FROM Admins WHERE gameid=%s""", (self.id, ))
+        admins_list = self.__cursor.fetchall()
+        if admins_list is None:
+            return []
+        else:
+            return list(map(lambda x: User(x[0], self.__conn), admins_list))
+
+    def planets(self) -> list[Planet]:
+        """
+        Returns a list of all planets in the game.
+        """
+        self.__cursor.execute("SELECT id FROM Planet WHERE gameid=%s", (self.id, ))
+        result = self.__cursor.fetchall()
+        return list(map(lambda x: Planet(x[0], self.__conn), result))
+        
+    def number_of_planets(self) -> int:
+        """
+        Returns the number of the planets in the game.
+        """
+        self.__cursor.execute("SELECT planets FROM Game WHERE id=%s", (self.id,))
+        return self.__cursor.fetchone()[0]
+    
+    def active_users(self) -> list[User]:
+        """
+        Returns a list of users in the lobby.
+        """
+        self.__cursor.execute("""SELECT tgid FROM "User" WHERE gameid=%s""", (self.id,))
+        res = self.__cursor.fetchall()
+        if res is None:
+            return []
+        else:
+            return [User(x[0], self.__conn) for x in res]
+
+    def get_homeland(self, user_id: int) -> Optional[Planet]:
+        """
+        Returns a planet of the user
+        """
+        self.__cursor.execute("SELECT id FROM Planet WHERE ownerid = %s AND gameid=%s", (user_id, self.id))
+        res = self.__cursor.fetchone()
+        if res is None:
+            return None
+        else:
+            return Planet(res[0], self.__conn)
+
+    def is_all_active(self) -> bool:
+        """
+        Checks whether all planets have his owner online.
+        """
+        self.__cursor.execute("SELECT EXISTS(SELECT * FROM Planet WHERE gameid=%s AND ownerid IS NULL)", (self.id, ))
+        return not self.__cursor.fetchone()[0]
+
+    def exists(self) -> bool:
+        self.__cursor.execute("SELECT EXISTS(SELECT * FROM Game WHERE id=%s)", (self.id, ))
+        return self.__cursor.fetchone()[0]
+
+    def show_round(self) -> Optional[int]:
+        """
+        Return a number of the round in the game if it's active and -1 if it's inactive.
+        """
+        self.__cursor.execute("SELECT COALESCE(round, -1) FROM Game WHERE id=%s", (self.id,))
+        return self.__cursor.fetchone()[0]
+    
+    def start_new_round(self) -> None:
+        """
+        Starts a new round
+        """
+        try:
+            self.__cursor.execute("CALL Start_new_round(%s)", (self.id, ))
+            self.__conn.commit()
+        except psycopg2.DatabaseError as ex:
+            self.__conn.rollback()
+            raise CDException(ex.pgcode) from ex
+    
+    def end_this_round(self) -> None:
+        """
+        Ends this round
+        """
+        try:
+            self.__cursor.execute("CALL End_this_round(%s)", (self.id, ))
+            self.__conn.commit()
+        except psycopg2.DatabaseError as ex:
+            self.__conn.rollback()
+            raise CDException(ex.pgcode) from ex
+        
+    def end_game(self) -> None:
+        self.__cursor.execute("CALL end_game(%s)", (self.id,))
+        self.__conn.commit()
+
+    def eco_rate(self) -> int:
+        """
+        Returns an eco rate of the game.
+        """
+        self.__cursor.execute("SELECT ecorate FROM Game WHERE id=%s", (self.id, ))
+        return self.__cursor.fetchone()[0]
+    
+    def status(self) -> str:
+        """
+        Returns status of the game.
+        """
+        self.__cursor.execute("SELECT status FROM Game WHERE id=%s", (self.id, ))
+        return self.__cursor.fetchone()[0]
+    
+    def extract_orders_data(self, path: str) -> None:
+        writer = pd.ExcelWriter(path)
+        planets = self.planets()
+        df = pd.DataFrame(columns=map(lambda x: x.name(), planets),
+                          index=['Развить города', 
+                                 'Построить щит над', 
+                                 'Изобрести технологию отправки метеоритов', 
+                                 'Закупить метеориты', 
+                                 'Отправить метеорит в аномалию', 
+                                 'Наложить санкции на', 
+                                 'Атаковать'])
+        self.__cursor.execute("SELECT MAX(round) FROM Orders")
+        max_round = self.__cursor.fetchone()[0]
+        for nround in range(1, max_round + 1):
+            for planet in planets:
+                # adding develop info
+                self.__cursor.execute("SELECT argument FROM Orders WHERE action='Develop' AND planetid=%s", (planet.id, ))
+                result = self.__cursor.fetchall()
+                if result is None:
+                    result = []
+                developed_cities = list(map(lambda x: x[0].name(), result))
+                df.loc['Развить города', planet.name()] = ', '.join(developed_cities)
+
+                # adding shield info
+                self.__cursor.execute("SELECT argument FROM Orders WHERE action='Shield' AND planetid=%s", (planet.id, ))
+                result = self.__cursor.fetchall()
+                if result is None:
+                    result = []
+                shielded_cities = list(map(lambda x: x[0].name(), result))
+                df.loc['Построить щит над', planet.name()] = ', '.join(shielded_cities)
+
+                # adding invention info
+                is_invented = planet.is_invented()
+                is_ordered = planet.is_invent_in_order()
+                if is_invented:
+                    df.loc['Изобрести технологию отправки метеоритов', planet.name()] = 'Уже изобретена'
+                elif is_ordered:
+                    df.loc['Изобрести технологию отправки метеоритов', planet.name()] = 'Да'
+                else:
+                    df.loc['Изобрести технологию отправки метеоритов', planet.name()] = 'Нет'
+                
+                # adding creation info
+                num_created = planet.number_of_ordered_meteorites()
+                df.loc['Закупить метеориты', planet.name()] = str(num_created)
+
+                # adding eco boost info
+                is_boosted = planet.is_planned_eco_boost()
+                df.loc['Отправить метеорит в аномалию', planet.name()] = 'Да' if is_boosted else 'Нет'
+
+                # sanctions info
+                sanctions_list = list(map(lambda x: x.name(), planet.ordered_sanctions_list()))
+                df.loc['Наложить санкции на', planet.name()] = ', '.join(sanctions_list)
+
+                # attack cities
+                attacked_list = list(map(lambda x: x.name(), planet.ordered_attack_cities()))
+                df.loc['Атаковать', planet.name()] = ', '.join(attacked_list)
+            df.to_excel(writer, f'{nround} раунд')
+        writer.close()
+
+    def get_all_messages(self) -> list[tuple[int]]:
+        """
+        Returns all message ids with author ids that was sent to the users of the game.
+        """
+        self.__cursor.execute("""SELECT im.id, p.ownerid FROM InfoMessages im 
+                              JOIN Planet p ON p.id=im.planetid
+                              WHERE p.gameid=%s""", (self.id, ))
+        res = self.__cursor.fetchall()
+        if res is None:
+            res = []
+        self.__cursor.execute("""SELECT pm.messageid, p.ownerid FROM PlanetMessages pm
+                              JOIN Planet p ON p.id = pm.ownerid WHERE p.gameid=%s""", (self.id, ))
+        res1 = self.__cursor.fetchall()
+        if res1 is None:
+            res1 = []
+        return res + res1
+    
+    def delete_all_messages(self) -> None:
+        """
+        Deletes all messages with information about this round.
+        """
+        self.__cursor.execute("""DELETE FROM InfoMessages WHERE planetid IN 
+                              (SELECT id FROM Planet WHERE gameid=%s)""", (self.id, ))
+        self.__cursor.execute("""DELETE FROM PlanetMessages WHERE planetid IN
+                              (SELECT id FROM Planet WHERE gameid=%s)""", (self.id, ))
+        self.__conn.commit()
+        return
+    
+    def get_all_user_messages(self, user: User) -> list[int]:
+        """
+        Returns all ids of the messages of the user sent to him.
+        """
+        self.__cursor.execute("""SELECT im.id FROM InfoMessages im
+                              JOIN Planet p ON p.id=im.planetid
+                              WHERE p.ownerid=%s""", (user.id,))
+        res = self.__cursor.fetchall()
+        if res is None:
+            res = []
+        self.__cursor.execute("""SELECT pm.messageid FROM PlanetMessages pm
+                              JOIN Planet p ON p.id = pm.ownerid WHERE p.ownerid=%s""", (user.id, ))
+        res1 = self.__cursor.fetchall()
+        if res1 is None:
+            res1 = []
+        result = res + res1
+        return [x[0] for x in result]
+    
+    def delete_all_user_messages(self, user: User) -> None:
+        """
+        Deletes all messages with information about this round.
+        """
+        self.__cursor.execute("""DELETE FROM InfoMessages WHERE planetid IN 
+                              (SELECT id FROM Planet WHERE ownerid=%s)""", (user.id, ))
+        self.__cursor.execute("""DELETE FROM PlanetMessages WHERE planetid IN
+                              (SELECT id FROM Planet WHERE ownerid=%s)""", (user.id, ))
+        self.__conn.commit()
+        return
