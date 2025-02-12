@@ -1,7 +1,7 @@
-import psycopg2
-from dotenv import dotenv_values
+from game_classes import *
+from page import *
+from dotenv import *
 env_config = dotenv_values()
-
 db_connection = psycopg2.connect(
     dbname=env_config['DATABASE_NAME'],
     user=env_config['USER_NAME'],
@@ -10,7 +10,5 @@ db_connection = psycopg2.connect(
     port=env_config['PORT']
 )
 cursor = db_connection.cursor()
-
-cursor.execute("SET SCHEMA 'myschema'")
-cursor.execute("SELECT * FROM Game")
-print(cursor.fetchone())
+game = Game(3, db_connection)
+html_page_generator(game)

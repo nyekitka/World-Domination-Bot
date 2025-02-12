@@ -231,12 +231,17 @@ class Planet:
         self.__cursor.execute("SELECT gameid FROM planet WHERE id=%s", (self.id,))
         return self.__cursor.fetchone()[0]
 
-    def cities(self) -> list[City]:
+    def cities(self, nondestroyed:bool = True) -> list[City]:
         """
         Returns the list of non-destroyed cities on the planet
         """
-        self.__cursor.execute("SELECT id FROM city WHERE planetid=%s AND development > 0", (self.id,))
+        if nondestroyed:  
+            self.__cursor.execute("SELECT id FROM city WHERE planetid=%s AND development > 0", (self.id,))
+        else:
+            self.__cursor.execute("SELECT id FROM city WHERE planetid=%s", (self.id, ))
         ls = self.__cursor.fetchall()
+        if ls is None:
+            ls = []
         return list(map(lambda x: City(x[0], self.__conn), ls))
     
     def balance(self) -> int:
@@ -362,6 +367,21 @@ class Planet:
         else:
             return list(map(lambda x: City(x[0], self.__conn), result))
     
+    def ordered_attack_all_cities(self) -> list[City]:
+        """
+        Returns a list of all cities that are in order for attack.
+        """
+        nround = self.game().show_round()
+        self.__cursor.execute("""SELECT c.id FROM City c
+                              JOIN Orders o ON o.argument=c.id
+                              WHERE o.action='Attack' AND o.planetid=%s AND o.round=%s""", 
+                              (self.id, nround))
+        result = self.__cursor.fetchall()
+        if result is None:
+            return []
+        else:
+            return list(map(lambda x: City(x[0], self.__conn), result))
+
     def ordered_shield_cities(self) -> list[City]:
         nround = self.game().show_round()
         self.__cursor.execute("SELECT c.id FROM City c JOIN Orders o ON c.id = o.argument WHERE o.action = 'Shield' AND o.round = %s", (nround,))
@@ -673,7 +693,9 @@ class Game:
     def extract_orders_data(self, path: str) -> None:
         writer = pd.ExcelWriter(path)
         planets = self.planets()
-        df = pd.DataFrame(columns=map(lambda x: x.name(), planets),
+        max_round = 6
+        for nround in range(1, max_round + 1):
+            df = pd.DataFrame(columns=list(map(lambda x: x.name(), planets)),
                           index=['Развить города', 
                                  'Построить щит над', 
                                  'Изобрести технологию отправки метеоритов', 
@@ -681,50 +703,75 @@ class Game:
                                  'Отправить метеорит в аномалию', 
                                  'Наложить санкции на', 
                                  'Атаковать'])
-        self.__cursor.execute("SELECT MAX(round) FROM Orders")
-        max_round = self.__cursor.fetchone()[0]
-        for nround in range(1, max_round + 1):
             for planet in planets:
                 # adding develop info
-                self.__cursor.execute("SELECT argument FROM Orders WHERE action='Develop' AND planetid=%s", (planet.id, ))
+                self.__cursor.execute("""SELECT c.name FROM Orders o
+                                      JOIN City c ON c.id=o.argument
+                                      WHERE action='Develop' AND o.planetid=%s AND o.round=%s""", (planet.id, nround))
                 result = self.__cursor.fetchall()
                 if result is None:
                     result = []
-                developed_cities = list(map(lambda x: x[0].name(), result))
+                developed_cities = list(map(lambda x: x[0], result))
                 df.loc['Развить города', planet.name()] = ', '.join(developed_cities)
 
                 # adding shield info
-                self.__cursor.execute("SELECT argument FROM Orders WHERE action='Shield' AND planetid=%s", (planet.id, ))
+                self.__cursor.execute("""SELECT c.name FROM Orders o
+                                      JOIN City c ON c.id=o.argument
+                                      WHERE action='Shield' AND o.planetid=%s AND o.round=%s""", (planet.id, nround))
                 result = self.__cursor.fetchall()
                 if result is None:
                     result = []
-                shielded_cities = list(map(lambda x: x[0].name(), result))
+                shielded_cities = list(map(lambda x: x[0], result))
                 df.loc['Построить щит над', planet.name()] = ', '.join(shielded_cities)
 
                 # adding invention info
-                is_invented = planet.is_invented()
-                is_ordered = planet.is_invent_in_order()
-                if is_invented:
+                self.__cursor.execute("""SELECT o.round FROM Orders o WHERE o.action='Invent' AND o.planetid=%s""", (planet.id,))
+                invention_round = self.__cursor.fetchone()
+                if invention_round is None:
+                    invention_round = max_round + 1
+                else:
+                    invention_round = invention_round[0]
+                if invention_round < nround:
                     df.loc['Изобрести технологию отправки метеоритов', planet.name()] = 'Уже изобретена'
-                elif is_ordered:
+                elif invention_round == nround:
                     df.loc['Изобрести технологию отправки метеоритов', planet.name()] = 'Да'
                 else:
                     df.loc['Изобрести технологию отправки метеоритов', planet.name()] = 'Нет'
                 
                 # adding creation info
-                num_created = planet.number_of_ordered_meteorites()
+                self.__cursor.execute("SELECT o.argument FROM Orders o WHERE o.round=%s AND o.planetid=%s AND o.action='Create Meteorites'",
+                                      (nround, planet.id))
+                num_created = self.__cursor.fetchone()
+                if num_created is None:
+                    num_created = 0
+                else:
+                    num_created = num_created[0]
                 df.loc['Закупить метеориты', planet.name()] = str(num_created)
 
                 # adding eco boost info
-                is_boosted = planet.is_planned_eco_boost()
+                self.__cursor.execute("SELECT EXISTS(SELECT * FROM Orders WHERE action='Eco boost' AND round=%s AND planetid=%s)",
+                                      (nround, planet.id))
+                is_boosted = self.__cursor.fetchone()[0]
                 df.loc['Отправить метеорит в аномалию', planet.name()] = 'Да' if is_boosted else 'Нет'
 
                 # sanctions info
-                sanctions_list = list(map(lambda x: x.name(), planet.ordered_sanctions_list()))
+                self.__cursor.execute("SELECT o.argument FROM Orders o WHERE o.action='Sanctions' AND o.planetid=%s AND o.round=%s",
+                                      (planet.id, nround))
+                sanctions_list = self.__cursor.fetchall()
+                if sanctions_list is None:
+                    sanctions_list = []
+                else:
+                    sanctions_list = [Planet(x[0], self.__conn).name() for x in sanctions_list]
                 df.loc['Наложить санкции на', planet.name()] = ', '.join(sanctions_list)
 
                 # attack cities
-                attacked_list = list(map(lambda x: x.name(), planet.ordered_attack_cities()))
+                self.__cursor.execute("SELECT o.argument FROM Orders o WHERE o.action='Attack' AND o.planetid=%s AND o.round=%s",
+                                      (planet.id, nround))
+                attacked_list = self.__cursor.fetchall()
+                if attacked_list is None:
+                    attacked_list = []
+                else:
+                    attacked_list = [City(x[0], self.__conn).name() for x in attacked_list]
                 df.loc['Атаковать', planet.name()] = ', '.join(attacked_list)
             df.to_excel(writer, f'{nround} раунд')
         writer.close()

@@ -62,7 +62,7 @@ storage = MemoryStorage()
 bot = Bot(token=bot_token)
 dp = Dispatcher(storage=storage)
 messager = Messager(db_connection)
-OwnerID = env_config['OWNER']
+OwnerID = int(env_config['OWNER'])
 
 ############################################ Вспомогательные функции ##################################################
         
@@ -99,28 +99,35 @@ async def timer(game: Game, secs: int = round_length):
     if round == 1:
         css_generator(game)
     html_page_generator(game)
+<<<<<<< HEAD
     os.chdir("round results")
     with ZipFile(f'{game.id} game {round} round results.zip', 'w') as zfile:
         zfile.write(f'style{game.id}.css')
         zfile.write(f'results_{game.id}_{round}.html')
         for file in os.listdir('fonts'):
             zfile.write(f'fonts/{file}')
+=======
+    with ZipFile(f'./round results/{game.id} game {round} round results.zip', 'w') as zfile:
+        zfile.write(f'./round results/style{game.id}.css')
+        zfile.write(f'./round results/results_{game.id}_{round}.html')
+        for file in os.listdir('round results/fonts'):
+            zfile.write(f'round results/fonts/{file}')
+>>>>>>> 33955a45114621b55eb0eb68e203a034ef0167ed
     for admin in game.admins_list():
         await bot.send_document(admin.id, 
-                                FSInputFile(f'{game.id} game {round} round results.zip'),
+                                FSInputFile(f'./round results/{game.id} game {round} round results.zip'),
                                 caption=messager.admin_round_end(round))
     if round == 6:
         game.extract_orders_data(f'./excel files/game {game.id} results.xlsx')
         for admin in game.admins_list():
             await bot.send_document(admin.id,
-                                    FSInputFile(f'game results {game.id}.xlsx'),
+                                    FSInputFile(f'./excel files/game {game.id} results.xlsx'),
                                     caption=messager.game_results())
             await bot.send_message(admin.id, messager.goodbye())
         for user in game.active_users():
-            await bot.send_message(admin.id, messager.end_of_the_game(), parse_mode='MarkdownV2')
-            await bot.send_message(admin.id, messager.goodbye())
+            await bot.send_message(user.id, messager.end_of_the_game(), parse_mode='MarkdownV2')
+            await bot.send_message(user.id, messager.goodbye())
         game.end_game()
-    os.chdir('..')
         
 async def method_executor_call(method, call : types.CallbackQuery, *args):
     try:
@@ -191,24 +198,49 @@ async def start(message : types.Message):
         await message.answer(messager.start_msg(isadmin, user.game() is not None, message.from_user.first_name),
                              reply_markup=kb.start_keyboard(isadmin))
 
-@dp.message(Command('knight'), F.from_user.id == OwnerID)
-async def knight(message: types.Message, command: CommandObject):
-    username = command.args.strip()
-    if username.startswith('@'):
-        user = await bot.get_chat(username)
-        cursor.execute("DELETE FROM \"User\" WHERE tgid=%s", (user.id,))
-        cursor.execute("INSERT INTO Admins(tgid) VALUES (%s)", (user.id,))
-        await bot.send_message(user.id, messager.knight())
-        await message.answer(messager.knighting_for_leader(user.first_name))
+@dp.message(Command('request'), F.chat.func(lambda user: not User(user.id, db_connection).is_admin()))
+async def request(message: types.Message):
+    userid = message.from_user.id
+    await message.answer(messager.request_for_user())
+    await bot.send_message(OwnerID, messager.request_for_leader(f'[{message.from_user.full_name}](tg://user?id={userid})'),
+                           reply_markup=kb.request_keyboard(userid), parse_mode='markdownv2')
+    
+@dp.callback_query(F.data.startswith('knight'))
+async def knight(call: types.CallbackQuery, state: FSMContext):
+    call.answer('')
+    id = int(call.data.split()[1])
+    user = await bot.get_chat(id)
+    cursor.execute("SELECT EXISTS(SELECT * FROM Planet WHERE ownerid=%s)", (id,))
+    wasingame = cursor.fetchone()[0]
+    cursor.execute("UPDATE Planet SET ownerid=NULL WHERE ownerid=%s", (id,))
+    cursor.execute("DELETE FROM \"User\" WHERE tgid=%s", (id,))
+    cursor.execute("INSERT INTO Admins(tgid) VALUES (%s)", (id,))
+    db_connection.commit()
+    await call.message.answer(messager.knighting_for_leader(user.full_name))
+    await bot.send_message(id, messager.knight())
+    if wasingame:
+        await bot.send_message(id, messager.kick_due_to_admin())
 
+@dp.callback_query(F.data.startswith('notknight'))
+async def notknight(call: types.CallbackQuery, state: FSMContext):
+    call.answer('')
+    id = int(call.data.split()[1])
+    user = await bot.get_chat(id)
+    await call.message.answer(messager.notknight_for_leader(user.full_name))
+    await bot.send_message(id, messager.notknight())
+    
 @dp.message(Command('unknight'), F.from_user.id == OwnerID)
 async def unknight(message: types.Message, command: CommandObject):
     username = command.args.strip()
     if username.startswith('@'):
         user = await bot.get_chat(username)
+        cursor.execute("SELECT ISNULL(gameid) FROM Admins WHERE tgid=%s", (user.id,))
+        wasingame = cursor.fetchone()[0]
         cursor.execute("DELETE FROM Admins WHERE tgid=%s", (user.id,))
         cursor.execute("INSERT INTO \"User\"(tgid) VALUES (%s)", (user.id,))
         await bot.send_message(user.id, messager.unknight())
+        if wasingame:
+            await bot.send_message(user.id, messager.kick_due_to_admin())
         await message.answer(messager.unknighting_for_leader(user.first_name))
 
 
@@ -239,12 +271,13 @@ async def leave_lobby(message: types.Message):
     if game is not None:
         planet = game.get_homeland(user.id)
     res = await method_executor_msg(user.kick_user, tgid, reply_markup=kb.start_keyboard(user.is_admin()))
-    if res:
+    if res and game is not None:
         if not user.is_admin():
             await message.answer(messager.leaving_msg(),
                            reply_markup=kb.start_keyboard(user.is_admin()))
             mids = game.get_all_user_messages(user)
-            await bot.delete_messages(user.id, mids)
+            if len(mids) > 0:
+                await bot.delete_messages(user.id, mids)
             status = game.status()
             game.delete_all_user_messages(user)
             if status == 'Waiting':
@@ -258,7 +291,7 @@ async def leave_lobby(message: types.Message):
 
 @dp.message(Command('help'))
 async def help(message : types.Message):
-    with open('help.txt', 'r', encoding='UTF-8') as file:
+    with open('./presets/help.txt', 'r', encoding='UTF-8') as file:
         text = ''.join(file.readlines())
         await message.answer(text=text, parse_mode='MarkdownV2')
 
@@ -280,7 +313,7 @@ async def start_game(message : types.Message):
         all_planets = game.planets()
         game.start_new_round()
         for admin in all_admins:
-            await bot.send_message(admin.id, messager.round_admins(1), parse_mode='MarkdownV2')
+            await bot.send_message(admin.id, messager.round_admins(1), parse_mode='MarkdownV2', reply_markup=types.ReplyKeyboardRemove())
         for planet in all_planets:
             user_id = planet.user_id()
             await print_all_info(1, planet, user_id)
@@ -561,7 +594,7 @@ async def set_amount_of_money(message: types.Message, state: FSMContext):
         cursor.execute("UPDATE InfoMessages SET id=%s WHERE id=%s", (to_msg.message_id, to_city_id))
         db_connection.commit()
         await message.answer(messager.successful_transaction(to_planet.name()))
-        await bot.send_message(to_planet.user_id(), messager.transaction_notification(to_planet.name(), amount))
+        await bot.send_message(to_planet.user_id(), messager.transaction_notification(from_planet.name(), amount))
         await state.clear()
 
 @dp.message(Command('endgame'), F.chat.func(lambda user: User(user.id, db_connection).is_admin()))
@@ -589,6 +622,8 @@ async def main():
 
 if __name__ == '__main__':
     try:
+        cursor.execute("SET SCHEMA 'myschema';")
+        db_connection.commit()
         asyncio.run(main())
     except KeyboardInterrupt:
         print('Working was interrupted.')

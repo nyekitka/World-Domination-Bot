@@ -81,7 +81,7 @@ class Messager:
         all_info = [planet.name(),
                     planet.balance(),
                     planet.rate_of_life()]
-        cities = planet.cities()
+        cities = planet.cities(False)
         for city in cities:
             addition = ''
             if city.is_under_shield():
@@ -112,7 +112,7 @@ class Messager:
 
     def other_planets_message(self, planet: Planet) -> str:
         args = [planet.name()]
-        for city in planet.cities():
+        for city in planet.cities(False):
             args.extend([city.name() + (' ❌' if city.development() == 0 else ''), city.development()])
         return Messages['other_planet'].format(*args)
     
@@ -211,3 +211,21 @@ class Messager:
     
     def unknighting_for_leader(self, name):
         return Messages['unknighting_for_leader'].format(name)
+    
+    def request_for_user(self):
+        return Messages['request_for_user']
+    
+    def request_for_leader(self, name):
+        return Messages['request_for_leader'].format(name)
+    
+    def notknight_for_leader(self, name):
+        return Messages['notknight_leader'].format(name)
+    
+    def notknight(self):
+        return Messages['notknight']
+    
+    def kick_due_to_admin(self):
+        return Messages['kick_due_to_admin']
+    
+    def kick_due_to_not_admin(self):
+        return Messages['kick_due_to_not_admin']
