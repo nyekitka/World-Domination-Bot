@@ -3,7 +3,7 @@ import json
 from typing import Optional
 import pandas as pd
 
-__exceptions_file = open('presets\\exception codes.json', encoding='utf-8')
+__exceptions_file = open('presets/exception codes.json', encoding='utf-8')
 errors = json.load(__exceptions_file)
 
 class CDException(Exception):
@@ -106,9 +106,8 @@ class City:
     @classmethod
     def make_new_city(cls, name: str, planetid: int, conn: psycopg2.extensions.connection):
         cursor = conn.cursor()
-        cursor.execute("SELECT COALESCE(MAX(id), 0) FROM City")
-        id = cursor.fetchone()[0] + 1
-        cursor.execute("INSERT INTO City(id, name, planetid) VALUES (%s, %s, %s)", (id, name, planetid))
+        cursor.execute("INSERT INTO City(name, planetid) VALUES (%s, %s) RETURNING id", (name, planetid))
+        id = cursor.fetchone()[0]
         conn.commit()
         return cls(id, conn)
 
@@ -200,9 +199,8 @@ class Planet:
     @classmethod
     def make_new_planet(cls, name: str, gameid: int, conn: psycopg2.extensions.connection):
         cursor = conn.cursor()
-        cursor.execute("SELECT COALESCE(MAX(id), 0) FROM Planet");
-        id = cursor.fetchone()[0] + 1
-        cursor.execute("INSERT INTO Planet(id, name, gameid) VALUES (%s, %s, %s)", (id, name, gameid))
+        cursor.execute("INSERT INTO Planet(name, gameid) VALUES (%s, %s) RETURNING id", (name, gameid))
+        id = cursor.fetchone()[0]
         conn.commit()
         return cls(id, conn)
 
@@ -526,9 +524,8 @@ class Game:
     @classmethod
     def make_new_game(cls, planets: int, conn: psycopg2.extensions.connection):
         cursor = conn.cursor()
-        cursor.execute("SELECT COALESCE(MAX(id), 0) FROM Game")
-        id = cursor.fetchone()[0] + 1
-        cursor.execute("INSERT INTO Game(id, planets) VALUES (%s, %s)", (id, planets))
+        cursor.execute("INSERT INTO Game(planets) VALUES (%s) RETURNING id", (planets,))
+        id = cursor.fetchone()[0]
         conn.commit()
         return cls(id, conn)
 

@@ -113,7 +113,7 @@ conversations_admin_keyboard = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(tex
 
 #Клавиатура выбора паков
 def pack_keyboard():
-    file = open('.\\presets\\planets_and_cities.json', encoding='utf-8')
+    file = open('./presets/planets_and_cities.json', encoding='utf-8')
     d = json.load(file)
     builder = InlineKeyboardBuilder()
     for key in d.keys():

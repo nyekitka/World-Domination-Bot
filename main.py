@@ -39,16 +39,22 @@ env_config = dotenv_values()
 bot_token = env_config['BOT_TOKEN']
 round_length = int(env_config['ROUND_LENGTH'])
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
+
+logging.debug(f"""dbname={env_config['POSTGRES_NAME']},
+    user={env_config['POSTGRES_USER']},
+    password={env_config['POSTGRES_PASSWORD']},
+    host={env_config['POSTGRES_HOST']},
+    port={env_config['POSTGRES_PORT']})""")
 
 # database initialization
 
 db_connection = psycopg2.connect(
-    dbname=env_config['DATABASE_NAME'],
-    user=env_config['USER_NAME'],
-    password=env_config['DATABASE_PASSWORD'],
-    host=env_config['DATABASE_HOST'],
-    port=env_config['PORT']
+    dbname=env_config['POSTGRES_NAME'],
+    user=env_config['POSTGRES_USER'],
+    password=env_config['POSTGRES_PASSWORD'],
+    host=env_config['POSTGRES_HOST'],
+    port=env_config['POSTGRES_PORT']
 )
 cursor = db_connection.cursor()
     
@@ -98,13 +104,13 @@ async def timer(game: Game, secs: int = round_length):
         zfile.write(f'style{game.id}.css')
         zfile.write(f'results_{game.id}_{round}.html')
         for file in os.listdir('fonts'):
-            zfile.write(f'fonts\\{file}')
+            zfile.write(f'fonts/{file}')
     for admin in game.admins_list():
         await bot.send_document(admin.id, 
                                 FSInputFile(f'{game.id} game {round} round results.zip'),
                                 caption=messager.admin_round_end(round))
     if round == 6:
-        game.extract_orders_data(f'.\\excel files\\game {game.id} results.xlsx')
+        game.extract_orders_data(f'./excel files/game {game.id} results.xlsx')
         for admin in game.admins_list():
             await bot.send_document(admin.id,
                                     FSInputFile(f'game results {game.id}.xlsx'),
@@ -329,7 +335,7 @@ async def chosen_lobby(call: types.CallbackQuery, state: FSMContext):
 async def set_number_of_planets(call: types.CallbackQuery, state: FSMContext):
     number, pack = call.data.split(',')
     number = int(number)
-    file = open('presets\\planets_and_cities.json', encoding='utf-8')
+    file = open('presets/planets_and_cities.json', encoding='utf-8')
     plncities = json.load(file)
     pack = plncities[pack]
     game = Game.make_new_game(number, db_connection)
@@ -573,6 +579,10 @@ async def end_the_game(message: types.Message):
 
 async def main():
     logging.basicConfig(level=logging.INFO)
+    cursor.execute("""
+        INSERT INTO admins (tgid) VALUES (%s) ON CONFLICT DO NOTHING;
+    """, (OwnerID,))
+    db_connection.commit()
     await dp.start_polling(bot)
     
 

@@ -4,7 +4,7 @@ import pymorphy3
 from num2words import num2words
 from game_classes import City, Planet, Game
 
-_messages_file = open('.\\presets\\messages.json', encoding='utf-8')
+_messages_file = open('./presets/messages.json', encoding='utf-8')
 Messages = json.load(_messages_file)
 morph = pymorphy3.MorphAnalyzer()
 
