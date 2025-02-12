@@ -3,9 +3,6 @@ from aiogram.types import (ReplyKeyboardMarkup, KeyboardButton,
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from game_classes import Game, City, Planet
 import json
-import pymorphy3
-
-morph = pymorphy3.MorphAnalyzer()
 
 #Клавиатура админа в начале
 
@@ -47,9 +44,7 @@ def sanctions_keyboard(planet : Planet, planets: list[Planet], under_sanctions: 
     planets.remove(planet)
     for other_planet in planets:
         addition = '✅ ' if other_planet in under_sanctions else ''
-        other_name = morph.parse(other_planet.name())[0]
-        other_name = other_name.inflect({'accs'}).word.capitalize()
-        builder.add(InlineKeyboardButton(text=f'{addition}Наложить санкции на {other_name}', 
+        builder.add(InlineKeyboardButton(text=f'{addition}{other_planet.name()}', 
                                          callback_data=f'sanctions {planet.id} {other_planet.id}'))
     return builder.adjust(2).as_markup()
 
@@ -61,10 +56,10 @@ def meteorites_keyboard(planet: Planet, chosen: int) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     for i in range(1, 4):
         if chosen == i:
-            builder.add(InlineKeyboardButton(text=f'✅ Купить {i} ({150*i} 💵)', 
+            builder.add(InlineKeyboardButton(text=f'✅ {i} ({150*i} 💵)', 
                                              callback_data=f'create {planet.id} {i}'))
         else:
-            builder.add(InlineKeyboardButton(text=f'Купить {i} ({150*i} 💵)', 
+            builder.add(InlineKeyboardButton(text=f'{i} ({150*i} 💵)', 
                                              callback_data=f'create {planet.id} {i}'))
     return builder.adjust(3).as_markup()
 
@@ -77,13 +72,11 @@ def other_planets_keyboard(nround: int, planet: Planet, other_planet: Planet, ch
     if nround > 1:
         for city in other_planet.cities():
             add = '✅ ' if city in chosen_cities else ''
-            cityname = morph.parse(city.name())[0]
-            cityname = cityname.inflect({'accs'}).word.capitalize()
-            builder.add(InlineKeyboardButton(text=f'{add}Атаковать {cityname}', 
+            builder.add(InlineKeyboardButton(text=f'{add}🗡 {city.name()}', 
                                             callback_data=f'attack {planet.id} {city.id}'))
-    builder.add(InlineKeyboardButton(text='Запросить переговоры 📞', 
+    builder.add(InlineKeyboardButton(text='Переговоры 📞', 
                                      callback_data=f'negotiations {planet.id} {other_planet.id}'),
-                InlineKeyboardButton(text='Перевести денег 💸', 
+                InlineKeyboardButton(text='Перевод 💸', 
                                      callback_data=f'transaction {planet.id} {other_planet.id}'))
     return builder.adjust(2).as_markup()
 
@@ -113,9 +106,15 @@ conversations_admin_keyboard = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(tex
 
 #Клавиатура выбора паков
 def pack_keyboard():
-    file = open('.\\presets\\planets_and_cities.json', encoding='utf-8')
+    file = open('./presets/planets_and_cities.json', encoding='utf-8')
     d = json.load(file)
     builder = InlineKeyboardBuilder()
     for key in d.keys():
         builder.add(InlineKeyboardButton(text=key, callback_data=key))
     return builder.adjust(2).as_markup()
+
+def request_keyboard(id: int):
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text='Принять', callback_data=f'knight {id}'),
+        InlineKeyboardButton(text='Отклонить', callback_data=f'notknight {id}')
+    ]])
