@@ -17,6 +17,7 @@
     "NEO" : "Negotiations outside a round are forbidden",
     "BLN" : "Bilateral negotiations are forbidden",
     "BAM" : "This planet is busy at the moment.",
+    "PNL" : "Вы не находитесь в лобби, чтобы из него выходить",
     "P0014" : "Недостаточно игроков для того, чтобы начать игру.",
     "P0013" : "Вы не находитесь ни в каком лобби, чтобы выходить.",
     "P0016" : "Вы не можете зайти в эту игру т.к. лобби полное.",

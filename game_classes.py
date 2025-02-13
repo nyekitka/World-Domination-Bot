@@ -578,7 +578,7 @@ class Game:
         Adds given user to the game
         """
         try:
-            self.__cursor.execute("CALL Join_Admin(%s, %s)", (self.id, user_id))
+            self.__cursor.execute("CALL Join_Admin(%s, %s)", (user_id, self.id))
             self.__conn.commit()
         except psycopg2.DatabaseError as ex:
             self.__conn.rollback()

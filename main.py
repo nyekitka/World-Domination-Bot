@@ -4,6 +4,7 @@ import asyncio
 import os
 import logging
 import json
+from datetime import datetime, timedelta
 
 import psycopg2
 import numpy as np
@@ -15,6 +16,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.filters import Command, CommandStart, CommandObject
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.date import DateTrigger
 
 import keyboards as kb
 from game_classes import City, Planet, Game, CDException, User
@@ -65,23 +68,52 @@ messager = Messager(db_connection)
 OwnerID = int(env_config['OWNER'])
 
 ############################################ Вспомогательные функции ##################################################
-        
+
+async def notifier(
+    queue: asyncio.Queue,
+    type: str
+):
+    await queue.put(type)
+
+
 async def timer(game: Game, secs: int = round_length):
-    await asyncio.sleep(secs // 2)
+    queue = asyncio.Queue()
+    scheduler = AsyncIOScheduler()
+    scheduler.start()
+    now = datetime.now()
+    half_time = now + timedelta(seconds=secs // 2)
+    hurry_up_time = now + timedelta(seconds=9*secs // 10)
+    end_time = now + timedelta(seconds=secs)
+    scheduler.add_job(
+        func=notifier,
+        trigger=DateTrigger(half_time),
+        args=[queue, 'half_time']
+    )
+    scheduler.add_job(
+        func=notifier,
+        trigger=DateTrigger(hurry_up_time),
+        args=[queue, 'hurry_up']
+    )
+    scheduler.add_job(
+        func=notifier,
+        trigger=DateTrigger(end_time),
+        args=[queue, 'end']
+    )
+    await queue.get()
     if not game.exists():
         return
     for user in game.active_users():
         await bot.send_message(user.id, messager.fivemin())
     for admin in game.admins_list():
         await bot.send_message(admin.id, messager.fivemin())
-    await asyncio.sleep(secs // 2 - secs // 10)
+    await queue.get()
     if not game.exists():
         return
     for user in game.active_users():
         await bot.send_message(user.id, messager.onemin())
     for admin in game.admins_list():
         await bot.send_message(admin.id, messager.onemin())
-    await asyncio.sleep(secs // 10)
+    await queue.get()
     if not game.exists():
         return
     
@@ -99,20 +131,11 @@ async def timer(game: Game, secs: int = round_length):
     if round == 1:
         css_generator(game)
     html_page_generator(game)
-<<<<<<< HEAD
-    os.chdir("round results")
-    with ZipFile(f'{game.id} game {round} round results.zip', 'w') as zfile:
-        zfile.write(f'style{game.id}.css')
-        zfile.write(f'results_{game.id}_{round}.html')
-        for file in os.listdir('fonts'):
-            zfile.write(f'fonts/{file}')
-=======
     with ZipFile(f'./round results/{game.id} game {round} round results.zip', 'w') as zfile:
         zfile.write(f'./round results/style{game.id}.css')
         zfile.write(f'./round results/results_{game.id}_{round}.html')
         for file in os.listdir('round results/fonts'):
             zfile.write(f'round results/fonts/{file}')
->>>>>>> 33955a45114621b55eb0eb68e203a034ef0167ed
     for admin in game.admins_list():
         await bot.send_document(admin.id, 
                                 FSInputFile(f'./round results/{game.id} game {round} round results.zip'),
@@ -246,6 +269,9 @@ async def unknight(message: types.Message, command: CommandObject):
 
 @dp.message((F.text == 'Войти в игру') & F.chat.func(lambda user: not User(user.id, db_connection).is_admin()))
 async def enter_game(message: types.Message, state: FSMContext):
+    user = User.init_with_check(message.from_user.id, db_connection)
+    if user is None:
+        user = User.make_new_user(message.from_user.id, False, db_connection)
     all_games = Game.all_games(db_connection)
     if len(all_games) == 0:
         await message.answer(messager.no_games(), reply_markup=kb.start_keyboard(False))
@@ -265,7 +291,9 @@ async def admin_game(message: types.Message, state: FSMContext):
 @dp.message(F.text == 'Выйти из игры')
 async def leave_lobby(message: types.Message):
     tgid = message.from_user.id
-    user = User(tgid, db_connection)
+    user = User.init_with_check(tgid, db_connection)
+    if user is None:
+        user = User.make_new_user(tgid, False, db_connection)
     game = user.game()
     planet = None
     if game is not None:
@@ -594,7 +622,7 @@ async def set_amount_of_money(message: types.Message, state: FSMContext):
         cursor.execute("UPDATE InfoMessages SET id=%s WHERE id=%s", (to_msg.message_id, to_city_id))
         db_connection.commit()
         await message.answer(messager.successful_transaction(to_planet.name()))
-        await bot.send_message(to_planet.user_id(), messager.transaction_notification(from_planet.name(), amount))
+        await bot.send_message(to_planet.user_id(), messager.transaction_notification(to_planet.name(), amount))
         await state.clear()
 
 @dp.message(Command('endgame'), F.chat.func(lambda user: User(user.id, db_connection).is_admin()))
@@ -622,8 +650,6 @@ async def main():
 
 if __name__ == '__main__':
     try:
-        cursor.execute("SET SCHEMA 'myschema';")
-        db_connection.commit()
         asyncio.run(main())
     except KeyboardInterrupt:
         print('Working was interrupted.')
