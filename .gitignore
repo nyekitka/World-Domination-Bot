@@ -4,3 +4,6 @@ round results/*.html
 round results/*.css
 round results/*.xlsx
 .env
+
+__pycache__
+__pycache__/*
