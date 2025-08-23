@@ -1,7 +1,7 @@
 from enum import StrEnum, auto
 from typing import Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class GameStatus(StrEnum):
@@ -30,35 +30,38 @@ class OrderType(StrEnum):
     INVENT = auto()
 
 
-class GameDto(BaseModel):
+class BaseDto(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+
+class GameDto(BaseDto):
     id: int
     status: GameStatus = GameStatus.WAITING
-    planets: int
     ecorate: int = 95
     round: int | None = None
 
 
-class PlayerDto(BaseModel):
+class PlayerDto(BaseDto):
     tg_id: int
     game_id: int
 
 
-class AdminDto(BaseModel):
+class AdminDto(BaseDto):
     tg_id: int
     game_id: int | None = None
 
 
-class PlanetDto(BaseModel):
+class PlanetDto(BaseDto):
     id: int
     name: str
     game_id: int
-    owner_id: int
+    owner_id: int | None = None
     balance: int = 1000
     meteorites: int = 0
     is_invented: bool = False
 
 
-class CityDto(BaseModel):
+class CityDto(BaseDto):
     id: int
     name: str
     planet_id: int
@@ -66,32 +69,32 @@ class CityDto(BaseModel):
     development: int = 60
 
 
-class InfoMessageDto(BaseModel):
+class InfoMessageDto(BaseDto):
     id: int
     planet_id: int
     message_type: MessageType
 
 
-class OrderDto(BaseModel):
+class OrderDto(BaseDto):
     action: OrderType
     planet_id: int
     argument: int | None
     round: int
 
 
-class PlanetMessageDto(BaseModel):
+class PlanetMessageDto(BaseDto):
     owner_id: int
     planet_id: int
     message_id: int
     message_type: MessageType
 
 
-class SanctionDto(BaseModel):
+class SanctionDto(BaseDto):
     planet_from: int
     planet_to: int
 
 
-class NegotiationDto(BaseModel):
+class NegotiationDto(BaseDto):
     planet_from: int
     planet_to: int
 

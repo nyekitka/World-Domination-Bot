@@ -17,6 +17,11 @@ BOT_TOKEN=... #token of the telegram bot
 ROUND_LENGTH=... #length of the round in seconds
 ```
 
+You can do it fast with this command:
+```
+cp .env.example .env
+```
+
 Make sure that you have installed Docker and it's running. If it is, then enter the next command in the terminal
 ```
 docker-compose up

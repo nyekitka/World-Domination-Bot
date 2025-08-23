@@ -1,5 +1,5 @@
 lint:
-	ruff check .
+	poetry run ruff check .
 
 format:
-	ruff format .
+	poetry run ruff format .

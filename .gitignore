@@ -7,3 +7,5 @@ round results/*.xlsx
 
 __pycache__
 __pycache__/*
+.ruff_cache
+.pytest_cache

@@ -1,153 +1,19 @@
 from collections import Counter
 import logging
 
-from pydantic import TypeAdapter
-import ring
-from sqlalchemy import delete, select, update, insert
-from sqlalchemy.ext.asyncio import async_sessionmaker
-from sqlalchemy.ext.asyncio.engine import AsyncEngine
+from sqlalchemy import delete, insert, select, update
+from database.base_client import DatabaseClient
+from database.config import GameConfig
+from database.models import City, Game, Negotiation, Order, Planet
+from database.schemas import FailureReason, GameStatus, OrderDto, OrderType, SanctionDto
 from sqlalchemy.sql.functions import coalesce
 
-from database.config import database_config, game_config
-from database.models import (
-    Admin,
-    City,
-    Game,
-    Negotiation,
-    Order,
-    Planet,
-    Player,
-    ModelBase,
-    Sanction,
-)
-from database.schemas import (
-    CityDto,
-    FailureReason,
-    GameDto,
-    GameStatus,
-    OrderDto,
-    OrderType,
-    PlanetDto,
-    SanctionDto,
-    UserDto,
-)
-from presets.pack import Pack
+from database.config import game_config
 
 logger = logging.getLogger(__name__)
 
 
-class DatabaseClient:
-    def __init__(self, engine: AsyncEngine):
-        self.session = async_sessionmaker(engine)
-        ModelBase.metadata.create_all(engine)
-
-    async def make_new_user_if_not_exists(self, tg_id: int, is_admin: bool) -> UserDto:
-        async with self.session() as s:
-            user: Player | Admin | None = None
-            if is_admin:
-                user = await s.get(Admin, tg_id)
-            else:
-                user = await s.get(Player, tg_id)
-            if user:
-                return UserDto.model_validate(user)
-
-            logger.info(
-                "Creating new user with tg_id=%s and is_admin=%s", tg_id, is_admin
-            )
-
-            if is_admin:
-                user = Admin(tg_id=tg_id)
-            else:
-                user = Player(tg_id=tg_id)
-
-            s.add(user)
-            await s.commit()
-            return UserDto.model_validate(user)
-
-    async def make_new_user(self, tg_id: int, is_admin: bool) -> UserDto:
-        async with self.session() as s:
-            if is_admin:
-                user = Admin(tg_id=tg_id)
-            else:
-                user = Player(tg_id=tg_id)
-
-            s.add(user)
-            await s.commit()
-            return UserDto.model_validate(user)
-
-    async def get_user(self, tg_id: int) -> UserDto | None:
-        async with self.session() as s:
-            user = await s.get(Player, tg_id=tg_id)
-            if user:
-                return UserDto.model_validate(user)
-            user = await s.get(Admin, tg_id=tg_id)
-            return UserDto.model_validate(user)
-
-    @ring.lru(expire=database_config.EXPIRE_CACHE)
-    async def get_game(self, game_id: int) -> GameDto | None:
-        async with self.session() as s:
-            game = await s.get(Game, game_id=game_id)
-            if game:
-                return GameDto.model_validate(game)
-
-            return None
-
-    @ring.lru(expire=database_config.EXPIRE_CACHE)
-    async def get_game_by_planet_id(self, planet_id: int) -> GameDto | None:
-        stmt = (
-            select(Game).join(Game.id == Planet.game_id).where(Planet.id == planet_id)
-        )
-        async with self.session() as s:
-            res = await s.execute(stmt)
-            game = res.scalars().first()
-            if game:
-                return GameDto.model_validate(game)
-
-            return None
-
-    @ring.lru(expire=database_config.EXPIRE_CACHE)
-    async def get_game_by_city_id(self, city_id: int) -> GameDto | None:
-        stmt = (
-            select(Game)
-            .join(Game.id == Planet.game_id)
-            .join(City.planet_id == Planet.id)
-            .where(City.id == city_id)
-        )
-        async with self.session() as s:
-            res = await s.execute(stmt)
-            game = res.scalars().first()
-            if game:
-                return GameDto.model_validate(game)
-
-            return None
-
-    async def kick_user_from_game(self, tg_id: int) -> None:
-        async with self.session() as s:
-            stmt_player = (
-                update(Player).where(Player.tg_id == tg_id).values(game_id=None)
-            )
-            stmt_admin = update(Admin).where(Admin.tg_id == tg_id).values(game_id=None)
-            await s.execute(stmt_admin)
-            await s.execute(stmt_player)
-            await s.commit()
-
-    async def create_game(self, admin_id: int, pack: Pack) -> GameDto:
-        async with self.session() as s:
-            game = Game()
-            s.add(game)
-            for _planet in pack.planets:
-                planet = Planet(name=_planet.name, game_id=game.id)
-                s.add(planet)
-                for _city in _planet.cities:
-                    city = City(name=_city.name, planet_id=planet.id)
-                    s.add(city)
-
-            await s.commit()
-            stmt = update(Admin).where(Admin.tg_id == admin_id).values(game_id=game.id)
-            await s.execute(stmt)
-            await s.commit()
-            return GameDto.model_validate(game)
-
+class ActionsClient(DatabaseClient):
     async def order_shield_for_city(self, city_id: int) -> FailureReason:
         async with self.session() as s:
             city = await s.get(City, city_id)
@@ -190,13 +56,6 @@ class DatabaseClient:
         async with self.session() as s:
             await s.execute(stmt)
             await s.commit()
-
-    async def get_city(self, city_id: int) -> CityDto | None:
-        async with self.session() as s:
-            city = await s.get(City, city_id)
-            if city:
-                return CityDto.model_validate(city)
-            return None
 
     async def order_development(self, city_id: int) -> FailureReason:
         async with self.session() as s:
@@ -246,39 +105,6 @@ class DatabaseClient:
             )
             await s.execute(stmt)
             await s.commit()
-
-    async def get_planet(self, planet_id: int) -> PlanetDto | None:
-        async with self.session() as s:
-            planet = await s.get(Planet, planet_id)
-            if planet:
-                return PlanetDto.model_validate(planet)
-            return None
-
-    async def get_cities_of_planet(
-        self, planet_id: int, only_alive: bool = True
-    ) -> list[CityDto] | None:
-        if only_alive:
-            stmt = select(City).where(
-                City.planet_id == planet_id and City.development > 0
-            )
-        else:
-            stmt = select(City).where(City.planet_id == planet_id)
-        async with self.session() as s:
-            result = await s.execute(stmt)
-            if result:
-                return TypeAdapter[list[CityDto]].validate_python(
-                    result.scalars().all()
-                )
-            return None
-
-    async def get_planets_of_game(self, planet_id: int) -> list[PlanetDto] | None:
-        async with self.session() as s:
-            result = await s.execute((select(City).where(City.planet_id == planet_id)))
-            if result:
-                return TypeAdapter[list[CityDto]].validate_python(
-                    result.scalars().all()
-                )
-            return None
 
     async def accept_diplomatist(
         self, planet_from: int, planet_to: int
@@ -567,36 +393,24 @@ class DatabaseClient:
             await s.execute(stmt_add_orders)
             await s.commit()
 
-    async def get_all_sanctions_on_planet(self, planet_id: int) -> list[SanctionDto]:
-        async with self.session() as s:
-            sanctions_res = await s.execute(
-                (select(Sanction).where(Sanction.planet_to == planet_id))
-            )
-            sanctions = sanctions_res.scalars().all()
-            return TypeAdapter(list[SanctionDto]).validate_python(sanctions)
-
-    async def _clear_game_cache(self, game_id: int, soft: bool = False) -> None:
-        self.get_game(game_id).delete()
-        if soft:
-            return
+    async def transfer(
+        self, planet_from_id: int, planet_to_id: int, amount: int
+    ) -> FailureReason:
+        if amount <= 0:
+            return FailureReason.NEGATIVE_AMOUNT
 
         async with self.session() as s:
-            res_planets = await s.execute(
-                (select(Planet).where(Planet.game_id == Game.id))
-            )
-            all_planets = [planet.id for planet in res_planets.scalars().all()]
-            res_cities = await s.execute(
-                (select(City).where(City.planet_id.in_(all_planets)))
-            )
-            all_cities = [city.id for city in res_cities.scalars().all()]
-        for planet_id in all_planets:
-            self.get_game_by_planet_id(planet_id).delete()
+            planet_from = await s.get(Planet, planet_from_id)
+            if planet_from.balance < amount:
+                return FailureReason.NOT_ENOUGH_MONEY
 
-        for city_id in all_cities:
-            self.get_game_by_city_id(city_id).delete()
+            planet_to = await s.get(Planet, planet_to_id)
+            if planet_from.game_id != planet_to.game_id:
+                return FailureReason.DIFFERENT_GAMES
 
-    def _clear_user_cache(self, tg_id: int) -> None:
-        self.get_user(tg_id).delete()
+            planet_from.balance -= amount
+            planet_to.balance += amount
+            await s.commit()
 
     async def end_current_round(self, game_id: int) -> FailureReason:
         self._clear_game_cache()
@@ -661,7 +475,7 @@ class DatabaseClient:
                         {
                             Game.ecorate: min(
                                 Game.ecorate
-                                + num_eco_boosts * game_config.ECO_BOOST_RATE,
+                                + num_eco_boosts * GameConfig.ECO_BOOST_RATE,
                                 100,
                             ),
                             Game.status: GameStatus.MEETING,
@@ -670,44 +484,6 @@ class DatabaseClient:
                 )
             )
             await s.commit()
-
-    async def end_game(self, game_id: int) -> None:
-        async with self.session() as s:
-            await s.execute(
-                (update(Player).where(Player.game_id == game_id).values(game_id=None))
-            )
-            await s.execute(
-                (update(Admin).where(Admin.game_id == game_id).values(game_id=None))
-            )
-            await s.execute(
-                (update(Game).where(Game.id == game_id).values(status=GameStatus.ENDED))
-            )
-            await s.commit()
-        self._clear_game_cache(game_id, True)
-
-    def _rate_of_life_in_city(self, city: CityDto, eco_rate: int) -> float:
-        return city.development * eco_rate / 100
-
-    async def _rate_of_life_in_planet(self, planet_id: int, eco_rate: int) -> float:
-        cities = await self.get_cities_of_planet(planet_id, False)
-        return sum(self._rate_of_life_in_city(city, eco_rate) for city in cities) / len(
-            cities
-        )
-
-    def _city_income(self, city: CityDto, eco_rate: int) -> float:
-        return game_config.INCOME_COEFFICIENT * self._rate_of_life_in_city(
-            city, eco_rate
-        )
-
-    async def _planet_income(
-        self, planet_id: int, eco_rate: int, number_of_planets: int
-    ) -> float:
-        cities = await self.get_cities_of_planet(planet_id, False)
-        sanctions = await self.get_all_sanctions_on_planet(planet_id)
-        sanc_cofficient = (number_of_planets - len(sanctions)) / (len(sanctions) + 1)
-        return (
-            sum(self._city_income(city, eco_rate) for city in cities) * sanc_cofficient
-        )
 
     async def start_new_round(self, game_id: int) -> FailureReason:
         async with self.session() as s:
@@ -742,124 +518,3 @@ class DatabaseClient:
             )
 
             await s.commit()
-
-    async def transfer(
-        self, planet_from_id: int, planet_to_id: int, amount: int
-    ) -> FailureReason:
-        if amount <= 0:
-            return FailureReason.NEGATIVE_AMOUNT
-
-        async with self.session() as s:
-            planet_from = await s.get(Planet, planet_from_id)
-            if planet_from.balance < amount:
-                return FailureReason.NOT_ENOUGH_MONEY
-
-            planet_to = await s.get(Planet, planet_to_id)
-            if planet_from.game_id != planet_to.game_id:
-                return FailureReason.DIFFERENT_GAMES
-
-            planet_from.balance -= amount
-            planet_to.balance += amount
-            await s.commit()
-
-    async def join_user(self, user_id: int, game_id: int) -> FailureReason:
-        async with self.session() as s:
-            user = await s.get(Player, user_id)
-            if user:
-                return self._join_player(user, game_id)
-            user = await s.get(Admin, user_id)
-            if user:
-                return self._join_admin(user, game_id)
-
-        return FailureReason.OBJECT_NOT_FOUND
-
-    async def _join_player(self, player: Player, game_id: int) -> FailureReason:
-        if player.game_id:
-            return FailureReason.ALREADY_IN_GAME
-
-        game = await self.get_game(game_id)
-        if not game:
-            return FailureReason.OBJECT_NOT_FOUND
-
-        if game.status == GameStatus.ENDED:
-            return FailureReason.GAME_ENDED
-
-        async with self.session() as s:
-            planet = await s.execute(
-                (select(Planet).where(Planet.owner_id == player.tg_id))
-            )
-            if planet.all():
-                player.game_id = game_id
-                await s.commit()
-                return FailureReason.SUCCESS
-
-            free_planets = await s.execute(
-                (
-                    select(Planet).where(
-                        Planet.game_id == game_id and Planet.owner_id is None
-                    )
-                )
-            )
-            planet = free_planets.scalars().first()
-            if not planet:
-                return FailureReason.GAME_IS_FULL
-
-            planet.owner_id = player.tg_id
-            player.game_id = game_id
-            await s.commit()
-
-        return FailureReason.SUCCESS
-
-    async def _join_admin(self, admin: Admin, game_id: int) -> FailureReason:
-        if admin.game_id:
-            return FailureReason.ALREADY_IN_GAME
-
-        game = await self.get_game(game_id)
-        if not game:
-            return FailureReason.OBJECT_NOT_FOUND
-
-        async with self.session() as s:
-            admin.game_id = game_id
-            await s.commit()
-
-        return FailureReason.SUCCESS
-
-    async def kick_user(self, user_id: int) -> FailureReason:
-        async with self.session() as s:
-            user = await s.get(Player, user_id)
-            if user:
-                return self._kick_player(user)
-            user = await s.get(Admin, user_id)
-            if user:
-                return self._kick_admin(user)
-
-        return FailureReason.OBJECT_NOT_FOUND
-
-    async def _kick_player(self, player: Player) -> FailureReason:
-        if player.game_id is None:
-            return FailureReason.NOT_IN_GAME
-
-        async with self.session() as s:
-            game = await s.get(Game, player.game_id)
-            if game.status == GameStatus.WAITING:
-                await s.execute(
-                    (
-                        update(Planet)
-                        .where(Planet.owner_id == player.tg_id)
-                        .values(owner_id=None)
-                    )
-                )
-            player.game_id = None
-            await s.commit()
-
-        return FailureReason.SUCCESS
-
-    async def _kick_admin(self, admin: Admin) -> FailureReason:
-        if admin.game_id is None:
-            return FailureReason.NOT_IN_GAME
-
-        async with self.session() as s:
-            admin.game_id = None
-            await s.commit()
-
-        return FailureReason.SUCCESS

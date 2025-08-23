@@ -1,5 +1,5 @@
 import re
-from sqlalchemy import BigInteger, CheckConstraint, ForeignKey
+from sqlalchemy import BigInteger, Enum, ForeignKey, PrimaryKeyConstraint
 from sqlalchemy.orm import (
     declared_attr,
     DeclarativeBase,
@@ -7,6 +7,7 @@ from sqlalchemy.orm import (
     mapped_column,
 )
 
+from database.config import game_config
 from database.schemas import GameStatus, MessageType, OrderType
 
 
@@ -20,20 +21,17 @@ class ModelBase(DeclarativeBase):
 class Game(ModelBase):
     id: Mapped[int] = mapped_column(primary_key=True)
     status: Mapped[GameStatus] = mapped_column(
-        nullable=False, default=GameStatus.WAITING
+        Enum(GameStatus, name="GameStatus"), nullable=False, default=GameStatus.WAITING
     )
-    ecorate: Mapped[int] = mapped_column(nullable=False, default=95)
+    ecorate: Mapped[int] = mapped_column(
+        nullable=False, default=game_config.DEFAULT_GAME_ECO_RATE
+    )
     round: Mapped[int] = mapped_column(nullable=True)
-
-    __table_args__ = CheckConstraint(
-        "status == 'waiting' or status == 'ended' or round IS NOT NULL",
-        name="round_partly_nullable",
-    )
 
 
 class Player(ModelBase):
     tg_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    game_id: Mapped[int] = mapped_column(ForeignKey("game.id"))
+    game_id: Mapped[int] = mapped_column(ForeignKey("game.id"), nullable=True)
 
 
 class Admin(ModelBase):
@@ -47,8 +45,12 @@ class Planet(ModelBase):
     game_id: Mapped[int] = mapped_column(
         ForeignKey("game.id", ondelete="CASCADE"), nullable=False
     )
-    owner_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("player.id"))
-    balance: Mapped[int] = mapped_column(nullable=False, default=1000)
+    owner_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("player.tg_id"), nullable=True
+    )
+    balance: Mapped[int] = mapped_column(
+        nullable=False, default=game_config.DEFAULT_BALANCE
+    )
     meteorites: Mapped[int] = mapped_column(nullable=False, default=0)
     is_invented: Mapped[bool] = mapped_column(nullable=False, default=False)
 
@@ -60,7 +62,9 @@ class City(ModelBase):
         ForeignKey("planet.id", ondelete="CASCADE"), nullable=False
     )
     is_shielded: Mapped[bool] = mapped_column(nullable=False, default=False)
-    development: Mapped[int] = mapped_column(nullable=False, default=60)
+    development: Mapped[int] = mapped_column(
+        nullable=False, default=game_config.DEFAULT_DEVELOPMENT
+    )
 
 
 class InfoMessage(ModelBase):
@@ -68,16 +72,24 @@ class InfoMessage(ModelBase):
     planet_id: Mapped[int] = mapped_column(
         ForeignKey("planet.id", ondelete="CASCADE"), nullable=False
     )
-    message_type: Mapped[MessageType] = mapped_column(nullable=False)
+    message_type: Mapped[MessageType] = mapped_column(
+        Enum(MessageType, name="MessageType"), nullable=False
+    )
 
 
 class Order(ModelBase):
-    action: Mapped[OrderType] = mapped_column(nullable=False)
+    action: Mapped[OrderType] = mapped_column(
+        Enum(OrderType, name="OrderType"), nullable=False
+    )
     planet_id: Mapped[int] = mapped_column(
         ForeignKey("planet.id", ondelete="CASCADE"), nullable=False
     )
     argument: Mapped[int]
     round: Mapped[int] = mapped_column(nullable=False)
+
+    __table_args__ = (
+        PrimaryKeyConstraint(action, planet_id, round, name="order_pkey"),
+    )
 
 
 class PlanetMessage(ModelBase):
@@ -88,7 +100,15 @@ class PlanetMessage(ModelBase):
         ForeignKey("planet.id", ondelete="CASCADE"), nullable=False
     )
     message_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    message_type: Mapped[MessageType] = mapped_column(nullable=False)
+    message_type: Mapped[MessageType] = mapped_column(
+        Enum(OrderType, name="OrderType"), nullable=False
+    )
+
+    __table_args__ = (
+        PrimaryKeyConstraint(
+            owner_id, planet_id, message_id, name="planet_message_pkey"
+        ),
+    )
 
 
 class Sanction(ModelBase):
@@ -99,6 +119,10 @@ class Sanction(ModelBase):
         ForeignKey("planet.id", ondelete="CASCADE"), nullable=False
     )
 
+    __table_args__ = (
+        PrimaryKeyConstraint(planet_from, planet_to, name="sanction_pkey"),
+    )
+
 
 class Negotiation(ModelBase):
     planet_from: Mapped[int] = mapped_column(
@@ -106,4 +130,8 @@ class Negotiation(ModelBase):
     )
     planet_to: Mapped[int] = mapped_column(
         ForeignKey("planet.id", ondelete="CASCADE"), nullable=False
+    )
+
+    __table_args__ = (
+        PrimaryKeyConstraint(planet_from, planet_to, name="negotiation_pkey"),
     )
