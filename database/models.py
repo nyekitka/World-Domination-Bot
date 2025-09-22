@@ -84,11 +84,11 @@ class Order(ModelBase):
     planet_id: Mapped[int] = mapped_column(
         ForeignKey("planet.id", ondelete="CASCADE"), nullable=False
     )
-    argument: Mapped[int]
-    round: Mapped[int] = mapped_column(nullable=False)
+    argument: Mapped[int] = mapped_column(default=0, nullable=False)
+    round: Mapped[int] = mapped_column(nullable=False, default=0)
 
     __table_args__ = (
-        PrimaryKeyConstraint(action, planet_id, round, name="order_pkey"),
+        PrimaryKeyConstraint(action, planet_id, round, argument, name="order_pkey"),
     )
 
 

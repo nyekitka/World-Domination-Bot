@@ -43,7 +43,7 @@ class GameDto(BaseDto):
 
 class PlayerDto(BaseDto):
     tg_id: int
-    game_id: int
+    game_id: int | None = None
 
 
 class AdminDto(BaseDto):

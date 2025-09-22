@@ -1,9 +1,10 @@
 import logging
+from typing import Awaitable
 
 from async_lru import alru_cache
 from pydantic import TypeAdapter
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import async_sessionmaker
+from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 from sqlalchemy.ext.asyncio.engine import AsyncEngine
 
 from database.config import database_config, game_config
@@ -25,6 +26,28 @@ logger = logging.getLogger(__name__)
 
 
 class DatabaseClient:
+    def __init__(self, session: async_sessionmaker[AsyncSession]):
+        self.session = session
+
+    @staticmethod
+    def set_transaction(method: Awaitable) -> Awaitable:
+        async def wrapper(self, *args, **kwargs) -> None:
+            async with self.session() as s:
+                res = await method(self, s, *args, **kwargs)
+                await s.commit()
+            return res
+
+        return wrapper
+
+    @staticmethod
+    def get_transaction(method: Awaitable) -> Awaitable:
+        async def wrapper(self, *args, **kwargs):
+            async with self.session() as s:
+                res = await method(self, s, *args, **kwargs)
+                return res
+
+        return wrapper
+
     @classmethod
     async def create(cls, engine: AsyncEngine):
         self = cls()
@@ -34,61 +57,68 @@ class DatabaseClient:
         return self
 
     @alru_cache(ttl=database_config.EXPIRE_CACHE)
-    async def get_game(self, game_id: int) -> GameDto | None:
-        async with self.session() as s:
-            game = await s.get(Game, game_id)
-            if game:
-                return GameDto.model_validate(game)
+    @get_transaction
+    async def get_game(self, s: AsyncSession, game_id: int) -> GameDto | None:
+        game = await s.get(Game, game_id)
+        if game:
+            return GameDto.model_validate(game)
 
-            return None
+        return None
 
     @alru_cache(ttl=database_config.EXPIRE_CACHE)
-    async def get_game_by_planet_id(self, planet_id: int) -> GameDto | None:
+    @get_transaction
+    async def get_game_by_planet_id(
+        self, s: AsyncSession, planet_id: int
+    ) -> GameDto | None:
         stmt = (
             select(Game)
             .join(Planet, Game.id == Planet.game_id)
             .where(Planet.id == planet_id)
         )
-        async with self.session() as s:
-            res = await s.execute(stmt)
-            game = res.scalars().first()
-            if game:
-                return GameDto.model_validate(game)
 
-            return None
+        res = await s.execute(stmt)
+        game = res.scalars().first()
+        if game:
+            return GameDto.model_validate(game)
+
+        return None
 
     @alru_cache(ttl=database_config.EXPIRE_CACHE)
-    async def get_game_by_city_id(self, city_id: int) -> GameDto | None:
+    @get_transaction
+    async def get_game_by_city_id(
+        self, s: AsyncSession, city_id: int
+    ) -> GameDto | None:
         stmt = (
             select(Game)
             .join(Planet, Game.id == Planet.game_id)
             .join(City, City.planet_id == Planet.id)
             .where(City.id == city_id)
         )
-        async with self.session() as s:
-            res = await s.execute(stmt)
-            game = res.scalars().first()
-            if game:
-                return GameDto.model_validate(game)
 
-            return None
+        res = await s.execute(stmt)
+        game = res.scalars().first()
+        if game:
+            return GameDto.model_validate(game)
 
-    async def get_city(self, city_id: int) -> CityDto | None:
-        async with self.session() as s:
-            city = await s.get(City, city_id)
-            if city:
-                return CityDto.model_validate(city)
-            return None
+        return None
 
-    async def get_planet(self, planet_id: int) -> PlanetDto | None:
-        async with self.session() as s:
-            planet = await s.get(Planet, planet_id)
-            if planet:
-                return PlanetDto.model_validate(planet)
-            return None
+    @get_transaction
+    async def get_city(self, s: AsyncSession, city_id: int) -> CityDto | None:
+        city = await s.get(City, city_id)
+        if city:
+            return CityDto.model_validate(city)
+        return None
 
+    @get_transaction
+    async def get_planet(self, s: AsyncSession, planet_id: int) -> PlanetDto | None:
+        planet = await s.get(Planet, planet_id)
+        if planet:
+            return PlanetDto.model_validate(planet)
+        return None
+
+    @get_transaction
     async def get_cities_of_planet(
-        self, planet_id: int, only_alive: bool = True
+        self, s: AsyncSession, planet_id: int, only_alive: bool = True
     ) -> list[CityDto] | None:
         if only_alive:
             stmt = select(City).where(
@@ -96,25 +126,22 @@ class DatabaseClient:
             )
         else:
             stmt = select(City).where(City.planet_id == planet_id)
-        async with self.session() as s:
-            result = await s.execute(stmt)
-            if result:
-                return TypeAdapter(list[CityDto]).validate_python(
-                    result.scalars().all()
-                )
-            return None
+        result = await s.execute(stmt)
+        if result:
+            return TypeAdapter(list[CityDto]).validate_python(result.scalars().all())
+        return None
 
-    async def get_planets_of_game(self, planet_id: int) -> list[PlanetDto] | None:
-        async with self.session() as s:
-            result = await s.execute((select(City).where(City.planet_id == planet_id)))
-            if result:
-                return TypeAdapter(list[CityDto]).validate_python(
-                    result.scalars().all()
-                )
-            return None
+    @get_transaction
+    async def get_planets_of_game(
+        self, s: AsyncSession, game_id: int
+    ) -> list[PlanetDto] | None:
+        result = await s.execute((select(Planet).where(Planet.game_id == game_id)))
+        if result:
+            return TypeAdapter(list[PlanetDto]).validate_python(result.scalars().all())
+        return None
 
     async def _clear_game_cache(self, game_id: int, soft: bool = False) -> None:
-        self.get_game(game_id).delete()
+        self.get_game.cache_invalidate(game_id)
         if soft:
             return
 
@@ -128,10 +155,10 @@ class DatabaseClient:
             )
             all_cities = [city.id for city in res_cities.scalars().all()]
         for planet_id in all_planets:
-            self.get_game_by_planet_id(planet_id).delete()
+            self.get_game_by_planet_id.cache_invalidate(planet_id)
 
         for city_id in all_cities:
-            self.get_game_by_city_id(city_id).delete()
+            self.get_game_by_city_id.cache_invalidate(city_id)
 
     def _rate_of_life_in_city(self, city: CityDto, eco_rate: int) -> float:
         return city.development * eco_rate / 100
@@ -157,10 +184,12 @@ class DatabaseClient:
             sum(self._city_income(city, eco_rate) for city in cities) * sanc_cofficient
         )
 
-    async def get_all_sanctions_on_planet(self, planet_id: int) -> list[SanctionDto]:
-        async with self.session() as s:
-            sanctions_res = await s.execute(
-                (select(Sanction).where(Sanction.planet_to == planet_id))
-            )
-            sanctions = sanctions_res.scalars().all()
-            return TypeAdapter(list[SanctionDto]).validate_python(sanctions)
+    @get_transaction
+    async def get_all_sanctions_on_planet(
+        self, s: AsyncSession, planet_id: int
+    ) -> list[SanctionDto]:
+        sanctions_res = await s.execute(
+            (select(Sanction).where(Sanction.planet_to == planet_id))
+        )
+        sanctions = sanctions_res.scalars().all()
+        return TypeAdapter(list[SanctionDto]).validate_python(sanctions)

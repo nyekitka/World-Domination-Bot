@@ -1,212 +1,238 @@
-from uuid import uuid4
-
 import pytest
 import pytest_asyncio
+from pytest_postgresql import factories
+from pytest_postgresql.janitor import DatabaseJanitor
 
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from sqlalchemy.ext.asyncio.engine import AsyncEngine
 
 from database.base_client import DatabaseClient
-from database.clients import (
-    ActionsClient,
-    GameClient,
-    UserClient
-)
+from database.clients import ActionsClient, GameClient, UserClient
 from database.models import Admin, City, Game, ModelBase, Planet, Player
 from database.schemas import GameStatus
 from presets.pack import Pack, PackCity, PackPlanet
 
 
-@pytest.fixture(scope='session')
-def mock_admin_id():
+test_db = factories.postgresql_noproc(
+    dbname="test_db", port="5432", user="postgres", password="123", host="test-db"
+)
+
+
+@pytest.fixture()
+def admin_id() -> int:
     return 1
 
 
-@pytest.fixture(scope='session')
-def mock_player_ids():
-    return list(range(4))
+@pytest.fixture()
+def player_id() -> int:
+    return 2
 
 
-@pytest.fixture(scope='session')
-def game_id():
+@pytest.fixture()
+def non_existing_user_id() -> int:
+    return 123
+
+
+@pytest.fixture()
+def player_ids() -> list[int]:
+    return list(range(2, 6))
+
+
+@pytest.fixture()
+def game_id() -> int:
     return 1
-    
+
 
 @pytest.fixture()
 def planet_id() -> int:
     return 1
 
+
+@pytest.fixture()
+def planet_id_2() -> int:
+    return 2
+
+
+@pytest.fixture()
+def planet_id_3() -> int:
+    return 3
+
+
+@pytest.fixture()
+def planet_ids() -> list[int]:
+    return list(range(1, 5))
+
+
 @pytest.fixture()
 def city_id() -> int:
-    return 11
+    return 1
 
 
 @pytest.fixture()
-def non_existing_city_id():
+def city_id_2() -> int:
+    return 2
+
+
+@pytest.fixture()
+def non_existing_city_id() -> int:
     return 0
 
 
 @pytest.fixture()
-def non_existing_planet_id():
+def non_existing_planet_id() -> int:
     return 0
 
 
 @pytest.fixture()
-def non_existing_game_id():
+def non_existing_game_id() -> int:
     return 0
 
 
-@pytest.fixture(scope='session')
-def mock_pack() -> Pack:
+@pytest.fixture()
+def pack() -> Pack:
     return Pack(
-        name='pack',
+        name="pack",
         planets=[
             PackPlanet(
-                name='Planet1',
+                name="Planet1",
                 cities=[
-                    PackCity(name='City11'),
-                    PackCity(name='City12'),
-                    PackCity(name='City13'),
-                    PackCity(name='City14'),
-                ]
+                    PackCity(name="City11"),
+                    PackCity(name="City12"),
+                    PackCity(name="City13"),
+                    PackCity(name="City14"),
+                ],
             ),
             PackPlanet(
-                name='Planet2',
+                name="Planet2",
                 cities=[
-                    PackCity(name='City21'),
-                    PackCity(name='City22'),
-                    PackCity(name='City23'),
-                    PackCity(name='City24'),
-                ]
+                    PackCity(name="City21"),
+                    PackCity(name="City22"),
+                    PackCity(name="City23"),
+                    PackCity(name="City24"),
+                ],
             ),
             PackPlanet(
-                name='Planet3',
+                name="Planet3",
                 cities=[
-                    PackCity(name='City31'),
-                    PackCity(name='City32'),
-                    PackCity(name='City33'),
-                    PackCity(name='City34'),
-                ]
+                    PackCity(name="City31"),
+                    PackCity(name="City32"),
+                    PackCity(name="City33"),
+                    PackCity(name="City34"),
+                ],
             ),
             PackPlanet(
-                name='Planet4',
+                name="Planet4",
                 cities=[
-                    PackCity(name='City41'),
-                    PackCity(name='City42'),
-                    PackCity(name='City43'),
-                    PackCity(name='City44'),
-                ]
+                    PackCity(name="City41"),
+                    PackCity(name="City42"),
+                    PackCity(name="City43"),
+                    PackCity(name="City44"),
+                ],
             ),
-        ]
+        ],
     )
 
 
-@pytest.fixture(scope='session')
-def planet_name_to_id():
+@pytest.fixture()
+def planet_name_to_id() -> dict[str, int]:
     return {
-        'Planet1': 1,
-        'Planet2': 2,
-        'Planet3': 3,
-        'Planet4': 4,
+        "Planet1": 1,
+        "Planet2": 2,
+        "Planet3": 3,
+        "Planet4": 4,
     }
 
 
-@pytest.fixture(scope='session')
-def city_name_to_id():
+@pytest.fixture()
+def city_name_to_id() -> dict[str, int]:
     return {
-        'City11': 11,
-        'City12': 12,
-        'City13': 13,
-        'City14': 14,
-        'City21': 21,
-        'City22': 22,
-        'City23': 23,
-        'City24': 24,
-        'City31': 31,
-        'City32': 32,
-        'City33': 33,
-        'City34': 34,
-        'City41': 41,
-        'City42': 42,
-        'City43': 43,
-        'City44': 44,
+        "City11": 1,
+        "City12": 2,
+        "City13": 3,
+        "City14": 4,
+        "City21": 5,
+        "City22": 6,
+        "City23": 7,
+        "City24": 8,
+        "City31": 9,
+        "City32": 10,
+        "City33": 11,
+        "City34": 12,
+        "City41": 13,
+        "City42": 14,
+        "City43": 15,
+        "City44": 16,
     }
 
 
-@pytest_asyncio.fixture(scope='session')
-async def mock_engine(
-    mock_pack,
-    mock_admin_id,
-    mock_player_ids,
-    game_id,
-    planet_name_to_id,
-    city_name_to_id
-) -> AsyncEngine:
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///test.db"
-    )
-    session = async_sessionmaker(engine)
-    async with engine.begin() as conn:
-        await conn.run_sync(ModelBase.metadata.drop_all)
-        await conn.run_sync(ModelBase.metadata.create_all)
-
-    admin = Admin(tg_id=mock_admin_id)
-    players = [
-        Player(tg_id=tg_id)
-        for tg_id in mock_player_ids
-    ]
-    game = Game(id=game_id, status=GameStatus.WAITING)
-
-    planets = []
-    cities = []
-    for planet_pack in mock_pack.planets:
-        planets.append(
-            Planet(
-                id=planet_name_to_id[planet_pack.name],
-                name=planet_pack.name,
-                game_id=game_id
-            )
+@pytest_asyncio.fixture
+async def mock_session(pack, admin_id, player_ids, game_id, planet_name_to_id, test_db):
+    with DatabaseJanitor(
+        user=test_db.user,
+        dbname=test_db.dbname,
+        host=test_db.host,
+        port=test_db.port,
+        password=test_db.password,
+        version=test_db.version,
+    ):
+        engine = create_async_engine(
+            f"postgresql+asyncpg://{test_db.user}:{test_db.password}"
+            f"@{test_db.host}:{test_db.port}/{test_db.dbname}",
+            echo=True,
         )
-        for city_pack in planet_pack.cities:
-            cities.append(
-                City(
-                    id=city_name_to_id[city_pack.name],
-                    name=city_pack.name,
-                    planet_id=planet_name_to_id[planet_pack.name]
+        session = async_sessionmaker(engine)
+        async with engine.begin() as conn:
+            await conn.run_sync(ModelBase.metadata.drop_all)
+            await conn.run_sync(ModelBase.metadata.create_all)
+
+        admin = Admin(tg_id=admin_id)
+        players = [Player(tg_id=tg_id) for tg_id in player_ids]
+        game = Game(status=GameStatus.WAITING)
+
+        planets = []
+        cities = []
+        for planet_pack in pack.planets:
+            planets.append(Planet(name=planet_pack.name, game_id=game_id))
+            for city_pack in planet_pack.cities:
+                cities.append(
+                    City(
+                        name=city_pack.name,
+                        planet_id=planet_name_to_id[planet_pack.name],
+                    )
                 )
-            )
 
-    async with session() as s:
-        s.add(admin)
-        s.add_all(players)
-        s.add(game)
-        s.add_all(planets)
-        s.add_all(cities)
-        await s.commit()
-    
-    return engine
+        async with session() as s:
+            s.add(game)
+            await s.commit()
+            s.add(admin)
+            s.add_all(players)
+            await s.commit()
+            s.add_all(planets)
+            await s.commit()
+            s.add_all(cities)
+            await s.commit()
 
-
-@pytest_asyncio.fixture()
-async def mock_database_client(mock_engine) -> DatabaseClient:
-    client = await DatabaseClient.create(mock_engine)
-    return client
+        yield session
 
 
-
-@pytest_asyncio.fixture()
-async def mock_actions_client(mock_engine) -> ActionsClient:
-    client = await ActionsClient.create(mock_engine)
-    return client
-
-
-@pytest_asyncio.fixture()
-async def mock_user_client(mock_engine) -> UserClient:
-    client = await UserClient.create(mock_engine)
-    return client
+@pytest.fixture()
+def mock_database_client(mock_session):
+    client = DatabaseClient(mock_session)
+    yield client
 
 
-@pytest_asyncio.fixture()
-async def mock_game_client(mock_engine) -> GameClient:
-    client = await GameClient.create(mock_engine)
-    return client
+@pytest.fixture()
+def mock_actions_client(mock_session):
+    client = ActionsClient(mock_session)
+    yield client
+
+
+@pytest.fixture()
+def mock_user_client(mock_session):
+    client = UserClient(mock_session)
+    yield client
+
+
+@pytest.fixture()
+def mock_game_client(mock_session):
+    client = GameClient(mock_session)
+    yield client

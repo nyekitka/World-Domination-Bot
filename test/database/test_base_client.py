@@ -55,23 +55,23 @@ async def test_get_city(mock_database_client, city_id):
 
 
 @pytest.mark.asyncio
-async def test_get_cities_of_planet(mock_database_client, planet_id, mock_pack):
+async def test_get_cities_of_planet(mock_database_client, planet_id, pack):
     cities = await mock_database_client.get_cities_of_planet(planet_id)
 
     assert cities
 
     city_names = [city.name for city in cities]
-    planet = mock_pack.planets[0]
+    planet = pack.planets[0]
     for city in planet.cities:
         assert city.name in city_names
 
 
 @pytest.mark.asyncio
-async def test_get_planets_of_game(mock_database_client, game_id, mock_pack):
+async def test_get_planets_of_game(mock_database_client, game_id, pack):
     planets = await mock_database_client.get_planets_of_game(game_id)
 
     assert planets
 
     planet_names = [planet.name for planet in planets]
-    for planet in mock_pack.planets:
+    for planet in pack.planets:
         assert planet.name in planet_names
