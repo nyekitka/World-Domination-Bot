@@ -1,4 +1,4 @@
-import psycopg2
+import psycopg
 import json
 from typing import Optional
 import pandas as pd
@@ -22,13 +22,13 @@ class User:
     Representation of user and admin in game. Works like a wrapper of sql queries.
     """
 
-    def __init__(self, id: int, conn: psycopg2.extensions.connection):
+    def __init__(self, id: int, conn: psycopg.extensions.connection):
         self.id = id
         self.__conn = conn
         self.__cursor = self.__conn.cursor()
     
     @classmethod
-    def init_with_check(cls, id : int, conn: psycopg2.extensions.connection):
+    def init_with_check(cls, id : int, conn: psycopg.extensions.connection):
         cursor = conn.cursor()
         cursor.execute("""SELECT EXISTS(SELECT * FROM "User" WHERE tgid=%s)""", (id,))
         if cursor.fetchone()[0]:
@@ -41,7 +41,7 @@ class User:
                 return None
     
     @classmethod
-    def make_new_user(cls, id: int, isadmin: bool, conn: psycopg2.extensions.connection):
+    def make_new_user(cls, id: int, isadmin: bool, conn: psycopg.extensions.connection):
         cursor = conn.cursor()
         if isadmin:
             cursor.execute("""INSERT INTO Admins(tgid) VALUES (%s)""", (id,))
@@ -79,7 +79,7 @@ class User:
             else:
                 self.__cursor.execute("CALL Kick_user(%s::BIGINT)", (self.id,))
             self.__conn.commit()
-        except psycopg2.DatabaseError as ex:
+        except psycopg.DatabaseError as ex:
             self.__conn.rollback()
             raise CDException(ex.pgcode) from ex
     
@@ -89,13 +89,13 @@ class City:
     Representation of city in game. Works like a wrapper of sql queries.
     """
 
-    def __init__(self, id: int, conn: psycopg2.extensions.connection):
+    def __init__(self, id: int, conn: psycopg.extensions.connection):
         self.id = id
         self.__conn = conn
         self.__cursor = conn.cursor()
 
     @classmethod
-    def init_with_check(cls, id : int, conn: psycopg2.extensions.connection):
+    def init_with_check(cls, id : int, conn: psycopg.extensions.connection):
         cursor = conn.cursor()
         cursor.execute("SELECT EXISTS(SELECT * FROM City WHERE id=%s)", (id,))
         if cursor.fetchone()[0]:
@@ -104,7 +104,7 @@ class City:
             return None
 
     @classmethod
-    def make_new_city(cls, name: str, planetid: int, conn: psycopg2.extensions.connection):
+    def make_new_city(cls, name: str, planetid: int, conn: psycopg.extensions.connection):
         cursor = conn.cursor()
         cursor.execute("INSERT INTO City(name, planetid) VALUES (%s, %s) RETURNING id", (name, planetid))
         id = cursor.fetchone()[0]
@@ -182,13 +182,13 @@ class Planet:
     Representation of the planet in game. Works like a wrapper of sql queries.
     """
 
-    def __init__(self, planetid: int, conn: psycopg2.extensions.connection):
+    def __init__(self, planetid: int, conn: psycopg.extensions.connection):
         self.id = planetid
         self.__conn = conn
         self.__cursor = conn.cursor()
 
     @classmethod
-    def init_with_check(cls, id : int, conn: psycopg2.extensions.connection):
+    def init_with_check(cls, id : int, conn: psycopg.extensions.connection):
         cursor = conn.cursor()
         cursor.execute("SELECT EXISTS(SELECT * FROM Planet WHERE id=%s)", (id,))
         if cursor.fetchone()[0]:
@@ -197,7 +197,7 @@ class Planet:
             return None
 
     @classmethod
-    def make_new_planet(cls, name: str, gameid: int, conn: psycopg2.extensions.connection):
+    def make_new_planet(cls, name: str, gameid: int, conn: psycopg.extensions.connection):
         cursor = conn.cursor()
         cursor.execute("INSERT INTO Planet(name, gameid) VALUES (%s, %s) RETURNING id", (name, gameid))
         id = cursor.fetchone()[0]
@@ -234,8 +234,8 @@ class Planet:
     def cities(self, nondestroyed:bool = True) -> list[City]:
         """
         Returns the list of non-destroyed cities on the planet
-        """
-        if nondestroyed:  
+        """ 
+        if nondestroyed: 
             self.__cursor.execute("SELECT id FROM city WHERE planetid=%s AND development > 0", (self.id,))
         else:
             self.__cursor.execute("SELECT id FROM city WHERE planetid=%s", (self.id, ))
@@ -278,7 +278,7 @@ class Planet:
             self.__cursor.execute("INSERT INTO Negotiations(GameID, PlanetFrom, PlanetTo) VALUES (%s, %s, %s)",
                               (game_id, planet.id, self.id))
             self.__conn.commit()
-        except psycopg2.DatabaseError as err:
+        except psycopg.DatabaseError as err:
             self.__conn.rollback()
             if 'gamestatechecker' in err.pgerror:
                 raise CDException('NEO') from err
@@ -302,7 +302,7 @@ class Planet:
         try:
             self.__cursor.execute("CALL INVENT(%s)", (self.id, ))
             self.__conn.commit()
-        except psycopg2.DatabaseError as ex:
+        except psycopg.DatabaseError as ex:
             self.__conn.rollback()
             raise CDException(ex.pgcode) from ex
 
@@ -328,7 +328,7 @@ class Planet:
         try:
             self.__cursor.execute("CALL Create_Meteorites(%s, %s)", (self.id, n))
             self.__conn.commit()
-        except psycopg2.DatabaseError as ex:
+        except psycopg.DatabaseError as ex:
             self.__conn.rollback()
             raise CDException(ex.pgcode) from ex
     
@@ -348,7 +348,7 @@ class Planet:
         try:
             self.__cursor.execute("CALL Attack(%s, %s)", (self.id, city_id))
             self.__conn.commit()
-        except psycopg2.DatabaseError as ex:
+        except psycopg.DatabaseError as ex:
             self.__conn.rollback()
             raise CDException(ex.pgcode) from ex
     
@@ -398,7 +398,7 @@ class Planet:
         try:
             self.__cursor.execute("CALL Develop(%s, %s)", (self.id, city_id))
             self.__conn.commit()
-        except psycopg2.DatabaseError as ex:
+        except psycopg.DatabaseError as ex:
             self.__conn.rollback()
             raise CDException(ex.pgcode) from ex
 
@@ -421,7 +421,7 @@ class Planet:
         try:
             self.__cursor.execute("CALL EcoBoost(%s)", (self.id,))
             self.__conn.commit()
-        except psycopg2.DatabaseError as ex:
+        except psycopg.DatabaseError as ex:
             self.__conn.rollback()
             raise CDException(ex.pgcode) from ex
     
@@ -460,7 +460,7 @@ class Planet:
         try:
             self.__cursor.execute("CALL Send_Sanctions(%s, %s)", (self.id, planet_id))
             self.__conn.commit()
-        except psycopg2.DatabaseError as ex:
+        except psycopg.DatabaseError as ex:
             self.__conn.rollback()
             raise CDException(ex.pgcode) from ex
     
@@ -495,7 +495,7 @@ class Planet:
         try:
             self.__cursor.execute("CALL Build_Shield(%s, %s)", (self.id, city_id))
             self.__conn.commit()
-        except psycopg2.DatabaseError as ex:
+        except psycopg.DatabaseError as ex:
             self.__conn.rollback()
             raise CDException(ex.pgcode) from ex
     
@@ -517,7 +517,7 @@ class Planet:
         try:
             self.__cursor.execute("CALL Transfer(%s, %s, %s)", (self.id, planet_id, money))
             self.__conn.commit()
-        except psycopg2.DatabaseError as ex:
+        except psycopg.DatabaseError as ex:
             self.__conn.rollback()
             raise CDException(ex.pgcode) from ex
 
@@ -527,13 +527,13 @@ class Game:
     Representation of the lobby in game. Works like a wrapper of sql queries.
     """
 
-    def __init__(self, id: int, conn: psycopg2.extensions.connection):
+    def __init__(self, id: int, conn: psycopg.extensions.connection):
         self.id = id
         self.__conn = conn
         self.__cursor = conn.cursor()
     
     @classmethod
-    def init_with_check(cls, id : int, conn: psycopg2.extensions.connection):
+    def init_with_check(cls, id : int, conn: psycopg.extensions.connection):
         cursor = conn.cursor()
         cursor.execute("SELECT EXISTS(SELECT * FROM Game WHERE id=%s)", (id,))
         if cursor.fetchone()[0]:
@@ -542,7 +542,7 @@ class Game:
             return None
         
     @classmethod
-    def make_new_game(cls, planets: int, conn: psycopg2.extensions.connection):
+    def make_new_game(cls, planets: int, conn: psycopg.extensions.connection):
         cursor = conn.cursor()
         cursor.execute("INSERT INTO Game(planets) VALUES (%s) RETURNING id", (planets,))
         id = cursor.fetchone()[0]
@@ -550,7 +550,7 @@ class Game:
         return cls(id, conn)
 
     @classmethod
-    def all_games(cls, conn: psycopg2.extensions.connection):
+    def all_games(cls, conn: psycopg.extensions.connection):
         cursor = conn.cursor()
         cursor.execute("SELECT id FROM Game")
         result = cursor.fetchall()
@@ -569,7 +569,7 @@ class Game:
         try:
             self.__cursor.execute("CALL Join_User(%s, %s)", (user_id, self.id))
             self.__conn.commit()
-        except psycopg2.DatabaseError as ex:
+        except psycopg.DatabaseError as ex:
             self.__conn.rollback()
             raise CDException(ex.pgcode) from ex
     
@@ -580,7 +580,7 @@ class Game:
         try:
             self.__cursor.execute("CALL Join_Admin(%s, %s)", (user_id, self.id))
             self.__conn.commit()
-        except psycopg2.DatabaseError as ex:
+        except psycopg.DatabaseError as ex:
             self.__conn.rollback()
             raise CDException(ex.pgcode) from ex
 
@@ -657,7 +657,7 @@ class Game:
         try:
             self.__cursor.execute("CALL Start_new_round(%s)", (self.id, ))
             self.__conn.commit()
-        except psycopg2.DatabaseError as ex:
+        except psycopg.DatabaseError as ex:
             self.__conn.rollback()
             raise CDException(ex.pgcode) from ex
     
@@ -668,7 +668,7 @@ class Game:
         try:
             self.__cursor.execute("CALL End_this_round(%s)", (self.id, ))
             self.__conn.commit()
-        except psycopg2.DatabaseError as ex:
+        except psycopg.DatabaseError as ex:
             self.__conn.rollback()
             raise CDException(ex.pgcode) from ex
         
