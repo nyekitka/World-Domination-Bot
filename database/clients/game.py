@@ -1,16 +1,35 @@
 import logging
 
-from sqlalchemy import update
+from async_lru import alru_cache
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.base_client import DatabaseClient
 from database.models import Admin, City, Game, Planet, Player
-from database.schemas import GameDto, GameStatus
+from database.schemas import AdminDto, GameDto, GameStatus, PlanetDto, PlayerDto
 from presets.pack import Pack
+from pydantic import TypeAdapter
+
+from database.config import database_config
 
 logger = logging.getLogger(__name__)
 
 
 class GameClient(DatabaseClient):
+    @DatabaseClient.get_transaction
+    async def get_all_games(
+        self, s: AsyncSession, every: bool = False
+    ) -> list[GameDto]:
+        if every:
+            stmt = select(Game)
+        else:
+            stmt = (
+                select(Game)
+                .where(Game.status != GameStatus.ENDED)
+            )
+        result = await s.execute(stmt)
+        games = result.scalars().all()
+        return TypeAdapter(list[GameDto]).validate_python(games)
+
     @DatabaseClient.set_transaction
     async def create_game(self, s: AsyncSession, admin_id: int, pack: Pack) -> GameDto:
         game = Game()
@@ -43,3 +62,49 @@ class GameClient(DatabaseClient):
         )
 
         await self._clear_game_cache(game_id, True)
+    
+    @DatabaseClient.get_transaction
+    async def get_all_active_players(
+        self, s: AsyncSession, game_id: int
+    ) -> list[PlayerDto]:
+        result = await s.execute(
+            select(Player)
+            .where(Player.game_id == game_id)
+        )
+        players = result.scalars().all()
+        return TypeAdapter(list[PlayerDto]).validate_python(players)
+    
+    @DatabaseClient.get_transaction
+    async def get_all_active_admins(
+        self, s: AsyncSession, game_id: int
+    ) -> list[PlayerDto]:
+        result = await s.execute(
+            select(Admin)
+            .where(Admin.game_id == game_id)
+        )
+        admins = result.scalars().all()
+        return TypeAdapter(list[AdminDto]).validate_python(admins)
+
+    @alru_cache(ttl=database_config.EXPIRE_CACHE)
+    @DatabaseClient.get_transaction
+    async def get_number_of_planets(
+        self, s: AsyncSession, game_id: int
+    ) -> int:
+        results = await s.execute(
+            select(Planet)
+            .where(Planet.game_id == game_id)
+        )
+        return len(results.scalars().all())
+    
+    @alru_cache(ttl=database_config.EXPIRE_CACHE)
+    @DatabaseClient.get_transaction
+    async def get_all_planets_in_game(
+        self, s: AsyncSession, game_id: int
+    ) -> list[PlanetDto]:
+        results = await s.execute(
+            select(Planet)
+            .where(Planet.game_id == game_id)
+        )
+        return TypeAdapter(list[AdminDto]).validate_python(
+            results.scalars().all()
+        )

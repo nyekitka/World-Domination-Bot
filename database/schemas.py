@@ -3,6 +3,8 @@ from typing import Union
 
 from pydantic import BaseModel, ConfigDict
 
+from game.schemas import OrderType
+
 
 class GameStatus(StrEnum):
     WAITING = auto()
@@ -10,24 +12,6 @@ class GameStatus(StrEnum):
     ROUND = auto()
     ENDED = auto()
 
-
-class MessageType(StrEnum):
-    CITY = auto()
-    METEORITES = auto()
-    SANCTIONS = auto()
-    ECO = auto()
-    NEGOTIATIONS = auto()
-    ATTACK = auto()
-
-
-class OrderType(StrEnum):
-    ATTACK = auto()
-    DEVELOP = auto()
-    SHIELD = auto()
-    CREATE = auto()
-    ECO = auto()
-    SANCTIONS = auto()
-    INVENT = auto()
 
 
 class BaseDto(BaseModel):
@@ -69,24 +53,11 @@ class CityDto(BaseDto):
     development: int = 60
 
 
-class InfoMessageDto(BaseDto):
-    id: int
-    planet_id: int
-    message_type: MessageType
-
-
 class OrderDto(BaseDto):
     action: OrderType
     planet_id: int
     argument: int | None
     round: int
-
-
-class PlanetMessageDto(BaseDto):
-    owner_id: int
-    planet_id: int
-    message_id: int
-    message_type: MessageType
 
 
 class SanctionDto(BaseDto):
@@ -101,25 +72,3 @@ class NegotiationDto(BaseDto):
 
 UserDto = Union[PlayerDto, AdminDto]
 
-
-class FailureReason(StrEnum):
-    SUCCESS = auto()
-    UNTIMELY_NEGOTIATIONS = auto()
-    PLANET_IS_BUSY = auto()
-    BILATERAL_NEGOTIATIONS = auto()
-    ALREADY_NEGOTIATING = auto()
-    OBJECT_NOT_FOUND = auto()
-    ALREADY_INVENTED = auto()
-    NOT_ENOUGH_MONEY = auto()
-    NOT_ENOUGH_PLAYERS = auto()
-    NOT_ENOUGH_METEORITES = auto()
-    NOT_IN_GAME = auto()
-    NEGATIVE_AMOUNT = auto()
-    IS_NOT_INVENTED = auto()
-    SELF_ATTACK = auto()
-    ROUND_IS_NOT_GOING = auto()
-    ALREADY_IN_GAME = auto()
-    GAME_ENDED = auto()
-    GAME_IS_FULL = auto()
-    CANNOT_START_ROUND = auto()
-    DIFFERENT_GAMES = auto()

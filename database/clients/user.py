@@ -2,9 +2,12 @@ import logging
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from database.base_client import DatabaseClient
 from database.models import Admin, Game, Planet, Player
-from database.schemas import AdminDto, FailureReason, GameStatus, PlayerDto, UserDto
+from database.schemas import AdminDto, GameStatus, PlayerDto, UserDto
+from game.schemas import FailureReason
+
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +27,10 @@ class UserClient(DatabaseClient):
             if user:
                 return PlayerDto.model_validate(user)
 
-        logger.info("Creating new user with tg_id=%s and is_admin=%s", tg_id, is_admin)
+        logger.info(
+            "Creating new user with tg_id=%s and is_admin=%s",
+            tg_id, is_admin
+        )
 
         if is_admin:
             user = Admin(tg_id=tg_id)
@@ -98,7 +104,7 @@ class UserClient(DatabaseClient):
             return FailureReason.SUCCESS
 
         free_planets = await s.execute(
-            select(Planet).where(Planet.game_id == game_id, Planet.owner_id is None)
+            select(Planet).where(Planet.game_id == game_id, Planet.owner_id == None)
         )
         planet = free_planets.scalars().first()
         if not planet:
@@ -154,5 +160,24 @@ class UserClient(DatabaseClient):
             return FailureReason.NOT_IN_GAME
 
         admin.game_id = None
+
+        return FailureReason.SUCCESS
+    
+    @DatabaseClient.set_transaction
+    async def promote_to_admin(self, s: AsyncSession, player_id: int) -> FailureReason:
+        player = await s.get(Player, player_id)
+        if player is None:
+            return FailureReason.OBJECT_NOT_FOUND
+        
+        if player.game_id:
+            game = await s.get(Game, player.game_id)
+            if game.status != GameStatus.WAITING:
+                return FailureReason.WAIT_TILL_GAME_ENDS
+            
+            await self._kick_player(s, player)
+        
+        admin = Admin(tg_id=player.tg_id)
+        s.add(admin)
+        await s.delete(player)
 
         return FailureReason.SUCCESS
