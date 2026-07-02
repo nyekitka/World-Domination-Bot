@@ -6,7 +6,7 @@ format:
 
 .PHONY: test
 test:
-	poetry run pytest -v -k "$(k)"
+	poetry run pytest -vv -k "$(k)"
 
 .PHONY: test-cov
 test-cov:

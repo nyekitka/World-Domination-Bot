@@ -3,9 +3,10 @@ import logging
 import pytest
 from pytest_lazy_fixtures import lf
 
-from database.config import game_config
 from database.models import City, Game, Negotiation, Order, Planet, Sanction
-from database.schemas import FailureReason, GameStatus, OrderDto, OrderType, SanctionDto
+from database.schemas import GameStatus, OrderDto,  SanctionDto
+from game.config import game_config
+from game.schemas import FailureReason, OrderType
 
 
 logger = logging.getLogger(__name__)

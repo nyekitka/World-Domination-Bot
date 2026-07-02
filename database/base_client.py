@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 from sqlalchemy.ext.asyncio.engine import AsyncEngine
 
-from database.config import database_config, game_config
+from database.config import database_config
 from database.models import (
     City,
     Game,
@@ -21,6 +21,7 @@ from database.schemas import (
     PlanetDto,
     SanctionDto,
 )
+from game.config import game_config
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +113,36 @@ class DatabaseClient:
     @get_transaction
     async def get_planet(self, s: AsyncSession, planet_id: int) -> PlanetDto | None:
         planet = await s.get(Planet, planet_id)
+        if planet:
+            return PlanetDto.model_validate(planet)
+        return None
+    
+    @get_transaction
+    async def get_planet_by_city_id(
+        self, s: AsyncSession, city_id: int
+    ) -> PlanetDto | None:
+        city_res = await s.execute(
+            select(Planet).
+            join(City, City.planet_id == Planet.id)
+            .where(City.id == city_id)
+        )
+        city = city_res.scalar_one_or_none()
+        if city:
+            return CityDto.model_validate(city)
+        return None
+
+    @get_transaction
+    async def get_player_planet(
+        self, s: AsyncSession, player_id: int, game_id: int
+    ) -> PlanetDto | None:
+        result = await s.execute(
+            select(Planet)
+            .where(
+                Planet.owner_id == player_id,
+                Planet.game_id == game_id
+            )
+        )
+        planet = result.scalar_one_or_none()
         if planet:
             return PlanetDto.model_validate(planet)
         return None

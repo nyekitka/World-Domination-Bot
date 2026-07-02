@@ -2,7 +2,8 @@ import pytest
 from pytest_lazy_fixtures import lf
 
 from database.models import Admin, Game, Planet, Player
-from database.schemas import FailureReason, GameStatus
+from database.schemas import GameStatus
+from game.schemas import FailureReason
 
 
 @pytest.mark.parametrize(

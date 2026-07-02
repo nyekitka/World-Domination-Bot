@@ -7,9 +7,9 @@ from sqlalchemy.orm import (
     mapped_column,
 )
 
-from database.config import game_config
-from database.schemas import GameStatus, MessageType, OrderType
-
+from database.schemas import GameStatus
+from game.schemas import OrderType
+from game.config import game_config
 
 class ModelBase(DeclarativeBase):
     @declared_attr.directive
@@ -67,16 +67,6 @@ class City(ModelBase):
     )
 
 
-class InfoMessage(ModelBase):
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    planet_id: Mapped[int] = mapped_column(
-        ForeignKey("planet.id", ondelete="CASCADE"), nullable=False
-    )
-    message_type: Mapped[MessageType] = mapped_column(
-        Enum(MessageType, name="MessageType"), nullable=False
-    )
-
-
 class Order(ModelBase):
     action: Mapped[OrderType] = mapped_column(
         Enum(OrderType, name="OrderType"), nullable=False
@@ -89,25 +79,6 @@ class Order(ModelBase):
 
     __table_args__ = (
         PrimaryKeyConstraint(action, planet_id, round, argument, name="order_pkey"),
-    )
-
-
-class PlanetMessage(ModelBase):
-    owner_id: Mapped[int] = mapped_column(
-        ForeignKey("planet.id", ondelete="CASCADE"), nullable=False
-    )
-    planet_id: Mapped[int] = mapped_column(
-        ForeignKey("planet.id", ondelete="CASCADE"), nullable=False
-    )
-    message_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    message_type: Mapped[MessageType] = mapped_column(
-        Enum(OrderType, name="OrderType"), nullable=False
-    )
-
-    __table_args__ = (
-        PrimaryKeyConstraint(
-            owner_id, planet_id, message_id, name="planet_message_pkey"
-        ),
     )
 
 

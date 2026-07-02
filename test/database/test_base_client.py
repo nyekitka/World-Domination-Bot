@@ -1,6 +1,6 @@
 import pytest
 
-from database.config import game_config
+from game.config import game_config
 
 
 @pytest.mark.asyncio

@@ -4,12 +4,14 @@ import logging
 from pydantic import TypeAdapter
 from sqlalchemy import and_, delete, insert, not_, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from database.base_client import DatabaseClient
-from database.models import City, Game, Negotiation, Order, Planet, Sanction
-from database.schemas import FailureReason, GameStatus, OrderDto, OrderType, SanctionDto
 from sqlalchemy.sql.functions import coalesce
 
-from database.config import game_config
+from database.base_client import DatabaseClient
+from database.models import City, Game, Negotiation, Order, Planet, Sanction
+from database.schemas import  GameStatus, OrderDto, SanctionDto
+from game.schemas import FailureReason, OrderType
+from game.config import game_config
+
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +60,9 @@ class ActionsClient(DatabaseClient):
         await s.execute(stmt)
 
     @DatabaseClient.set_transaction
-    async def order_development(self, s: AsyncSession, city_id: int) -> FailureReason:
+    async def order_development(
+        self, s: AsyncSession, city_id: int
+    ) -> FailureReason:
         city = await s.get(City, city_id)
         if not city:
             return FailureReason.OBJECT_NOT_FOUND

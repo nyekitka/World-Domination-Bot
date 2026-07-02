@@ -15,3 +15,14 @@ class MessageType(StrEnum):
     NEGOTIATIONS = auto()
     ATTACK = auto()
 
+INFO_MESSAGE_TYPES = (
+    MessageType.CITY,
+    MessageType.METEORITES,
+    MessageType.SANCTIONS,
+    MessageType.ECO
+)
+
+PLANET_MESSAGE_TYPES = (
+    MessageType.NEGOTIATIONS,
+    MessageType.ATTACK
+)

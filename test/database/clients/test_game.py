@@ -6,6 +6,13 @@ from database.schemas import GameStatus
 
 
 @pytest.mark.asyncio
+async def test_get_games(mock_game_client, game_id):
+    games = await mock_game_client.get_all_games()
+    assert len(games) == 1
+    assert games[0].id == game_id
+
+
+@pytest.mark.asyncio
 async def test_create_game(mock_game_client, admin_id, pack):
     game = await mock_game_client.create_game(admin_id, pack)
 
