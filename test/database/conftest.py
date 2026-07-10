@@ -185,7 +185,6 @@ async def mock_session(
         engine = create_async_engine(
             f"postgresql+asyncpg://{j.user}:{j.password}"
             f"@{j.host}:{j.port}/{j.dbname}",
-            echo=True,
         )
         session = async_sessionmaker(engine)
         async with engine.begin() as conn:

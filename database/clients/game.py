@@ -3,6 +3,7 @@ import logging
 from async_lru import alru_cache
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload, selectinload
 from database.base_client import DatabaseClient
 from database.models import Admin, City, Game, Planet, Player
 from database.schemas import AdminDto, GameDto, GameStatus, PlanetDto, PlayerDto
@@ -99,12 +100,22 @@ class GameClient(DatabaseClient):
     @alru_cache(ttl=database_config.EXPIRE_CACHE)
     @DatabaseClient.get_transaction
     async def get_all_planets_in_game(
-        self, s: AsyncSession, game_id: int
+        self,
+        s: AsyncSession,
+        game_id: int,
+        load_development: bool = True
     ) -> list[PlanetDto]:
+        options = ()
+        if load_development:
+            options = (
+                selectinload(Planet.cities),
+                joinedload(Planet.game)
+            )
         results = await s.execute(
             select(Planet)
+            .options(*options)
             .where(Planet.game_id == game_id)
         )
-        return TypeAdapter(list[AdminDto]).validate_python(
+        return TypeAdapter(list[PlanetDto]).validate_python(
             results.scalars().all()
         )

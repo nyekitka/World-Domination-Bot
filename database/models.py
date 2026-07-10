@@ -1,10 +1,16 @@
 import re
-from sqlalchemy import BigInteger, Enum, ForeignKey, PrimaryKeyConstraint
+from sqlalchemy import (
+    BigInteger, Enum,
+    ForeignKey, PrimaryKeyConstraint,
+    func, inspect, select
+)
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import (
     declared_attr,
     DeclarativeBase,
     Mapped,
     mapped_column,
+    relationship
 )
 
 from database.schemas import GameStatus
@@ -27,6 +33,8 @@ class Game(ModelBase):
         nullable=False, default=game_config.DEFAULT_GAME_ECO_RATE
     )
     round: Mapped[int] = mapped_column(nullable=True)
+
+    planets: Mapped[list['Planet']] = relationship(back_populates='game')
 
 
 class Player(ModelBase):
@@ -54,6 +62,39 @@ class Planet(ModelBase):
     meteorites: Mapped[int] = mapped_column(nullable=False, default=0)
     is_invented: Mapped[bool] = mapped_column(nullable=False, default=False)
 
+    game: Mapped[Game] = relationship(back_populates='planets')
+    cities: Mapped[list['City']] = relationship(back_populates='planet')
+
+    @hybrid_property
+    def development(self) -> float:
+        state = inspect(self)
+
+        if 'cities' in state.unloaded or 'game' in state.unloaded:
+            return None
+        if len(self.cities) == 0:
+            return 0
+        avg_development = sum(
+            city.development
+            for city in self.cities
+        ) / len(self.cities)
+        return avg_development * self.game.ecorate / 100
+    
+    @development.expression
+    def development(cls):
+        avg_development = (
+            select(func.avg(City.development))
+            .where(City.planet_id == cls.id)
+            .scalar_subquery()
+        )
+
+        eco_rate = (
+            select(Game.ecorate / 100)
+            .where(Game.id == cls.game_id)
+            .scalar_subquery()
+        )
+
+        return func.coalesce(avg_development, 0.0) * eco_rate
+
 
 class City(ModelBase):
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -65,6 +106,8 @@ class City(ModelBase):
     development: Mapped[int] = mapped_column(
         nullable=False, default=game_config.DEFAULT_DEVELOPMENT
     )
+
+    planet: Mapped[Planet] = relationship(back_populates='cities')
 
 
 class Order(ModelBase):

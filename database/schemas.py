@@ -43,6 +43,7 @@ class PlanetDto(BaseDto):
     balance: int = 1000
     meteorites: int = 0
     is_invented: bool = False
+    development: float | None = None
 
 
 class CityDto(BaseDto):

@@ -43,6 +43,10 @@ async def test_get_planet(mock_database_client, planet_id):
     assert planet.balance == game_config.DEFAULT_BALANCE
     assert not planet.meteorites
     assert not planet.is_invented
+    assert planet.development == game_config.DEFAULT_DEVELOPMENT * game_config.DEFAULT_GAME_ECO_RATE / 100
+
+    same_planet = await mock_database_client.get_planet(planet_id, False)
+    assert same_planet.development is None
 
 
 @pytest.mark.asyncio
