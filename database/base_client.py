@@ -1,5 +1,13 @@
+import functools
 import logging
-from typing import Awaitable
+from typing import (
+    Awaitable,
+    Callable,
+    Concatenate,
+    ParamSpec,
+    TypeVar,
+    Self
+)
 
 from async_lru import alru_cache
 from pydantic import TypeAdapter
@@ -25,14 +33,25 @@ from game.config import game_config
 
 logger = logging.getLogger(__name__)
 
+ReturnType = TypeVar('ReturnType')
+ParamsType = ParamSpec('ParamsType')
+ClientType = TypeVar('ClientType', bound='DatabaseClient')
+
 
 class DatabaseClient:
     def __init__(self, session: async_sessionmaker[AsyncSession]):
         self.session = session
 
     @staticmethod
-    def set_transaction(method: Awaitable) -> Awaitable:
-        async def wrapper(self, *args, **kwargs) -> None:
+    def set_transaction(
+        method: Callable[Concatenate[ClientType, AsyncSession, ParamsType], Awaitable[ReturnType]]
+    ) -> Callable[Concatenate[ClientType, ParamsType], Awaitable[ReturnType]]:
+        @functools.wraps(method)
+        async def wrapper(
+            self: ClientType,
+            *args: ParamsType.args,
+            **kwargs: ParamsType.kwargs
+        ) -> ReturnType:
             async with self.session() as s:
                 res = await method(self, s, *args, **kwargs)
                 await s.commit()
@@ -41,8 +60,15 @@ class DatabaseClient:
         return wrapper
 
     @staticmethod
-    def get_transaction(method: Awaitable) -> Awaitable:
-        async def wrapper(self, *args, **kwargs):
+    def get_transaction(
+        method: Callable[Concatenate[ClientType, AsyncSession, ParamsType], Awaitable[ReturnType]]
+    ) -> Callable[Concatenate[ClientType, ParamsType], Awaitable[ReturnType]]:
+        @functools.wraps(method)
+        async def wrapper(
+            self: ClientType,
+            *args: ParamsType.args,
+            **kwargs: ParamsType.kwargs
+        ) -> ReturnType:
             async with self.session() as s:
                 res = await method(self, s, *args, **kwargs)
                 return res
