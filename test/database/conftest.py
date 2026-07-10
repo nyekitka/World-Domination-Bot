@@ -1,6 +1,5 @@
 import pytest
 import pytest_asyncio
-from pytest_postgresql import factories
 from pytest_postgresql.janitor import DatabaseJanitor
 
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
@@ -11,10 +10,16 @@ from database.models import Admin, City, Game, ModelBase, Planet, Player
 from database.schemas import GameStatus
 from presets.pack import Pack, PackCity, PackPlanet
 
-
-test_db = factories.postgresql_noproc(
-    dbname="test_db", port="5432", user="postgres", password="123", host="test-db"
-)
+@pytest.fixture()
+def test_db_config() -> dict[str, str]:
+    return {
+        'user': 'postgres',
+        'host': 'test-db',
+        'port': '5432',
+        'name':  'test_db',
+        'password': '123',
+        'version': '18'
+    }
 
 
 @pytest.fixture()
@@ -165,18 +170,21 @@ def city_name_to_id() -> dict[str, int]:
 
 
 @pytest_asyncio.fixture
-async def mock_session(pack, admin_id, player_ids, game_id, planet_name_to_id, test_db):
+async def mock_session(
+    pack, admin_id, player_ids, 
+    game_id, planet_name_to_id, test_db_config
+):
     with DatabaseJanitor(
-        user=test_db.user,
-        dbname=test_db.dbname,
-        host=test_db.host,
-        port=test_db.port,
-        password=test_db.password,
-        version=test_db.version,
-    ):
+        user=test_db_config['user'],
+        dbname=test_db_config['name'],
+        host=test_db_config['host'],
+        port=test_db_config['port'],
+        password=test_db_config['password'],
+        version=test_db_config['version'],
+    ) as j:
         engine = create_async_engine(
-            f"postgresql+asyncpg://{test_db.user}:{test_db.password}"
-            f"@{test_db.host}:{test_db.port}/{test_db.dbname}",
+            f"postgresql+asyncpg://{j.user}:{j.password}"
+            f"@{j.host}:{j.port}/{j.dbname}",
             echo=True,
         )
         session = async_sessionmaker(engine)
