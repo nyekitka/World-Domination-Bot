@@ -14,6 +14,7 @@ from pydantic import TypeAdapter
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 from sqlalchemy.ext.asyncio.engine import AsyncEngine
+from sqlalchemy.orm import joinedload, selectinload
 
 from database.config import database_config
 from database.models import (
@@ -137,8 +138,23 @@ class DatabaseClient:
         return None
 
     @get_transaction
-    async def get_planet(self, s: AsyncSession, planet_id: int) -> PlanetDto | None:
-        planet = await s.get(Planet, planet_id)
+    async def get_planet(
+        self,
+        s: AsyncSession,
+        planet_id: int,
+        load_development: bool = True,
+    ) -> PlanetDto | None:
+        options = ()
+        if load_development:
+            options = (
+                selectinload(Planet.cities),
+                joinedload(Planet.game)
+            )
+        planet = (await s.execute(
+            select(Planet)
+            .options(*options)
+            .where(Planet.id == planet_id)
+        )).scalar_one_or_none()
         if planet:
             return PlanetDto.model_validate(planet)
         return None
@@ -159,10 +175,21 @@ class DatabaseClient:
 
     @get_transaction
     async def get_player_planet(
-        self, s: AsyncSession, player_id: int, game_id: int
+        self,
+        s: AsyncSession,
+        player_id: int,
+        game_id: int,
+        load_development: bool = True,
     ) -> PlanetDto | None:
+        options = ()
+        if load_development:
+            options = (
+                selectinload(Planet.cities),
+                joinedload(Planet.game)
+            )
         result = await s.execute(
             select(Planet)
+            .options(*options)
             .where(
                 Planet.owner_id == player_id,
                 Planet.game_id == game_id
@@ -190,11 +217,27 @@ class DatabaseClient:
 
     @get_transaction
     async def get_planets_of_game(
-        self, s: AsyncSession, game_id: int
+        self,
+        s: AsyncSession,
+        game_id: int,
+        load_development: bool = True,
     ) -> list[PlanetDto] | None:
-        result = await s.execute((select(Planet).where(Planet.game_id == game_id)))
-        if result:
-            return TypeAdapter(list[PlanetDto]).validate_python(result.scalars().all())
+        options = ()
+        if load_development:
+            options = (
+                selectinload(Planet.cities),
+                joinedload(Planet.game)
+            )
+        planets = (await s.execute(
+            select(Planet)
+            .options(*options)
+            .where(Planet.game_id == game_id)
+        )).scalars().all()
+
+        logger.debug(f'Planets[0].development: {planets[0].development}')
+
+        if planets:
+            return TypeAdapter(list[PlanetDto]).validate_python(planets)
         return None
 
     async def _clear_game_cache(self, game_id: int, soft: bool = False) -> None:
