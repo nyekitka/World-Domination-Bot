@@ -32,11 +32,21 @@ class GameClient(DatabaseClient):
         return TypeAdapter(list[GameDto]).validate_python(games)
 
     @DatabaseClient.set_transaction
-    async def create_game(self, s: AsyncSession, admin_id: int, pack: Pack) -> GameDto:
-        game = Game()
+    async def create_game(
+        self, s: AsyncSession,
+        admin_id: int, pack: Pack,
+        number_of_planets: int = -1
+    ) -> GameDto:
+        if number_of_planets == -1:
+            number_of_planets = len(pack.planets)
+        if number_of_planets > len(pack.planets):
+            number_of_planets = len(pack.planets)
+        game = Game(num_planets=number_of_planets)
         s.add(game)
         await s.flush()
-        for _planet in pack.planets:
+        for i, _planet in enumerate(pack.planets):
+            if i == number_of_planets:
+                break
             planet = Planet(name=_planet.name, game_id=game.id)
             s.add(planet)
             await s.flush()
@@ -86,16 +96,6 @@ class GameClient(DatabaseClient):
         admins = result.scalars().all()
         return TypeAdapter(list[AdminDto]).validate_python(admins)
 
-    @alru_cache(ttl=database_config.EXPIRE_CACHE)
-    @DatabaseClient.get_transaction
-    async def get_number_of_planets(
-        self, s: AsyncSession, game_id: int
-    ) -> int:
-        results = await s.execute(
-            select(Planet)
-            .where(Planet.game_id == game_id)
-        )
-        return len(results.scalars().all())
     
     @alru_cache(ttl=database_config.EXPIRE_CACHE)
     @DatabaseClient.get_transaction

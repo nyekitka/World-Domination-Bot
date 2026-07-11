@@ -23,6 +23,7 @@ class GameDto(BaseDto):
     status: GameStatus = GameStatus.WAITING
     ecorate: int = 95
     round: int | None = None
+    num_planets: int
 
 
 class PlayerDto(BaseDto):

@@ -33,6 +33,7 @@ class Game(ModelBase):
         nullable=False, default=game_config.DEFAULT_GAME_ECO_RATE
     )
     round: Mapped[int] = mapped_column(nullable=True)
+    num_planets: Mapped[int] = mapped_column(nullable=True)
 
     planets: Mapped[list['Planet']] = relationship(back_populates='game')
 

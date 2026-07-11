@@ -12,29 +12,39 @@ async def test_get_games(mock_game_client, game_id):
     assert games[0].id == game_id
 
 
+@pytest.mark.parametrize(
+    'num_planets',
+    (-1, 2, 6)
+)
 @pytest.mark.asyncio
-async def test_create_game(mock_game_client, admin_id, pack):
-    game = await mock_game_client.create_game(admin_id, pack)
-
+async def test_create_game(
+    mock_game_client, admin_id, pack, num_planets
+):
+    game = await mock_game_client.create_game(admin_id, pack, num_planets)
+    if num_planets == -1:
+        num_planets = len(pack.planets)
     async with mock_game_client.session() as s:
         admin = await s.get(Admin, admin_id)
         assert admin.game_id == game.id
-        for planet in pack.planets:
+        for i, planet in enumerate(pack.planets):
             result = await s.execute(
                 select(Planet).where(
                     Planet.name == planet.name, Planet.game_id == game.id
                 )
             )
-            orm_planet = result.scalars().all()
+            orm_planet = result.scalar_one_or_none()
+            if i >= num_planets:
+                assert orm_planet is None
+                continue
             assert orm_planet
 
             for city in planet.cities:
                 result = await s.execute(
                     select(City).where(
-                        City.name == city.name, City.planet_id == orm_planet[0].id
+                        City.name == city.name, City.planet_id == orm_planet.id
                     )
                 )
-                orm_city = result.scalars().all()
+                orm_city = result.scalar_one_or_none()
                 assert orm_city
 
 
