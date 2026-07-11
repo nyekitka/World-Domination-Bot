@@ -158,9 +158,54 @@ async def test_kick_user(mock_user_client, player_id, game_id, admin_id):
 
 
 @pytest.mark.asyncio
-async def test_kick_user_when_not_in_lobby(mock_user_client, player_id, admin_id):
+async def test_kick_user_when_not_in_lobby(
+    mock_user_client, player_id, admin_id
+):
     res = await mock_user_client.kick_user(player_id)
     assert res == FailureReason.NOT_IN_GAME
 
     res = await mock_user_client.kick_user(admin_id)
     assert res == FailureReason.NOT_IN_GAME
+
+
+@pytest.mark.asyncio
+async def test_promote_to_admin_not_in_game(
+    mock_user_client, player_id
+):
+    res = await mock_user_client.promote_to_admin(player_id)
+    assert res == FailureReason.SUCCESS
+    async with mock_user_client.session() as s:
+        admin = await s.get(Admin, player_id)
+        assert admin.tg_id == player_id
+
+
+@pytest.mark.parametrize(
+    ('game_status', 'expected_result'),
+    [
+        (GameStatus.WAITING, FailureReason.SUCCESS),
+        (GameStatus.ROUND, FailureReason.WAIT_TILL_GAME_ENDS),
+        (GameStatus.MEETING, FailureReason.WAIT_TILL_GAME_ENDS),
+    ]
+)
+@pytest.mark.asyncio
+async def test_promote_to_admin_in_game(
+    mock_user_client, player_id, game_status,
+    expected_result, game_id
+):
+    async with mock_user_client.session() as s:
+        game = await s.get(Game, game_id)
+        game.status = game_status
+        player = await s.get(Player, player_id)
+        player.game_id = game_id
+        await s.commit()
+    
+    result = await mock_user_client.promote_to_admin(player_id)
+    assert result == expected_result
+
+    async with mock_user_client.session() as s:
+        player = await s.get(Player, player_id)
+        admin = await s.get(Admin, player_id)
+        if expected_result == FailureReason.SUCCESS:
+            assert admin.tg_id == player_id and player is None
+        else:
+            assert player.tg_id == player_id and admin is None

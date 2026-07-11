@@ -59,3 +59,47 @@ async def test_end_game(mock_game_client, game_id, player_ids, admin_id):
 
         game = await s.get(Game, game_id)
         assert game.status == GameStatus.ENDED
+
+
+@pytest.mark.asyncio
+async def test_get_all_active_players(
+    mock_game_client, player_ids, game_id
+):
+    async with mock_game_client.session() as s:
+        for player_id in player_ids:
+            player_model = await s.get(Player, player_id)
+            player_model.game_id = game_id
+            await s.commit()
+        
+    result = await mock_game_client.get_all_active_players(game_id)
+    ids = {player.tg_id for player in result}
+    assert ids == set(player_ids)
+
+
+@pytest.mark.asyncio
+async def test_get_all_active_admins(
+    mock_game_client, admin_id, player_ids, game_id
+):
+    async with mock_game_client.session() as s:
+        for player_id in player_ids:
+            player_model = await s.get(Player, player_id)
+            player_model.game_id = game_id
+            await s.commit()
+        admin = await s.get(Admin, admin_id)
+        admin.game_id = game_id
+        await s.commit()
+        
+    result = await mock_game_client.get_all_active_admins(game_id)
+    assert len(result) == 1
+    assert result[0].tg_id == admin_id
+
+
+@pytest.mark.asyncio
+async def test_get_all_planets_in_game(
+    mock_game_client, game_id, pack
+):
+    planets = await mock_game_client.get_all_planets_in_game(game_id)
+    
+    actual_planet_names = {planet.name for planet in planets}
+    true_planet_names = {planet.name for planet in pack.planets}
+    assert actual_planet_names == true_planet_names
