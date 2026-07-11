@@ -26,6 +26,10 @@ def other_planet_id():
 def city_id():
     return 1
 
+@pytest.fixture()
+def city_id2():
+    return 2
+
 
 @pytest.mark.parametrize(
     ('is_shielded', 'balance', 'new_balance', 'true_result'),
@@ -298,9 +302,83 @@ def test_make_negotiations(
         )
 
 
-def test_end_negotiations(
-    mock_actions_storage, planet_id
-):
+def test_end_negotiations(mock_actions_storage, planet_id):
     mock_actions_storage.end_negotiations(planet_id)
 
     assert mock_actions_storage.client.delete(f'negotiate:{planet_id}')
+
+
+def test_get_shielded_cities(mock_actions_storage, planet_id, city_id, city_id2):
+    mock_actions_storage.client.smembers.return_value = [str(city_id), str(city_id2)]
+
+    result = mock_actions_storage.get_shielded_cities(planet_id)
+    assert result == [city_id, city_id2]
+    mock_actions_storage.client.smembers.assert_called_once_with(f'shield:{planet_id}')
+
+
+def test_get_developed_cities(mock_actions_storage, planet_id, city_id, city_id2):
+    mock_actions_storage.client.smembers.return_value = [str(city_id), str(city_id2)]
+
+    result = mock_actions_storage.get_developed_cities(planet_id)
+    assert result == [city_id, city_id2]
+    mock_actions_storage.client.smembers.assert_called_once_with(f'develop:{planet_id}')
+
+
+def test_get_shielded_cities(mock_actions_storage, planet_id, city_id, city_id2):
+    mock_actions_storage.client.smembers.return_value = [str(city_id), str(city_id2)]
+
+    result = mock_actions_storage.get_attacked_cities(planet_id)
+    assert result == [city_id, city_id2]
+    mock_actions_storage.client.smembers.assert_called_once_with(f'attack:{planet_id}')
+
+
+def test_get_sanctioned_planets(mock_actions_storage, planet_id, other_planet_id):
+    mock_actions_storage.client.smembers.return_value = [str(other_planet_id)]
+
+    result = mock_actions_storage.get_sanctioned_planets(planet_id)
+    assert result == [other_planet_id]
+    mock_actions_storage.client.smembers.assert_called_once_with(f'sanctions:{planet_id}')
+
+
+@pytest.mark.parametrize(
+    ('inmemory_meteorites', 'expected_result'),
+    [
+        (None, 0), ('0', 0), ('2', 2)
+    ]
+)
+def test_get_created_meteorites(
+    mock_actions_storage, planet_id, inmemory_meteorites, expected_result
+):
+    mock_actions_storage.client.get.return_value = inmemory_meteorites
+
+    actual_result = mock_actions_storage.get_created_meteorites(planet_id)
+    assert actual_result == expected_result
+    mock_actions_storage.client.get.assert_called_once_with(f'create:{planet_id}')
+
+
+@pytest.mark.parametrize(
+    ('inmemory_eco', 'expected_result'),
+    [(None, False), ('0', False), ('1', True)]
+)
+def test_get_eco_boost(
+    mock_actions_storage, planet_id, inmemory_eco, expected_result
+):
+    mock_actions_storage.client.get.return_value = inmemory_eco
+
+    actual_result = mock_actions_storage.get_eco_boost(planet_id)
+    assert actual_result == expected_result
+    mock_actions_storage.client.get.assert_called_once_with(f'eco:{planet_id}')
+
+
+@pytest.mark.parametrize(
+    ('inmemory_invent', 'expected_result'),
+    [(None, False), ('0', False), ('1', True)]
+)
+def test_get_invented(
+    mock_actions_storage, planet_id, inmemory_invent, expected_result
+):
+    mock_actions_storage.client.get.return_value = inmemory_invent
+
+    actual_result = mock_actions_storage.get_invented(planet_id)
+    assert actual_result == expected_result
+    mock_actions_storage.client.get.assert_called_once_with(f'invent:{planet_id}')

@@ -61,6 +61,12 @@ class ActionsClient(BaseClient):
             self.set(1, relation, planet_id)
         return result
     
+    def _get_planet_binary_relation(
+        self, relation: OrderType, planet_id: int
+    ) -> list[int]:
+        members = self.smembers(relation, planet_id)
+        return list(map(int, members))
+    
     def shield_city(self, planet_id: int, city_id: int) -> FailureReason:
         return self._edit_planet_binary_relation(
             relation=OrderType.SHIELD,
@@ -69,6 +75,9 @@ class ActionsClient(BaseClient):
             planet_id=planet_id,
             other_id=city_id,
         )
+    
+    def get_shielded_cities(self, planet_id: int) -> list[int]:
+        return self._get_planet_binary_relation(OrderType.SHIELD, planet_id)
     
     def develop_city(self, planet_id: int, city_id: int) -> FailureReason:
         return self._edit_planet_binary_relation(
@@ -79,6 +88,9 @@ class ActionsClient(BaseClient):
             other_id=city_id,
         )
     
+    def get_developed_cities(self, planet_id: int) -> list[int]:
+        return self._get_planet_binary_relation(OrderType.DEVELOP, planet_id)
+    
     def attack_city(self, planet_id: int, city_id: int) -> FailureReason:
         return self._edit_planet_binary_relation(
             relation=OrderType.ATTACK,
@@ -88,6 +100,9 @@ class ActionsClient(BaseClient):
             other_id=city_id,
         )
     
+    def get_attacked_cities(self, planet_id: int) -> list[int]:
+        return self._get_planet_binary_relation(OrderType.ATTACK, planet_id)
+    
     def sanction_planet(self, planet_id: int, other_planet_id: int) -> FailureReason:
         return self._edit_planet_binary_relation(
             relation=OrderType.SANCTIONS,
@@ -96,6 +111,9 @@ class ActionsClient(BaseClient):
             planet_id=planet_id,
             other_id=other_planet_id,
         )
+    
+    def get_sanctioned_planets(self, planet_id: int) -> list[int]:
+        return self._get_planet_binary_relation(OrderType.SANCTIONS, planet_id)
     
     def create_meteorites(self, planet_id: int, meteorites_num: int) -> FailureReason:
         balance = self.get_balance(planet_id, self.MONEY_KEY)
@@ -114,6 +132,13 @@ class ActionsClient(BaseClient):
         
         self.set(meteorites_num, OrderType.CREATE, planet_id)
         return result
+    
+    def get_created_meteorites(self, planet_id: int) -> int:
+        result = self.get(OrderType.CREATE, planet_id)
+        if result is None:
+            return 0
+        
+        return int(result)
 
     def invent(self, planet_id: int) -> FailureReason:
         return self._edit_planet_unary_relation(
@@ -123,6 +148,9 @@ class ActionsClient(BaseClient):
             planet_id
         )
     
+    def get_invented(self, planet_id: int) -> bool:
+        return self.get(OrderType.INVENT, planet_id) == '1'
+    
     def eco_boost(self, planet_id: int) -> FailureReason:
         return self._edit_planet_unary_relation(
             OrderType.ECO,
@@ -130,6 +158,9 @@ class ActionsClient(BaseClient):
             self.game_config.ECO_COST,
             planet_id
         )
+    
+    def get_eco_boost(self, planet_id: int) -> bool:
+        return self.get(OrderType.ECO, planet_id) == '1'
 
     def make_negotiations(self, planet_from: int, planet_to: int) -> FailureReason:
         if self.exists(OrderType.NEGOTIATE, planet_from):
