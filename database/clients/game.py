@@ -428,3 +428,29 @@ class GameClient(DatabaseClient):
         game.round = 1 if game.round is None else game.round + 1
         await s.commit()
         return FailureReason.SUCCESS
+
+
+    @DatabaseClient.get_transaction
+    async def get_sanctioned_planets(
+        self, s: AsyncSession, planet_id: int
+    ) -> list[PlanetDto]:
+        """
+        Returns all planets that were sanctioned in previous round.
+        """
+        num_round = (await s.execute(
+            select(Game)
+            .join(Planet, Game.id == Planet.game_id)
+            .where(Planet.id == planet_id)
+        )).scalar_one().round
+        if num_round == 1:
+            return []
+        sanctioned_planets_result = await s.execute(
+            select(Planet)
+            .join(Sanction, Sanction.planet_to == Planet.id)
+            .where(
+                Sanction.planet_from == planet_id,
+                Sanction.num_round == num_round - 1
+            )
+        )
+        sanction_planets = sanctioned_planets_result.scalars().all()
+        return TypeAdapter(list[PlanetDto]).validate_python(sanction_planets)

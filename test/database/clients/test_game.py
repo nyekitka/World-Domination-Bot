@@ -468,3 +468,32 @@ async def test_get_all_planets_and_cities(
                 city.name == pack_city.name
                 for pack_city in pack_planet.cities
             ])
+@pytest.mark.parametrize(
+    ('sanction_round', 'expected_result'),
+    [
+        (1, [lf('planet_id_2'), lf('planet_id_3')]),
+        (2, [])
+    ]
+)
+@pytest.mark.asyncio
+async def test_get_sanctioned_planets(
+    mock_game_client, planet_id, planet_id_2, planet_id_3,
+    game_id, sanction_round, expected_result
+):
+    async with mock_game_client.session() as s:
+        game = await s.get(Game, game_id)
+        game.round = 2
+        
+        sanctions = [Sanction(
+            planet_from=planet_id,
+            planet_to=other_planet,
+            num_round=sanction_round
+        ) for other_planet in (planet_id_2, planet_id_3)]
+        s.add_all(sanctions)
+        await s.commit()
+    
+    result = await mock_game_client.get_sanctioned_planets(planet_id)
+    sanctioned_ids = [
+        planet.id for planet in result
+    ]
+    assert sanctioned_ids == expected_result
