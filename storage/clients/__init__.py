@@ -1,6 +1,7 @@
 from redis.asyncio import Redis
 
 from storage.clients.messages import MessagesClient
+from storage.clients.actions import ActionsClient
 from storage.config import redis_config
 
 redis_client = Redis(
