@@ -1,7 +1,8 @@
 import pytest
+from pytest_lazy_fixtures import lf
 from sqlalchemy import select
 
-from database.models import Admin, City, Game, Planet, Player
+from database.models import Admin, City, Game, Planet, Player, Sanction
 from database.schemas import GameStatus
 
 
@@ -113,3 +114,34 @@ async def test_get_all_planets_in_game(
     actual_planet_names = {planet.name for planet in planets}
     true_planet_names = {planet.name for planet in pack.planets}
     assert actual_planet_names == true_planet_names
+
+
+@pytest.mark.parametrize(
+    ('sanction_round', 'expected_result'),
+    [
+        (1, [lf('planet_id_2'), lf('planet_id_3')]),
+        (2, [])
+    ]
+)
+@pytest.mark.asyncio
+async def test_get_sanctioned_planets(
+    mock_game_client, planet_id, planet_id_2, planet_id_3,
+    game_id, sanction_round, expected_result
+):
+    async with mock_game_client.session() as s:
+        game = await s.get(Game, game_id)
+        game.round = 2
+        
+        sanctions = [Sanction(
+            planet_from=planet_id,
+            planet_to=other_planet,
+            num_round=sanction_round
+        ) for other_planet in (planet_id_2, planet_id_3)]
+        s.add_all(sanctions)
+        await s.commit()
+    
+    result = await mock_game_client.get_sanctioned_planets(planet_id)
+    sanctioned_ids = [
+        planet.id for planet in result
+    ]
+    assert sanctioned_ids == expected_result

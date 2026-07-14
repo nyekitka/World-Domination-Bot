@@ -5,7 +5,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 from database.base_client import DatabaseClient
-from database.models import Admin, City, Game, Planet, Player
+from database.models import Admin, City, Game, Planet, Player, Sanction
 from database.schemas import AdminDto, GameDto, GameStatus, PlanetDto, PlayerDto
 from presets.pack import Pack
 from pydantic import TypeAdapter
@@ -119,3 +119,29 @@ class GameClient(DatabaseClient):
         return TypeAdapter(list[PlanetDto]).validate_python(
             results.scalars().all()
         )
+
+
+    @DatabaseClient.get_transaction
+    async def get_sanctioned_planets(
+        self, s: AsyncSession, planet_id: int
+    ) -> list[PlanetDto]:
+        """
+        Returns all planets that were sanctioned in previous round.
+        """
+        num_round = (await s.execute(
+            select(Game)
+            .join(Planet, Game.id == Planet.game_id)
+            .where(Planet.id == planet_id)
+        )).scalar_one().round
+        if num_round == 1:
+            return []
+        sanctioned_planets_result = await s.execute(
+            select(Planet)
+            .join(Sanction, Sanction.planet_to == Planet.id)
+            .where(
+                Sanction.planet_from == planet_id,
+                Sanction.num_round == num_round - 1
+            )
+        )
+        sanction_planets = sanctioned_planets_result.scalars().all()
+        return TypeAdapter(list[PlanetDto]).validate_python(sanction_planets)

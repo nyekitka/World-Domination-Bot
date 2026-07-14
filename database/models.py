@@ -151,6 +151,7 @@ class Sanction(ModelBase):
     planet_to: Mapped[int] = mapped_column(
         ForeignKey("planet.id", ondelete="CASCADE"), nullable=False
     )
+    num_round: Mapped[int] = mapped_column(nullable=False)
 
     __table_args__ = (
         PrimaryKeyConstraint(planet_from, planet_to, name="sanction_pkey"),
