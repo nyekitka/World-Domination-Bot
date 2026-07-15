@@ -131,8 +131,18 @@ class DatabaseClient:
         return None
 
     @get_transaction
-    async def get_city(self, s: AsyncSession, city_id: int) -> CityDto | None:
-        city = await s.get(City, city_id)
+    async def get_city(
+        self, s: AsyncSession, city_id: int,
+        load_rate: bool = False
+    ) -> CityDto | None:
+        options = ()
+        if load_rate:
+            options = (joinedload(City.planet).joinedload(Planet.game),)
+        city = (await s.execute(
+            select(City)
+            .options(*options)
+            .where(City.id == city_id)
+        )).scalar_one_or_none()
         if city:
             return CityDto.model_validate(city)
         return None
@@ -202,14 +212,27 @@ class DatabaseClient:
 
     @get_transaction
     async def get_cities_of_planet(
-        self, s: AsyncSession, planet_id: int, only_alive: bool = True
+        self,
+        s: AsyncSession,
+        planet_id: int,
+        only_alive: bool = True,
+        with_rates: bool = True
     ) -> list[CityDto] | None:
-        if only_alive:
-            stmt = select(City).where(
-                City.planet_id == planet_id and City.development > 0
+        options = ()
+        if with_rates:
+            options = (
+                joinedload(City.planet).joinedload(Planet.game),
             )
+        if only_alive:
+            filters = (City.planet_id == planet_id, City.development > 0)
         else:
-            stmt = select(City).where(City.planet_id == planet_id)
+            filters = (City.planet_id == planet_id,)
+
+        stmt = (
+            select(City)
+            .options(*options)
+            .where(*filters)
+        )
         result = await s.execute(stmt)
         if result:
             return TypeAdapter(list[CityDto]).validate_python(result.scalars().all())
