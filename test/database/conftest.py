@@ -193,7 +193,7 @@ async def mock_session(
 
         admin = Admin(tg_id=admin_id)
         players = [Player(tg_id=tg_id) for tg_id in player_ids]
-        game = Game(status=GameStatus.WAITING)
+        game = Game(status=GameStatus.WAITING, num_planets=len(pack.planets))
 
         planets = []
         cities = []
