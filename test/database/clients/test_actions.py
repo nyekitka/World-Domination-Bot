@@ -711,15 +711,21 @@ async def test_order_sanctions_when_exist(
 @pytest.mark.asyncio
 async def test_send_sanctions(mock_actions_client, planet_id, planet_id_2):
     sanctions = [
-        SanctionDto(planet_from=planet_id, planet_to=planet_id_2),
-        SanctionDto(planet_from=planet_id_2, planet_to=planet_id),
+        SanctionDto(planet_from=planet_id, planet_to=planet_id_2, num_round=1),
+        SanctionDto(planet_from=planet_id_2, planet_to=planet_id, num_round=1),
     ]
 
     await mock_actions_client.send_sanctions(sanctions)
 
     async with mock_actions_client.session() as s:
         for sanction in sanctions:
-            db_sanc = await s.get(Sanction, sanction.model_dump())
+            db_sanc = await s.get(
+                Sanction,
+                {
+                    'planet_from': sanction.planet_from,
+                    'planet_to': sanction.planet_to
+                }
+            )
             assert db_sanc
 
 
@@ -826,7 +832,7 @@ async def test_end_current_round(
     mock_build_shield_for_cities.assert_any_call(city_id)
     mock_invent_for_planets.assert_any_call(planet_id_2)
     mock_send_sanctions.assert_any_call(
-        [SanctionDto(planet_from=planet_id, planet_to=planet_id_2)]
+        [SanctionDto(planet_from=planet_id, planet_to=planet_id_2, num_round=2)]
     )
     mock_eco_boost.assert_any_call(game_id, 2)
 
