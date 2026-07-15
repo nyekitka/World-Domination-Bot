@@ -53,6 +53,13 @@ class CityDto(BaseDto):
     planet_id: int
     is_shielded: bool = False
     development: int = 60
+    rate_of_life: float | None = None
+    
+    @property
+    def income(self) -> float | None:
+        if self.rate_of_life is None:
+            return None
+        return 3 * self.rate_of_life
 
 
 class OrderDto(BaseDto):

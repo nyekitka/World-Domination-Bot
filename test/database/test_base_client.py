@@ -59,10 +59,15 @@ async def test_get_city(mock_database_client, city_id):
 
 
 @pytest.mark.asyncio
-async def test_get_cities_of_planet(mock_database_client, planet_id, pack):
+async def test_get_cities_of_planet(
+    mock_database_client, planet_id, pack
+):
     cities = await mock_database_client.get_cities_of_planet(planet_id)
 
     assert cities
+
+    for city in cities:
+        assert city.rate_of_life == game_config.DEFAULT_GAME_ECO_RATE / 100 * game_config.DEFAULT_DEVELOPMENT
 
     city_names = [city.name for city in cities]
     planet = pack.planets[0]

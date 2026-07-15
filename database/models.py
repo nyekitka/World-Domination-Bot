@@ -110,6 +110,24 @@ class City(ModelBase):
 
     planet: Mapped[Planet] = relationship(back_populates='cities')
 
+    @hybrid_property
+    def rate_of_life(self):
+        state = inspect(self)
+
+        if 'planet' in state.unloaded:
+            return None
+        return self.development * self.planet.game.ecorate / 100
+    
+    @rate_of_life.expression
+    def rate_of_life(cls):
+        eco_rate = (
+            select(Game.ecorate)
+            .join(Planet, Planet.game_id == Game.id)
+            .join(City, City.planet_id == Planet.id)
+            .where(City.id == cls.id)
+        )
+        return eco_rate * cls.development / 100
+
 
 class Order(ModelBase):
     action: Mapped[OrderType] = mapped_column(
