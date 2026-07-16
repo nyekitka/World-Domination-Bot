@@ -72,6 +72,7 @@ class OrderDto(BaseDto):
 class SanctionDto(BaseDto):
     planet_from: int
     planet_to: int
+    num_round: int
 
 
 class NegotiationDto(BaseDto):
