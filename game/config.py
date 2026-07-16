@@ -23,5 +23,6 @@ class GameConfig(BaseSettings):
     DEFAULT_DEVELOPMENT: int = 60
     ECO_BOOST_RATE: int = 20
     INCOME_COEFFICIENT: float = 3
+    MAX_METEORITES_TO_BUY: int = 3
 
 game_config = GameConfig()
