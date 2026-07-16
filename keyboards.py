@@ -8,7 +8,7 @@ from aiogram.types import (
 )
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from database.schemas import CityDto, PlanetDto
+from database.schemas import CityDto, GameDto, PlanetDto
 from game.config import game_config
 
 
@@ -27,7 +27,7 @@ def start_keyboard(isadmin: bool):
         return ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Войти в игру')]])
 
 
-def choose_lobby_keyboard(games: list[Game]):
+def choose_lobby_keyboard(games: list[GameDto]):
     builder = InlineKeyboardBuilder()
     for game in games:
         builder.add(InlineKeyboardButton(text=str(game.id), callback_data=str(game.id)))
