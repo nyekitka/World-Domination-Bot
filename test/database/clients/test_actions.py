@@ -721,10 +721,7 @@ async def test_send_sanctions(mock_actions_client, planet_id, planet_id_2):
         for sanction in sanctions:
             db_sanc = await s.get(
                 Sanction,
-                {
-                    'planet_from': sanction.planet_from,
-                    'planet_to': sanction.planet_to
-                }
+                sanction.model_dump()
             )
             assert db_sanc
 

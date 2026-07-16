@@ -465,7 +465,9 @@ class ActionsClient(DatabaseClient):
                 case OrderType.SANCTIONS:
                     orders_by_action[order.action].append(
                         SanctionDto(
-                            planet_from=order.planet_id, planet_to=order.argument
+                            planet_from=order.planet_id,
+                            planet_to=order.argument,
+                            num_round=game.round,
                         )
                     )
                 case OrderType.ATTACK:
