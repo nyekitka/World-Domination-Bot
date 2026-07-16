@@ -2,10 +2,12 @@ from typing import Any, Callable, ParamSpec
 
 from aiogram import Bot, types
 
-from database.schemas import CityDto, PlanetDto
+from database.schemas import CityDto, GameDto, PlanetDto
 from game.schemas import FailureReason, FAILURE_INTERPRETATIONS
 import keyboards as kb
 from messages import messager
+from storage.clients.messages import MessagesClient
+from storage.schemas import MessageType, OrderInfo
 
 
 Markup = (
@@ -54,85 +56,81 @@ def tag_person(name: str, id: int) -> str:
 
 async def send_all_info(
     bot: Bot,
-    nround: int,
-    planet: PlanetDto,
-    cities: list[CityDto],
-    user_id: int
+    game: GameDto,
+    planets_and_cities: dict[int, tuple[PlanetDto, list[CityDto]]],
+    planet_id: int,
+    order_info: OrderInfo,
+    user_id: int,
+    messages_client: MessagesClient,
 ):
+    planet, planet_cities = planets_and_cities.pop(planet_id)
+    other_planets = [val[0] for val in planets_and_cities.values()]
     await bot.send_message(
         user_id,
-        messager.round_message(nround),
+        messager.round_message(game.round),
         parse_mode='MarkdownV2'
     )
     city_msg = await bot.send_message(
         user_id,
-        messager.city_stats_message(planet, cities),
+        messager.city_stats_message(planet, planet_cities),
         reply_markup=kb.city_keyboard(
-            nround,
+            game.round,
             planet,
-            cities,
-            planet.ordered_shield_cities(),
-            planet.developed_cities(),
+            planet_cities,
+            order_info.shielded,
+            order_info.developed
         ),
-        parse_mode="MarkdownV2",
+        parse_mode='MarkdownV2',
     )
+    messages_client.set_info_message_id(user_id, MessageType.CITY, city_msg.message_id)
+
     ikm = (
-        kb.invent_meteorites_keyboard(planet, planet.is_invent_in_order())
+        kb.invent_meteorites_keyboard(planet, order_info.is_invented)
         if not planet.is_invented
-        else kb.meteorites_keyboard(planet, planet.number_of_ordered_meteorites())
+        else kb.meteorites_keyboard(planet, order_info.created)
     )
     meteorites_msg = await bot.send_message(
-        userid,
+        user_id,
         messager.meteorites_message(planet),
         reply_markup=ikm,
-        parse_mode="MarkdownV2",
+        parse_mode='MarkdownV2',
     )
+    messages_client.set_info_message_id(user_id, MessageType.METEORITES, meteorites_msg.message_id)
+
     sanctions_msg = await bot.send_message(
-        userid,
+        user_id,
         messager.sanctions_message(planet),
         reply_markup=kb.sanctions_keyboard(
-            planet, planet.game().planets(), planet.ordered_sanctions_list()
+            planet, other_planets, order_info.sanctions
         ),
-        parse_mode="MarkdownV2",
+        parse_mode='MarkdownV2',
     )
+    messages_client.set_info_message_id(user_id, MessageType.SANCTIONS, sanctions_msg.message_id)
+
     eco_msg = await bot.send_message(
-        userid,
-        messager.eco_message(planet.game()),
-        reply_markup=kb.eco_keyboard(planet, planet.is_planned_eco_boost()),
-        parse_mode="MarkdownV2",
+        user_id,
+        messager.eco_message(game.ecorate),
+        reply_markup=kb.eco_keyboard(planet, order_info.eco_boost),
+        parse_mode='MarkdownV2',
     )
-    cursor.execute(
-        """INSERT INTO InfoMessages(ID, MType, PlanetID) VALUES
-                    (%s, 'City', %s),
-                    (%s, 'Meteorites', %s),
-                    (%s, 'Sanctions', %s),
-                    (%s, 'Eco', %s)""",
-        (
-            city_msg.message_id,
-            planet.id,
-            meteorites_msg.message_id,
-            planet.id,
-            sanctions_msg.message_id,
-            planet.id,
-            eco_msg.message_id,
-            planet.id,
-        ),
-    )
-    for other_planet in planet.game().planets():
-        if planet != other_planet:
-            msg = await bot.send_message(
-                userid,
-                messager.other_planets_message(other_planet),
-                reply_markup=kb.other_planets_keyboard(
-                    nround,
-                    planet,
-                    other_planet,
-                    planet.ordered_attack_cities(other_planet),
-                ),
-                parse_mode="MarkdownV2",
-            )
-            cursor.execute(
-                "INSERT INTO PlanetMessages(OwnerID, PlanetID, MessageID, MType) VALUES (%s, %s, %s, 'Attack')",
-                (planet.id, other_planet.id, msg.message_id),
-            )
-    db_connection.commit()
+    messages_client.set_info_message_id(user_id, MessageType.ECO, eco_msg.message_id)
+
+    for other_planet, other_cities in planets_and_cities.values():
+        msg = await bot.send_message(
+            user_id,
+            messager.other_planets_message(other_planet),
+            reply_markup=kb.other_planets_keyboard(
+                game.round,
+                planet,
+                other_planet,
+                other_cities,
+                order_info.attacked,
+            ),
+            parse_mode='MarkdownV2',
+        )
+        messages_client.set_planet_message_id(
+            user_id,
+            other_planet.id,
+            MessageType.ATTACK,
+            msg.message_id
+        )
