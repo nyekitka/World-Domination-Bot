@@ -4,13 +4,14 @@ from aiogram.fsm.context import FSMContext
 from app.filters.admin import AdminFilter
 from app.filters.buttons import ReplyButtonFilter
 from app.filters.state import BotStates
-from app.utils import method_executor_msg
+from app.utils import method_executor_msg, send_all_info
 from database.clients.game import GameClient
 from database.clients.user import UserClient
 from database.schemas import GameDto, GameStatus, PlanetDto, PlayerDto
 import keyboards as kb
 from messages import messager
 from presets.pack import packs
+from storage.clients.actions import ActionsClient
 from storage.clients.messages import MessagesClient
 
 
@@ -169,47 +170,66 @@ async def chosen_lobby_admin(
     await state.clear()
 
 
-# @lobby_router.callback_query(BotStates.choose_lobby)
-# async def chosen_lobby(
-#     call: types.CallbackQuery,
-#     state: FSMContext,
-#     user_client: UserClient,
-#     game_client: GameClient,
-#     messager: Messager,
-# ):
-#     gamecode = int(call.data)
-#     tgid = call.from_user.id
-#     game: GameDto = await game_client.get_game(gamecode)
-#     res = await method_executor_msg(
-#         call.bot,
-#         user_client.join_user,
-#         tgid,
-#         tgid, game.id
-#     )
-#     if not res:
-#         return
-#     planet = await game_client.get_player_planet(tgid, game.id)
-#     await call.message.answer(
-#         messager.success_enter(gamecode, planet.name()),
-#         reply_markup=kb.ingame_keyboard(False),
-#     )
-#     if game.status == GameStatus.WAITING:
-#         active_players = await game_client.get_all_active_players(game.id)
-#         active_admins = await game_client.get_all_active_admins(game.id)
-#         for player in active_players:
-#             await call.bot.send_message(
-#                 player.tg_id,
-#                 messager.success_enter_for_others(
-#                     planet.name, len(active_players), game.num_planets
-#                 ),
-#             )
-#         for admin in active_admins:
-#             await call.bot.send_message(
-#                 admin.tg_id,
-#                 messager.success_enter_for_others(
-#                     planet.name, len(active_players), game.num_planets
-#                 ),
-#             )
-#     elif game.status == GameStatus.ROUND:
-#         await print_all_info(game.round, planet, tgid)
-#     await state.clear()
+@lobby_router.callback_query(BotStates.choose_lobby)
+async def chosen_lobby(
+    call: types.CallbackQuery,
+    state: FSMContext,
+    user_client: UserClient,
+    game_client: GameClient,
+    actions_client: ActionsClient,
+    messages_client: MessagesClient,
+):
+    gamecode = int(call.data)
+    tg_id = call.from_user.id
+    game: GameDto = await game_client.get_game(gamecode)
+    res = await method_executor_msg(
+        call.bot,
+        user_client.join_user,
+        tg_id,
+        tg_id, game.id
+    )
+    if not res:
+        return
+    planet = await game_client.get_player_planet(tg_id, game.id)
+    await call.message.answer(
+        messager.success_enter(gamecode, planet.name()),
+        reply_markup=kb.ingame_keyboard(False),
+    )
+    if game.status == GameStatus.WAITING:
+        active_players = await game_client.get_all_active_players(game.id)
+        active_admins = await game_client.get_all_active_admins(game.id)
+        for player in active_players:
+            await call.bot.send_message(
+                player.tg_id,
+                messager.success_enter_for_others(
+                    planet.name, len(active_players), game.num_planets
+                ),
+            )
+        for admin in active_admins:
+            await call.bot.send_message(
+                admin.tg_id,
+                messager.success_enter_for_others(
+                    planet.name, len(active_players), game.num_planets
+                ),
+            )
+    elif game.status == GameStatus.ROUND:
+        planets: list[PlanetDto] = await game_client.get_all_planets_in_game(game.id, False)
+        all_planets_and_cities = dict()
+        for pl in planets:
+            planet_cities = await game_client.get_cities_of_planet(
+                pl.id,
+                False, False
+            )
+            all_planets_and_cities[pl.id] = (pl, planet_cities)
+        order_info = actions_client.get_order_info(planet.id)
+        await send_all_info(
+            bot=call.bot,
+            game=game,
+            planets_and_cities=all_planets_and_cities,
+            planet_id=planet.id,
+            order_info=order_info,
+            user_id=tg_id,
+            messages_client=messages_client,
+        )
+    await state.clear()
+
