@@ -2,6 +2,7 @@ import json
 import psycopg
 import pymorphy3
 from num2words import num2words
+from database.schemas import CityDto, PlanetDto
 from game_classes import City, Planet, Game
 
 _messages_file = open("./presets/messages.json", encoding="utf-8")
@@ -84,24 +85,23 @@ class Messager:
                 num2words(n, lang="ru", to="ordinal").capitalize()
             )
 
-    def city_stats_message(self, planet: Planet) -> str:
-        all_info = [planet.name(), planet.balance(), planet.rate_of_life()]
-        cities = planet.cities(False)
+    def city_stats_message(self, planet: PlanetDto, cities: list[CityDto]) -> str:
+        all_info = [planet.name, planet.balance, planet.development]
         for city in cities:
-            addition = ""
-            if city.is_under_shield():
-                addition = " 🛡️"
-            elif city.development() == 0:
-                addition = " ❌"
+            addition = ''
+            if city.is_shielded:
+                addition = ' 🛡️'
+            elif city.development == 0:
+                addition = ' ❌'
             all_info.extend(
                 [
-                    city.name() + addition,
-                    city.development(),
-                    city.rate_of_life(),
-                    city.income(),
+                    city.name + addition,
+                    city.development,
+                    city.rate_of_life,
+                    city.income
                 ]
             )
-        return Messages["city_info"].format(*all_info)
+        return Messages['city_info'].format(*all_info)
 
     def sanctions_message(self, planet: Planet) -> str:
         sanctions = planet.get_sanc_set()
@@ -145,6 +145,9 @@ class Messager:
 
     def choose_lobby(self):
         return Messages["choose_lobby"]
+    
+    def choose_number_of_planets(self):
+        return Messages['choose_number_of_planets']
 
     def no_games(self):
         return Messages["no games"]
@@ -250,3 +253,6 @@ class Messager:
 
     def kick_due_to_not_admin(self):
         return Messages["kick_due_to_not_admin"]
+
+
+messager = Messager()
