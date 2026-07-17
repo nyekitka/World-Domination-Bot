@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.functions import coalesce
 
 from database.base_client import DatabaseClient
-from database.models import City, Game, Negotiation, Order, Planet, Sanction
+from database.models import Admin, City, Game, Negotiation, Order, Planet, Sanction
 from database.schemas import  GameStatus, OrderDto, SanctionDto
 from game.schemas import FailureReason, OrderType
 from game.config import game_config
@@ -507,12 +507,19 @@ class ActionsClient(DatabaseClient):
         )
 
     @DatabaseClient.set_transaction
-    async def start_new_round(self, s: AsyncSession, game_id: int) -> FailureReason:
-        game = await s.get(Game, game_id)
+    async def start_new_round(self, s: AsyncSession, initiator_id: int) -> FailureReason:
+        admin = await s.get(Admin, initiator_id)
+        if admin is None:
+            return FailureReason.OBJECT_NOT_FOUND
+        
+        if admin.game_id is None:
+            return FailureReason.STARTING_GAME_WITHOUT_BEING_IN
+        
+        game = await s.get(Game, admin.game_id)
         if game.status not in (GameStatus.WAITING, GameStatus.MEETING):
             return FailureReason.CANNOT_START_ROUND
 
-        planets = await self.get_planets_of_game(game_id)
+        planets = await self.get_planets_of_game(game.id)
 
         if not all(map(lambda pl: pl.owner_id is not None, planets)):
             return FailureReason.NOT_ENOUGH_PLAYERS
@@ -529,12 +536,6 @@ class ActionsClient(DatabaseClient):
                         .values({Planet.balance: Planet.balance + income})
                     )
                 )
-
-        await s.execute(
-            (
-                update(Game)
-                .where(Game.id == game_id)
-                .values({Game.round: coalesce(Game.round, 0) + 1})
-            )
-        )
+        game.round = 1 if game.round is None else game.round + 1
+        await s.commit()
         return FailureReason.SUCCESS

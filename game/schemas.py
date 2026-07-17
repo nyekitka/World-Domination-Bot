@@ -34,6 +34,7 @@ class FailureReason(StrEnum):
     CANNOT_START_ROUND = auto()
     DIFFERENT_GAMES = auto()
     WAIT_TILL_GAME_ENDS = auto()
+    STARTING_GAME_WITHOUT_BEING_IN = auto()
 
 
 FAILURE_INTERPRETATIONS = {

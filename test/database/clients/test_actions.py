@@ -3,7 +3,7 @@ import logging
 import pytest
 from pytest_lazy_fixtures import lf
 
-from database.models import City, Game, Negotiation, Order, Planet, Sanction
+from database.models import Admin, City, Game, Negotiation, Order, Planet, Sanction
 from database.schemas import GameStatus, OrderDto,  SanctionDto
 from game.config import game_config
 from game.schemas import FailureReason, OrderType
@@ -839,7 +839,7 @@ async def test_end_current_round(
 
 
 @pytest.mark.parametrize(
-    ["status", "result"],
+    ["status", "expected_result"],
     [
         (GameStatus.MEETING, FailureReason.SUCCESS),
         (GameStatus.WAITING, FailureReason.SUCCESS),
@@ -848,10 +848,17 @@ async def test_end_current_round(
 )
 @pytest.mark.asyncio
 async def test_start_new_round(
-    mock_actions_client, game_id, player_ids, planet_ids, status, result
+    mock_actions_client, game_id,
+    admin_id, player_ids, planet_ids,
+    status, expected_result
 ):
+    result = await mock_actions_client.start_new_round(admin_id)
+    assert result == FailureReason.STARTING_GAME_WITHOUT_BEING_IN
+
     round = None
     async with mock_actions_client.session() as s:
+        admin = await s.get(Admin, admin_id)
+        admin.game_id = game_id
         for player_id, planet_id in zip(player_ids, planet_ids):
             planet = await s.get(Planet, planet_id)
             planet.owner_id = player_id
@@ -867,8 +874,8 @@ async def test_start_new_round(
     if round is None:
         round = 0
 
-    res = await mock_actions_client.start_new_round(game_id)
-    assert res == result
+    result = await mock_actions_client.start_new_round(admin_id)
+    assert result == expected_result
 
     if result == FailureReason.SUCCESS:
         async with mock_actions_client.session() as s:
