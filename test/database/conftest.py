@@ -5,7 +5,7 @@ from pytest_postgresql.janitor import DatabaseJanitor
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 from database.base_client import DatabaseClient
-from database.clients import ActionsClient, GameClient, UserClient
+from database.clients import GameClient, UserClient
 from database.models import Admin, City, Game, ModelBase, Planet, Player
 from database.schemas import GameStatus
 from presets.pack import Pack, PackCity, PackPlanet
@@ -224,12 +224,6 @@ async def mock_session(
 @pytest.fixture()
 def mock_database_client(mock_session):
     client = DatabaseClient(mock_session)
-    yield client
-
-
-@pytest.fixture()
-def mock_actions_client(mock_session):
-    client = ActionsClient(mock_session)
     yield client
 
 

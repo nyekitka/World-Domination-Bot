@@ -1,8 +1,18 @@
+import asyncio
+
 import pytest
+from pytest_lazy_fixtures import lf
 from sqlalchemy import select
 
-from database.models import Admin, City, Game, Planet, Player
-from database.schemas import GameStatus
+from database.models import (
+    Admin, City, Game,
+    Negotiation, Order, Planet,
+    Player, Sanction
+)
+from database.schemas import GameStatus, OrderDto, SanctionDto
+from game.config import game_config
+from game.schemas import FailureReason, OrderType
+from storage.schemas import OrderInfo
 
 
 @pytest.mark.asyncio
@@ -113,3 +123,299 @@ async def test_get_all_planets_in_game(
     actual_planet_names = {planet.name for planet in planets}
     true_planet_names = {planet.name for planet in pack.planets}
     assert actual_planet_names == true_planet_names
+
+@pytest.mark.asyncio
+async def test_build_shield_for_cities(mock_game_client, city_id, city_id_2):
+    await mock_game_client.build_shield_for_cities(city_id, city_id_2)
+    async with mock_game_client.session() as s:
+        city1 = await s.get(City, city_id)
+        city2 = await s.get(City, city_id_2)
+
+        assert city1.is_shielded
+        assert city2.is_shielded
+
+
+@pytest.mark.asyncio
+async def test_develop_cities(mock_game_client, city_id, city_id_2):
+    async with mock_game_client.session() as s:
+        city1 = await s.get(City, city_id)
+        city2 = await s.get(City, city_id_2)
+        development1 = city1.development
+        development2 = city2.development
+
+    await mock_game_client.develop_cities(city_id, city_id_2)
+    async with mock_game_client.session() as s:
+        city1 = await s.get(City, city_id)
+        city2 = await s.get(City, city_id_2)
+
+        assert city1.development - development1 == game_config.DEVELOPMENT_BOOST
+        assert city2.development - development2 == game_config.DEVELOPMENT_BOOST
+
+
+@pytest.mark.asyncio
+async def test_invent_for_planets(mock_game_client, planet_id, planet_id_2):
+    await mock_game_client.invent_for_planets(planet_id, planet_id_2)
+
+    async with mock_game_client.session() as s:
+        planet = await s.get(Planet, planet_id)
+        planet_2 = await s.get(Planet, planet_id_2)
+
+        assert planet.is_invented
+        assert planet_2.is_invented
+
+
+@pytest.mark.parametrize(
+    ["num_to_create", "meteorites", "result"], [(1, 2, 3), (2, 2, 4)]
+)
+@pytest.mark.asyncio
+async def test_create_meteorites(
+    mock_game_client, planet_id, num_to_create, meteorites, result
+):
+    async with mock_game_client.session() as s:
+        planet = await s.get(Planet, planet_id)
+        planet.meteorites = meteorites
+        await s.commit()
+
+    await mock_game_client.create_meteorites(planet_id, num_to_create)
+
+    async with mock_game_client.session() as s:
+        planet = await s.get(Planet, planet_id)
+        assert planet.meteorites == result
+
+
+@pytest.fixture()
+def orders1(planet_id_2, city_id, city_id_2):
+    return [
+        OrderDto(
+            action=OrderType.ATTACK, planet_id=planet_id_2, round=1, argument=city_id
+        ),
+        OrderDto(
+            action=OrderType.ATTACK, planet_id=planet_id_2, round=1, argument=city_id_2
+        ),
+    ]
+
+
+@pytest.fixture()
+def orders2(planet_id_2, planet_id_3, city_id, city_id_2):
+    return [
+        OrderDto(
+            action=OrderType.ATTACK, planet_id=planet_id_2, round=1, argument=city_id
+        ),
+        OrderDto(
+            action=OrderType.ATTACK, planet_id=planet_id_2, round=1, argument=city_id_2
+        ),
+        OrderDto(
+            action=OrderType.ATTACK, planet_id=planet_id_3, round=1, argument=city_id
+        ),
+    ]
+
+
+@pytest.mark.parametrize(
+    ["orders", "alive"],
+    [
+        (lf("orders1"), (60, 0)),
+        (lf("orders2"), (0, 0))
+    ]
+)
+@pytest.mark.asyncio
+async def test_attack_cities(
+    mock_game_client, orders, alive, city_id, city_id_2, game_id
+):
+    async with mock_game_client.session() as s:
+        city1 = await s.get(City, city_id)
+        game = await s.get(Game, game_id)
+        game.round = 1
+        city1.is_shielded = True
+        await s.commit()
+
+    await mock_game_client.attack_cities(*orders)
+
+    async with mock_game_client.session() as s:
+        city1 = await s.get(City, city_id)
+        city2 = await s.get(City, city_id_2)
+
+        assert city1.development == alive[0]
+        assert city2.development == alive[1]
+
+
+@pytest.mark.parametrize(
+    ["times", "result"],
+    [
+        (1, game_config.DEFAULT_GAME_ECO_RATE + game_config.ECO_BOOST_RATE),
+        (2, game_config.DEFAULT_GAME_ECO_RATE + 2 * game_config.ECO_BOOST_RATE),
+    ],
+)
+@pytest.mark.asyncio
+async def test_eco_boost(mock_game_client, game_id, times, result):
+    await mock_game_client.eco_boost(game_id, times)
+
+    async with mock_game_client.session() as s:
+        game = await s.get(Game, game_id)
+        assert game.ecorate == result
+
+
+@pytest.mark.asyncio
+async def test_send_sanctions(mock_game_client, planet_id, planet_id_2):
+    sanctions = [
+        SanctionDto(planet_from=planet_id, planet_to=planet_id_2, num_round=1),
+        SanctionDto(planet_from=planet_id_2, planet_to=planet_id, num_round=1),
+    ]
+
+    await mock_game_client.send_sanctions(sanctions)
+
+    async with mock_game_client.session() as s:
+        for sanction in sanctions:
+            db_sanc = await s.get(
+                Sanction,
+                sanction.model_dump()
+            )
+            assert db_sanc
+
+
+@pytest.mark.parametrize(
+    ["balance", "amount", "result"],
+    [
+        (100, -100, FailureReason.NEGATIVE_AMOUNT),
+        (100, 200, FailureReason.NOT_ENOUGH_MONEY),
+        (200, 100, FailureReason.SUCCESS),
+    ],
+)
+@pytest.mark.asyncio
+async def test_transfer(
+    mock_game_client, planet_id, planet_id_2, balance, amount, result
+):
+    async with mock_game_client.session() as s:
+        planet = await s.get(Planet, planet_id)
+        planet.balance = balance
+        await s.commit()
+
+    res = await mock_game_client.transfer(planet_id, planet_id_2, amount)
+    assert res == result
+
+    if result == FailureReason.SUCCESS:
+        async with mock_game_client.session() as s:
+            planet1 = await s.get(Planet, planet_id)
+            planet2 = await s.get(Planet, planet_id_2)
+            assert planet1.balance == balance - amount
+            assert planet2.balance == game_config.DEFAULT_BALANCE + amount
+
+
+@pytest.mark.asyncio
+async def test_end_current_round(
+    mock_game_client, mocker, planet_id, planet_id_2, game_id, city_id
+):
+    orders_info = {
+        planet_id: OrderInfo(
+            shielded=[city_id],
+            developed=[city_id],
+            created=1,
+            sanctions=[planet_id_2],
+        ),
+        planet_id_2: OrderInfo(
+            attacked=[city_id],
+            created=2,
+        )
+    }
+
+    async with mock_game_client.session() as s:
+        game = await s.get(Game, game_id)
+        game.round = 2
+        game.status = GameStatus.ROUND
+        await s.commit()
+
+    mock_future = asyncio.Future()
+    mock_future.set_result(None)
+
+    mock_create_meteorites = mocker.patch.object(
+        mock_game_client, "create_meteorites", return_value=mock_future
+    )
+    mock_develop_cities = mocker.patch.object(
+        mock_game_client, "develop_cities", return_value=mock_future
+    )
+    mock_attack_cities = mocker.patch.object(
+        mock_game_client, "attack_cities", return_value=mock_future
+    )
+    mock_build_shield_for_cities = mocker.patch.object(
+        mock_game_client, "build_shield_for_cities", return_value=mock_future
+    )
+    mock_invent_for_planets = mocker.patch.object(
+        mock_game_client, "invent_for_planets", return_value=mock_future
+    )
+    mock_send_sanctions = mocker.patch.object(
+        mock_game_client, "send_sanctions", return_value=mock_future
+    )
+    mock_eco_boost = mocker.patch.object(
+        mock_game_client, "eco_boost", return_value=mock_future
+    )
+
+    await mock_game_client.end_current_round(game_id, orders_info)
+
+    mock_create_meteorites.assert_any_call(planet_id, 1)
+    mock_create_meteorites.assert_any_call(planet_id_2, 2)
+    mock_develop_cities.assert_any_call(city_id)
+    mock_attack_cities.assert_any_call(
+        [
+            OrderDto(
+                action=OrderType.ATTACK,
+                planet_id=planet_id_2,
+                round=2,
+                argument=city_id,
+            )
+        ]
+    )
+    mock_build_shield_for_cities.assert_any_call(city_id)
+    mock_invent_for_planets.assert_any_call(planet_id_2)
+    mock_send_sanctions.assert_any_call(
+        [SanctionDto(planet_from=planet_id, planet_to=planet_id_2, num_round=2)]
+    )
+    mock_eco_boost.assert_any_call(game_id, 2)
+
+    async with mock_game_client.session() as s:
+        game = await s.get(Game, game_id)
+        assert game.status == GameStatus.MEETING
+
+
+@pytest.mark.parametrize(
+    ["status", "expected_result"],
+    [
+        (GameStatus.MEETING, FailureReason.SUCCESS),
+        (GameStatus.WAITING, FailureReason.SUCCESS),
+        (GameStatus.ROUND, FailureReason.CANNOT_START_ROUND),
+    ],
+)
+@pytest.mark.asyncio
+async def test_start_new_round(
+    mock_game_client, game_id,
+    admin_id, player_ids, planet_ids,
+    status, expected_result
+):
+    result = await mock_game_client.start_new_round(admin_id)
+    assert result == FailureReason.STARTING_GAME_WITHOUT_BEING_IN
+
+    round = None
+    async with mock_game_client.session() as s:
+        admin = await s.get(Admin, admin_id)
+        admin.game_id = game_id
+        for player_id, planet_id in zip(player_ids, planet_ids):
+            planet = await s.get(Planet, planet_id)
+            planet.owner_id = player_id
+            await s.commit()
+
+        game = await s.get(Game, game_id)
+        game.status = status
+        if status != GameStatus.WAITING:
+            game.round = 1
+        round = game.round
+        await s.commit()
+
+    if round is None:
+        round = 0
+
+    result = await mock_game_client.start_new_round(admin_id)
+    assert result == expected_result
+
+    if result == FailureReason.SUCCESS:
+        async with mock_game_client.session() as s:
+            game = await s.get(Game, game_id)
+            new_round = game.round
+            assert new_round - round == 1
