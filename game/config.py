@@ -9,6 +9,7 @@ class GameConfig(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="GAME_")
 
     ROUND_LENGTH: int = 600
+    ROUND_NUM: int = 6
     INVENTION_COST: int = 500
     CREATE_COST: int = 150
     DEVELOPMENT_BOOST: int = 20
