@@ -12,6 +12,9 @@ class OrderType(StrEnum):
     NEGOTIATE = auto()
 
 
+OrderInfo = dict[OrderType, list[int] | int | bool]
+
+
 class FailureReason(StrEnum):
     SUCCESS = auto()
     UNTIMELY_NEGOTIATIONS = auto()

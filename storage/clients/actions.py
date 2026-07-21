@@ -1,6 +1,6 @@
 from redis import Redis
 
-from game.schemas import FailureReason, OrderType
+from game.schemas import FailureReason, OrderInfo, OrderType
 from game.config import GameConfig
 from storage.clients.base import BaseClient
 
@@ -192,7 +192,7 @@ class ActionsClient(BaseClient):
         self.set(balance, balance_key, planet_id)
         return FailureReason.SUCCESS
 
-    def get_order_info(self, planet_id: int) -> dict[OrderType, list[int] | int | bool]:
+    def get_order_info(self, planet_id: int) -> OrderInfo:
         return {
             OrderType.SHIELD: self.get_shielded_cities(planet_id),
             OrderType.DEVELOP: self.get_developed_cities(planet_id),
