@@ -12,7 +12,7 @@ from database.models import (
 from database.schemas import GameStatus, OrderDto, SanctionDto
 from game.config import game_config
 from game.schemas import FailureReason, OrderType
-from storage.schemas import OrderInfo
+from game.schemas import OrderInfo
 
 
 @pytest.mark.asyncio
@@ -183,59 +183,30 @@ async def test_create_meteorites(
         assert planet.meteorites == result
 
 
-@pytest.fixture()
-def orders1(planet_id_2, city_id, city_id_2):
-    return [
-        OrderDto(
-            action=OrderType.ATTACK, planet_id=planet_id_2, round=1, argument=city_id
-        ),
-        OrderDto(
-            action=OrderType.ATTACK, planet_id=planet_id_2, round=1, argument=city_id_2
-        ),
-    ]
-
-
-@pytest.fixture()
-def orders2(planet_id_2, planet_id_3, city_id, city_id_2):
-    return [
-        OrderDto(
-            action=OrderType.ATTACK, planet_id=planet_id_2, round=1, argument=city_id
-        ),
-        OrderDto(
-            action=OrderType.ATTACK, planet_id=planet_id_2, round=1, argument=city_id_2
-        ),
-        OrderDto(
-            action=OrderType.ATTACK, planet_id=planet_id_3, round=1, argument=city_id
-        ),
-    ]
-
-
-@pytest.mark.parametrize(
-    ["orders", "alive"],
-    [
-        (lf("orders1"), (60, 0)),
-        (lf("orders2"), (0, 0))
-    ]
-)
 @pytest.mark.asyncio
 async def test_attack_cities(
-    mock_game_client, orders, alive, city_id, city_id_2, game_id
+    mock_game_client, city_id, city_id_2, city_id_3, game_id
 ):
     async with mock_game_client.session() as s:
         city1 = await s.get(City, city_id)
+        city2 = await s.get(City, city_id_2)
         game = await s.get(Game, game_id)
         game.round = 1
         city1.is_shielded = True
+        city2.is_shielded = True
         await s.commit()
 
-    await mock_game_client.attack_cities(*orders)
+    await mock_game_client.attack_cities(city_id, city_id, city_id_2, city_id_3)
 
     async with mock_game_client.session() as s:
         city1 = await s.get(City, city_id)
         city2 = await s.get(City, city_id_2)
+        city3 = await s.get(City, city_id_3)
 
-        assert city1.development == alive[0]
-        assert city2.development == alive[1]
+        assert city1.development == 0
+        assert city2.development != 0
+        assert not city2.is_shielded
+        assert city3.development == 0
 
 
 @pytest.mark.parametrize(
@@ -305,16 +276,20 @@ async def test_end_current_round(
     mock_game_client, mocker, planet_id, planet_id_2, game_id, city_id
 ):
     orders_info = {
-        planet_id: OrderInfo(
-            shielded=[city_id],
-            developed=[city_id],
-            created=1,
-            sanctions=[planet_id_2],
-        ),
-        planet_id_2: OrderInfo(
-            attacked=[city_id],
-            created=2,
-        )
+        planet_id: {
+            OrderType.SHIELD: [city_id],
+            OrderType.DEVELOP: [city_id],
+            OrderType.CREATE: 1,
+            OrderType.SANCTIONS: [planet_id_2],
+            OrderType.INVENT: True,
+            OrderType.ECO: True,
+        },
+        planet_id_2: {
+            OrderType.ATTACK: [city_id],
+            OrderType.CREATE: 2,
+            OrderType.INVENT: True,
+            OrderType.ECO: True
+        }
     }
 
     async with mock_game_client.session() as s:
@@ -353,18 +328,9 @@ async def test_end_current_round(
     mock_create_meteorites.assert_any_call(planet_id, 1)
     mock_create_meteorites.assert_any_call(planet_id_2, 2)
     mock_develop_cities.assert_any_call(city_id)
-    mock_attack_cities.assert_any_call(
-        [
-            OrderDto(
-                action=OrderType.ATTACK,
-                planet_id=planet_id_2,
-                round=2,
-                argument=city_id,
-            )
-        ]
-    )
+    mock_attack_cities.assert_any_call(city_id)
     mock_build_shield_for_cities.assert_any_call(city_id)
-    mock_invent_for_planets.assert_any_call(planet_id_2)
+    mock_invent_for_planets.assert_any_call(planet_id, planet_id_2)
     mock_send_sanctions.assert_any_call(
         [SanctionDto(planet_from=planet_id, planet_to=planet_id_2, num_round=2)]
     )

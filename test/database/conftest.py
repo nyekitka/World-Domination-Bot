@@ -78,6 +78,11 @@ def city_id_2() -> int:
 
 
 @pytest.fixture()
+def city_id_3() -> int:
+    return 3
+
+
+@pytest.fixture()
 def non_existing_city_id() -> int:
     return 0
 
