@@ -3,7 +3,6 @@ from redis import Redis
 from game.schemas import FailureReason, OrderType
 from game.config import GameConfig
 from storage.clients.base import BaseClient
-from storage.schemas import OrderInfo
 
 
 class ActionsClient(BaseClient):
@@ -193,13 +192,13 @@ class ActionsClient(BaseClient):
         self.set(balance, balance_key, planet_id)
         return FailureReason.SUCCESS
 
-    def get_order_info(self, planet_id: int) -> OrderInfo:
-        return OrderInfo(
-            shielded=self.get_shielded_cities(planet_id),
-            developed=self.get_developed_cities(planet_id),
-            sanctions=self.get_sanctioned_planets(planet_id),
-            created=self.get_created_meteorites(planet_id),
-            is_invented=self.get_invented(planet_id),
-            eco_boost=self.get_eco_boost(planet_id),
-            attacked=self.get_attacked_cities(planet_id)
-        )
+    def get_order_info(self, planet_id: int) -> dict[OrderType, list[int] | int | bool]:
+        return {
+            OrderType.SHIELD: self.get_shielded_cities(planet_id),
+            OrderType.DEVELOP: self.get_developed_cities(planet_id),
+            OrderType.SANCTIONS: self.get_sanctioned_planets(planet_id),
+            OrderType.CREATE: self.get_created_meteorites(planet_id),
+            OrderType.INVENT: self.get_invented(planet_id),
+            OrderType.ECO: self.get_eco_boost(planet_id),
+            OrderType.ATTACK: self.get_attacked_cities(planet_id)
+        }
