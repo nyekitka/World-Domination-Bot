@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 from database.base_client import DatabaseClient
 from database.clients import GameClient, UserClient
+from database.clients.info import InfoClient
 from database.models import Admin, City, Game, ModelBase, Planet, Player
 from database.schemas import GameStatus
 from presets.pack import Pack, PackCity, PackPlanet
@@ -241,4 +242,10 @@ def mock_user_client(mock_session):
 @pytest.fixture()
 def mock_game_client(mock_session):
     client = GameClient(mock_session)
+    yield client
+
+
+@pytest.fixture()
+def mock_info_client(mock_session):
+    client = InfoClient(mock_session)
     yield client
