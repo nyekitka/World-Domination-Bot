@@ -88,7 +88,7 @@ class GameClient(DatabaseClient):
     
     async def get_all_active_admins(
         self, s: AsyncSession, game_id: int
-    ) -> list[PlayerDto]:
+    ) -> list[AdminDto]:
         result = await s.execute(
             select(Admin)
             .where(Admin.game_id == game_id)

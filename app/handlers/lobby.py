@@ -43,7 +43,7 @@ async def set_pack(
         if p.name == pack_name:
             pack = p
             break
-    await call.answer()
+    call.answer()
     await call.message.answer(
         messager.choose_number_of_planets(),
         reply_markup=kb.number_of_planets_keyboard(pack),
@@ -68,7 +68,7 @@ async def set_number_of_planets(
         pack=pack,
         number_of_planets=number
     )
-    await call.answer()
+    call.answer()
     await call.message.answer(
         text=messager.game_created(game.id, number),
         reply_markup=kb.start_keyboard(True),

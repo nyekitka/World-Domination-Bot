@@ -159,7 +159,7 @@ async def method_executor_call(method, call: types.CallbackQuery, *args):
     try:
         method(*args)
     except CDException as ex:
-        await call.answer(str(ex), True)
+        call.answer(str(ex), True)
         return False
     return True
 
@@ -464,7 +464,7 @@ async def start_game(message: types.Message):
 @dp.callback_query(BotStates.choose_pack)
 async def set_pack(call: types.CallbackQuery, state: FSMContext):
     pack = call.data
-    await call.answer("")
+    call.answer("")
     await call.message.answer(
         "Выберите количество планет в игре",
         reply_markup=kb.number_of_planets_keyboard(pack),
@@ -474,7 +474,7 @@ async def set_pack(call: types.CallbackQuery, state: FSMContext):
 
 @dp.callback_query(BotStates.choose_lobby_admin)
 async def chosen_lobby_admin(call: types.CallbackQuery, state: FSMContext):
-    await call.answer("")
+    call.answer("")
     gamecode = int(call.data)
     tgid = call.from_user.id
     game = Game.init_with_check(gamecode, db_connection)
@@ -489,7 +489,7 @@ async def chosen_lobby_admin(call: types.CallbackQuery, state: FSMContext):
 
 @dp.callback_query(BotStates.choose_lobby)
 async def chosen_lobby(call: types.CallbackQuery, state: FSMContext):
-    await call.answer("")
+    call.answer("")
     gamecode = int(call.data)
     tgid = call.from_user.id
     game = Game.init_with_check(gamecode, db_connection)
@@ -537,7 +537,7 @@ async def set_number_of_planets(call: types.CallbackQuery, state: FSMContext):
         planet = Planet.make_new_planet(key, game.id, db_connection)
         for city in pack[key]:
             City.make_new_city(city, planet.id, db_connection)
-    await call.answer("")
+    call.answer("")
     await call.message.answer(
         text=messager.game_created(game.id, number),
         reply_markup=kb.start_keyboard(True),

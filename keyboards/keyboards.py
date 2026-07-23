@@ -10,6 +10,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from database.schemas import CityDto, GameDto, PlanetDto
 from game.config import game_config
+from keyboards.schemas import Action, ActionType
 
 
 # Клавиатура админа в начале
@@ -48,10 +49,15 @@ def city_keyboard(
     if nround == 1:
         for city in cities:
             str1 = '✅' if city.id in developed_ids else ''
+            action = Action(
+                action_type=ActionType.DEVELOP,
+                planet_id=planet.id,
+                argument=city.id,
+            )
             builder.add(
                 InlineKeyboardButton(
                     text=f'{str1}📈 {city.name} ({game_config.DEVELOPMENT_COST} 💵)',
-                    callback_data=f'develop {planet.id} {city.id}',
+                    callback_data=action.model_dump_json(),
                 )
             )
         return builder.adjust(2).as_markup()
@@ -62,14 +68,24 @@ def city_keyboard(
             str1 = '✅'
         if city.id in under_shield_ids:
             str2 = '✅'
+        develop_action = Action(
+            action_type=ActionType.DEVELOP,
+            planet_id=planet.id,
+            argument=city.id,
+        )
+        shield_action = Action(
+            action_type=ActionType.SHIELD,
+            planet_id=planet.id,
+            argument=city.id,
+        )
         builder.add(
             InlineKeyboardButton(
                 text=f'{str1}📈 {city.name} ({game_config.DEVELOPMENT_COST} 💵)',
-                callback_data=f'develop {planet.id} {city.id}',
+                callback_data=develop_action.model_dump_json(),
             ),
             InlineKeyboardButton(
                 text=f'{str2}🛡️ {city.name} ({game_config.SHIELD_COST} 💵)',
-                callback_data=f'defend {planet.id} {city.id}',
+                callback_data=shield_action.model_dump_json(),
             ),
         )
     return builder.adjust(2).as_markup()
@@ -84,22 +100,30 @@ def sanctions_keyboard(
 
     for other_planet in other_planets:
         addition = '✅ ' if other_planet.id in under_sanctions_ids else ''
+        sanctions_action = Action(
+            action_type=ActionType.SANCTIONS, planet_id=planet.id,
+            argument=other_planet.id,
+        )
         builder.add(
             InlineKeyboardButton(
                 text=f'{addition}{other_planet.name}',
-                callback_data=f'sanctions {planet.id} {other_planet.id}',
+                callback_data=sanctions_action.model_dump_json(),
             )
         )
     return builder.adjust(2).as_markup()
 
 
 def invent_meteorites_keyboard(planet: PlanetDto, chosen: bool) -> InlineKeyboardMarkup:
+    invent_action = Action(
+        action_type=ActionType.INVENT,
+        planet_id=planet.id,
+    )
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
                     text=('✅ ' if chosen else '') + f'Разработать ({game_config.INVENTION_COST} 💵)',
-                    callback_data=f'invent {planet.id}',
+                    callback_data=invent_action.model_dump_json(),
                 )
             ]
         ]
@@ -109,24 +133,30 @@ def invent_meteorites_keyboard(planet: PlanetDto, chosen: bool) -> InlineKeyboar
 def meteorites_keyboard(planet: PlanetDto, chosen: int) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     for i in range(1, game_config.MAX_METEORITES_TO_BUY):
+        action = Action(
+            action_type=ActionType.CREATE,
+            planet_id=planet.id,
+            argument=i, 
+        )
         if chosen == i:
             builder.add(
                 InlineKeyboardButton(
                     text=f'✅ {i} ({game_config.CREATE_COST * i} 💵)',
-                    callback_data=f'create {planet.id} {i}',
+                    callback_data=action.model_dump_json(),
                 )
             )
         else:
             builder.add(
                 InlineKeyboardButton(
                     text=f'{i} ({game_config.CREATE_COST * i} 💵)',
-                    callback_data=f'create {planet.id} {i}'
+                    callback_data=action.model_dump_json()
                 )
             )
     return builder.adjust(3).as_markup()
 
 
 def eco_keyboard(planet: PlanetDto, chosen: bool) -> InlineKeyboardMarkup:
+    action = Action(action_type=ActionType.ECO, planet_id=planet.id)
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -134,7 +164,7 @@ def eco_keyboard(planet: PlanetDto, chosen: bool) -> InlineKeyboardMarkup:
                     text='✅ Отправить метеорит в аномалию'
                     if chosen
                     else 'Отправить метеорит в аномалию',
-                    callback_data=f'eco {planet.id}',
+                    callback_data=action.model_dump_json(),
                 )
             ]
         ]
@@ -152,49 +182,78 @@ def other_planets_keyboard(
     if nround > 1:
         for city in other_cities:
             add = '✅ ' if city.id in attacked_cities_ids else ''
+            attack_action = Action(
+                action_type=ActionType.ATTACK,
+                planet_id=planet.id,
+                argument=city.id,
+            )
             builder.add(
                 InlineKeyboardButton(
                     text=f'{add}🗡 {city.name}',
-                    callback_data=f'attack {planet.id} {city.id}',
+                    callback_data=attack_action.model_dump_json(),
                 )
             )
+    negotiate_action = Action(
+        action_type=ActionType.NEGOTIATE,
+        planet_id=planet.id,
+        argument=other_planet.id,
+        
+    )
+    transaction_action = Action(
+        action_type=ActionType.TRANSACTION,
+        planet_id=planet.id
+    )
     builder.add(
         InlineKeyboardButton(
             text='Переговоры 📞',
-            callback_data=f'negotiations {planet.id} {other_planet.id}',
+            callback_data=negotiate_action.model_dump_json(),
         ),
         InlineKeyboardButton(
             text='Перевод 💸',
-            callback_data=f'transaction {planet.id} {other_planet.id}',
+            callback_data=transaction_action.model_dump_json(),
         ),
     )
     return builder.adjust(2).as_markup()
 
 
 def negotiations_offer_keyboard(planet: PlanetDto, from_planet: PlanetDto):
+    accept_neg = Action(
+        action_type=ActionType.ACCEPT_NEGOTIATIONS,
+        planet_id=planet.id, argument=from_planet.id
+    )
+    refuse_neg = Action(
+        action_type=ActionType.REFUSE_NEGOTIATIONS,
+        planet_id=planet.id, argument=from_planet.id
+    )
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text='Принять', callback_data=f'accept {planet.id} {from_planet.id}'
+                    text='Принять', callback_data=accept_neg.model_dump_json()
                 ),
                 InlineKeyboardButton(
-                    text='Отклонить', callback_data=f'deny {planet.id} {from_planet.id}'
+                    text='Отклонить', callback_data=refuse_neg.model_dump_json()
                 ),
             ]
         ]
     )
 
-
-end_negotiations_keyboard = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text='Завершить переговоры', callback_data='end_negotiations'
-            )
+def end_negotiations_keyboard(planet_to: PlanetDto, planet_from: PlanetDto) -> InlineKeyboardMarkup:
+    end_negotiations_order = Action(
+        action_type=ActionType.END_NEGOTIATIONS,
+        planet_id=planet_to.id,
+        argument=planet_from.id,
+    )
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text='Завершить переговоры',
+                    callback_data=end_negotiations_order.model_dump_json()
+                )
+            ]
         ]
-    ]
-)
+    )
 
 
 # Клавиатура выбора количества планет в игре
