@@ -11,6 +11,15 @@ class OrderType(StrEnum):
     INVENT = auto()
     NEGOTIATE = auto()
 
+ORDER_TYPE_TRANSLATIONS = {
+    OrderType.ATTACK: 'Атаковать',
+    OrderType.DEVELOP: 'Развить',
+    OrderType.SHIELD: 'Защитить',
+    OrderType.CREATE: 'Создать метеориты',
+    OrderType.ECO: 'Отправить метеорит в аномалию',
+    OrderType.SANCTIONS: 'Наложить санкции',
+    OrderType.INVENT: 'Изобрести технологию',
+}
 
 OrderInfo = dict[OrderType, list[int] | int | bool]
 

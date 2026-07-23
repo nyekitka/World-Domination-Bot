@@ -1,15 +1,18 @@
 import asyncio
 
 from aiogram import Router, types
+from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 
 from app.filters.admin import AdminFilter
 from app.filters.buttons import ReplyButtonFilter
 from app.filters.state import BotStates
+from app.handlers.round_loop import get_round_notifier
 from app.utils import method_executor_call, method_executor_msg, send_all_info, sync_method_executor_call
 from database.clients.game import GameClient
+from database.clients.info import InfoClient
 from database.clients.user import UserClient
-from database.schemas import GameDto, GameStatus, PlanetDto
+from database.schemas import GameDto, GameStatus, PlanetDto, UserDto
 from game.config import game_config
 from keyboards import keyboards as kb
 from keyboards.schemas import Action, ActionType, validate_action_json
@@ -20,15 +23,14 @@ from storage.schemas import MessageType
 
 ingame_router = Router()
 
-@ingame_router.message(
-    ReplyButtonFilter('Начать игру'),
-    AdminFilter()
-)
-async def start_game(
+
+async def start_round(
     message: types.Message,
     user_client: UserClient,
     messages_client: MessagesClient,
     game_client: GameClient,
+    actions_client: ActionsClient,
+    info_client: InfoClient,
 ):
     res = await method_executor_msg(
         message.bot,
@@ -40,12 +42,12 @@ async def start_game(
     
     user = await user_client.get_user(message.from_user.id)
     active_admins = await game_client.get_all_active_admins(user.game_id)
-    game = await game_client.get_game(user.game_id)
+    game: GameDto = await game_client.get_game(user.game_id)
 
     for admin in active_admins:
         await message.bot.send_message(
             admin.tg_id,
-            messager.round_admins(1),
+            messager.round_admins(game.round),
             parse_mode='MarkdownV2',
             reply_markup=types.ReplyKeyboardRemove(),
         )
@@ -68,6 +70,90 @@ async def start_game(
             user_id=message.from_user.id,
             messages_client=messages_client,
         )
+    round_notifier = get_round_notifier(
+        bot=message.bot,
+        game=game,
+        game_client=game_client,
+        actions_client=actions_client,
+        info_client=info_client,
+        messages_client=messages_client,
+    )
+    await round_notifier.run_loop()
+
+
+@ingame_router.message(
+    ReplyButtonFilter('Начать игру'),
+    AdminFilter()
+)
+async def start_game(
+    message: types.Message,
+    user_client: UserClient,
+    messages_client: MessagesClient,
+    game_client: GameClient,
+    actions_client: ActionsClient,
+    info_client: InfoClient,
+):
+    await start_round(
+        message,
+        user_client,
+        messages_client,
+        game_client,
+        actions_client,
+        info_client,
+    )
+
+
+@ingame_router.message(
+    Command('snround'),
+    AdminFilter()
+)
+async def start_new_round(
+    message: types.Message,
+    user_client: UserClient,
+    messages_client: MessagesClient,
+    game_client: GameClient,
+    actions_client: ActionsClient,
+    info_client: InfoClient,
+):
+    await start_round(
+        message,
+        user_client,
+        messages_client,
+        game_client,
+        actions_client,
+        info_client,
+    )
+
+
+@ingame_router.message(
+    Command('endgame'),
+    AdminFilter(),
+)
+async def end_the_game(
+    message: types.Message,
+    user_client: UserClient,
+    game_client: GameClient,
+):
+    user: UserDto = await user_client.get_user(message.from_user.id)
+    if user.game_id is None:
+        message.answer(messager.ending_outside())
+        return
+    game: GameDto = await user_client.get_game(user.game_id)
+    
+    admins_list = await game_client.get_all_active_admins(game.id)
+    players_list = await game_client.get_all_active_players(game.id)
+
+    for admin in admins_list:
+        await message.bot.send_message(
+            admin.tg_id,
+            messager.game_interrupted_report()
+        )
+    for player in players_list:
+        await message.bot.send_message(
+            player.tg_id,
+            messager.game_interrupted_message()
+        )
+    await game_client.end_game(game.id)
 
 
 @ingame_router.callback_query(lambda call: validate_action_json(call.data))
@@ -512,7 +598,7 @@ async def set_amount_of_money(
 
     from_city_id = messages_client.get_info_message_id(from_planet.owner_id, MessageType.CITY)
     to_city_id = messages_client.get_info_message_id(to_planet.owner_id, MessageType.CITY)
-    from_msg = await message.bot.edit_message_text(
+    await message.bot.edit_message_text(
         messager.city_stats_message(from_planet),
         chat_id=from_planet.owner_id,
         message_id=from_city_id,
@@ -525,7 +611,7 @@ async def set_amount_of_money(
         ),
         parse_mode='MarkdownV2',
     )
-    to_msg = await message.bot.edit_message_text(
+    await message.bot.edit_message_text(
         messager.city_stats_message(to_planet),
         chat_id=to_planet.owner_id,
         message_id=to_city_id,

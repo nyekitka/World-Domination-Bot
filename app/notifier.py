@@ -6,25 +6,22 @@ from typing import (
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.date import DateTrigger
 
+from game.config import game_config
+
 P = ParamSpec('P')
 
 
 class Notifier:
     def __init__(
         self,
-        loop_length: int,
-        checkpoints: dict[str, int],
+        checkpoints: dict[int, str],
         handlers: dict[str, Callable[P, Awaitable[None]]],
-        handler_args: dict[str, tuple[Any]],
-        handler_kwargs: dict[str, dict[str, Any]],
+        handler_args: dict[str, tuple[Any]] = tuple(),
+        handler_kwargs: dict[str, dict[str, Any]] = dict(),
     ):
-        checkpoints.sort()
-        assert (
-            checkpoints[0] > 0
-            and checkpoints[-1] < loop_length
-        )
+        min_checkpoint = min(checkpoints.keys())
+        assert min_checkpoint > 0
 
-        self.loop_length = loop_length
         self.checkpoints = checkpoints
         self.handlers = handlers
         self.args = handler_args
@@ -41,7 +38,7 @@ class Notifier:
                 **self.kwargs[key],
             )
 
-        for key, secs in self.checkpoints.items():
+        for secs, key in self.checkpoints.items():
             scheduler.add_job(
                 func=executor,
                 trigger=DateTrigger(now + datetime.timedelta(seconds=secs)),

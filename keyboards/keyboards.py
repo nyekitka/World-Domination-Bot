@@ -5,6 +5,7 @@ from aiogram.types import (
     KeyboardButton,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
+    WebAppInfo,
 )
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
@@ -308,4 +309,15 @@ def request_keyboard(id: int):
                 InlineKeyboardButton(text='Отклонить', callback_data=f'notknight {id}'),
             ]
         ]
+    )
+
+def round_stats_keyboard(game: GameDto) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[[
+            # TODO: make site for statistics
+            InlineKeyboardButton(
+                text='📊 Открыть статистику после раунда',
+                web_app=WebAppInfo(url=f'https://some_url.com/{game.id}/{game.round}')
+            )
+        ]]
     )
