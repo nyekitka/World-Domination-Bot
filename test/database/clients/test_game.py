@@ -477,22 +477,21 @@ async def test_get_all_planets_and_cities(
 )
 @pytest.mark.asyncio
 async def test_get_sanctioned_planets(
-    mock_game_client, planet_id, planet_id_2, planet_id_3,
+    game_client, session, planet_id, planet_id_2, planet_id_3,
     game_id, sanction_round, expected_result
 ):
-    async with mock_game_client.session() as s:
-        game = await s.get(Game, game_id)
-        game.round = 2
-        
-        sanctions = [Sanction(
-            planet_from=planet_id,
-            planet_to=other_planet,
-            num_round=sanction_round
-        ) for other_planet in (planet_id_2, planet_id_3)]
-        s.add_all(sanctions)
-        await s.commit()
+    game = await session.get(Game, game_id)
+    game.round = 2
     
-    result = await mock_game_client.get_sanctioned_planets(planet_id)
+    sanctions = [Sanction(
+        planet_from=planet_id,
+        planet_to=other_planet,
+        num_round=sanction_round
+    ) for other_planet in (planet_id_2, planet_id_3)]
+    session.add_all(sanctions)
+    await session.commit()
+    
+    result = await game_client.get_sanctioned_planets(session, planet_id)
     sanctioned_ids = [
         planet.id for planet in result
     ]

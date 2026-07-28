@@ -430,7 +430,6 @@ class GameClient(DatabaseClient):
         return FailureReason.SUCCESS
 
 
-    @DatabaseClient.get_transaction
     async def get_sanctioned_planets(
         self, s: AsyncSession, planet_id: int
     ) -> list[PlanetDto]:
