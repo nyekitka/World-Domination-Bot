@@ -48,10 +48,11 @@ class InfoClient(DatabaseClient):
 
         for order in orders:
             if order.action in (OrderType.INVENT, OrderType.ECO):
-                all_orders[order.round][order.planet_id][order.action] = True
+                all_orders[order.round - 1][order.planet_id][order.action] = True
             elif order.action == OrderType.CREATE:
-                all_orders[order.round][order.planet_id][OrderType.CREATE] = order.argument
+                all_orders[order.round - 1][order.planet_id][OrderType.CREATE] = order.argument
             else:
-                all_orders[order.round][order.planet_id].setdefault(order.action, []).append(order.argument)
-        
+                all_orders[order.round - 1][order.planet_id].setdefault(order.action, []).append(order.argument)
+
+        logger.debug(all_orders)
         return all_orders
