@@ -1,5 +1,5 @@
 from enum import StrEnum, auto
-from typing import Union
+from typing import Any, Union
 
 from pydantic import BaseModel, ConfigDict
 
@@ -82,3 +82,24 @@ class NegotiationDto(BaseDto):
 
 UserDto = Union[PlayerDto, AdminDto]
 
+
+class RoundInfoDto(BaseDto):
+    game_id: int
+    round: int
+    info: GameData
+
+
+class GameData(BaseDto):
+    planets_data: list[PlanetData]
+    eco_rate: int
+
+
+class PlanetData(BaseDto):
+    name: str
+    development: float
+    cities_data: list[CityData]
+
+
+class CityData(BaseDto):
+    name: str
+    development: float
