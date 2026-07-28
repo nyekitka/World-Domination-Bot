@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 
 class InfoClient(DatabaseClient):
-    @DatabaseClient.get_transaction
     async def get_all_orders_in_game(
         self, s: AsyncSession,
         game_id: int,
