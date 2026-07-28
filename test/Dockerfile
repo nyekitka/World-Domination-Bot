@@ -1,4 +1,6 @@
-FROM python:3.13
+FROM python:3.14
+
+RUN python3 --version && which python3 && ls -la /usr/local/bin/python3*
 
 WORKDIR /test
 
