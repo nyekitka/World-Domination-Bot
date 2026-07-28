@@ -7,9 +7,9 @@ from sqlalchemy import select
 from database.models import (
     Admin, City, Game,
     Negotiation, Order, Planet,
-    Player, Sanction
+    Player, RoundInfo, Sanction
 )
-from database.schemas import GameStatus, OrderDto, SanctionDto
+from database.schemas import CityData, GameData, GameStatus, OrderDto, PlanetData, RoundInfoDto, SanctionDto
 from game.config import game_config
 from game.schemas import FailureReason, OrderType
 from game.schemas import OrderInfo
@@ -385,3 +385,78 @@ async def test_start_new_round(
             game = await s.get(Game, game_id)
             new_round = game.round
             assert new_round - round == 1
+
+
+@pytest.mark.asyncio
+async def test_save_round_info(
+    mock_game_client, game_id, city_id
+):
+    async with mock_game_client.session() as s:
+        game = await s.get(Game, game_id)
+        game.round = 2
+        game.ecorate = 20
+
+        city = await s.get(City, city_id)
+        city.development = 15
+        city_name = city.name
+        await s.commit()
+
+    await mock_game_client.save_round_info(game_id)
+
+    async with mock_game_client.session() as s:
+        round_info = await s.get(RoundInfo, {'game_id': game_id, 'round': 2})
+        assert round_info.info['eco_rate'] == 20
+
+        for planet in round_info.info['planets_data']:
+            for city in planet['cities_data']:
+                if city['name'] == city_name:
+                    assert city['development'] == 15
+                    break
+
+@pytest.mark.asyncio
+async def test_get_round_info(
+    mock_game_client, game_id
+):
+    async with mock_game_client.session() as s:
+        round_info = RoundInfo(
+            game_id=game_id,
+            round=1,
+            info={
+                'eco_rate': 13,
+                'planets_data': [
+                    {
+                        'name': 'Planet',
+                        'development': 10,
+                        'cities_data': [
+                            {
+                                'name': 'City',
+                                'development': 9
+                            }
+                        ]
+                    }
+                ]
+            }
+        )
+        s.add(round_info)
+        await s.commit()
+
+    expected_result = RoundInfoDto(
+        game_id=game_id,
+        round=1,
+        info=GameData(
+            eco_rate=13,
+            planets_data=[
+                PlanetData(
+                    name='Planet',
+                    development=10,
+                    cities_data=[CityData(
+                        name='City',
+                        development=9,
+                    )],
+                )
+            ]
+        )
+    )
+
+    result = await mock_game_client.get_round_info(game_id, 1)
+    assert result == expected_result

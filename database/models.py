@@ -1,6 +1,8 @@
 import re
+from typing import Any
+
 from sqlalchemy import (
-    BigInteger, Enum,
+    JSON, BigInteger, Enum,
     ForeignKey, PrimaryKeyConstraint,
     func, inspect, select
 )
@@ -22,6 +24,10 @@ class ModelBase(DeclarativeBase):
     def __tablename__(cls) -> str:
         match = re.findall(r"[A-Z][a-z]*", cls.__name__)
         return "_".join(list(map(lambda x: x.lower(), match)))
+
+    type_annotation_map = {
+        dict[str, Any]: JSON
+    }
 
 
 class Game(ModelBase):
@@ -168,4 +174,17 @@ class Negotiation(ModelBase):
 
     __table_args__ = (
         PrimaryKeyConstraint(planet_from, planet_to, name="negotiation_pkey"),
+    )
+
+
+class RoundInfo(ModelBase):
+    game_id: Mapped[int] = mapped_column(
+        ForeignKey('game.id', ondelete='CASCADE'),
+        nullable=False,
+    )
+    round: Mapped[int] = mapped_column(nullable=False)
+    info: Mapped[dict[str, Any]] = mapped_column(nullable=False)
+
+    __table_args__ = (
+        PrimaryKeyConstraint(game_id, round, name='round_info_pkey'),
     )

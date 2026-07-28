@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from database.base_client import DatabaseClient
-from database.models import Admin, City, Game, Order, Planet, Player, Sanction
-from database.schemas import AdminDto, GameDto, GameStatus, OrderDto, PlanetDto, PlayerDto, SanctionDto
+from database.models import Admin, City, Game, Order, Planet, Player, RoundInfo, Sanction
+from database.schemas import AdminDto, CityData, GameData, GameDto, GameStatus, OrderDto, PlanetData, PlanetDto, PlayerDto, RoundInfoDto, SanctionDto
 from game.config import game_config
 from game.schemas import FailureReason, OrderInfo, OrderType
 from presets.pack import Pack
@@ -351,6 +351,47 @@ class GameClient(DatabaseClient):
                 )
             )
         )
+
+
+    @DatabaseClient.set_transaction
+    async def save_round_info(self, s: AsyncSession, game_id: int) -> FailureReason:
+        game = await s.get(Game, game_id)
+        if game is None:
+            return FailureReason.OBJECT_NOT_FOUND
+
+        planets = await self.get_planets_of_game(game_id)
+        planets_data = []
+
+        for planet in planets:
+            cities = await self.get_cities_of_planet(planet.id, False, False)
+            cities_data = [
+                CityData(name=city.name, development=city.development)
+                for city in cities
+            ]
+            planets_data.append(
+                PlanetData(
+                    name=planet.name,
+                    development=planet.development,
+                    cities_data=cities_data
+                )
+            )
+        s.add(RoundInfo(
+            game_id=game_id,
+            round=game.round,
+            info=GameData(
+                planets_data=planets_data,
+                eco_rate=game.ecorate
+            ).model_dump()
+        ))
+
+    @DatabaseClient.get_transaction
+    async def get_round_info(self, s: AsyncSession, game_id: int, round: int) -> RoundInfoDto | None:
+        round_info = await s.get(RoundInfo, {'game_id': game_id, 'round': round})
+        if round_info is None:
+            return None
+
+        return RoundInfoDto.model_validate(round_info)
+
 
     @DatabaseClient.set_transaction
     async def start_new_round(self, s: AsyncSession, initiator_id: int) -> FailureReason:
