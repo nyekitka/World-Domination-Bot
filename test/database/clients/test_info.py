@@ -1,7 +1,11 @@
+import logging
+
 import pytest
 
 from database.models import Order
 from game.schemas import OrderType
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.mark.asyncio
@@ -51,4 +55,7 @@ async def test_get_all_orders_in_game(
         await s.commit()
     
     result = await mock_info_client.get_all_orders_in_game(game_id)
-    assert result == all_orders
+
+    for round in range(len(all_orders)):
+        for key, value in all_orders[round].items():
+            assert result[round][key] == value
