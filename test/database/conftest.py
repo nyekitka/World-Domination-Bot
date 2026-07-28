@@ -176,7 +176,7 @@ def city_name_to_id() -> dict[str, int]:
 
 
 @pytest_asyncio.fixture
-async def mock_session(
+async def session(
     pack, admin_id, player_ids, 
     game_id, planet_name_to_id, test_db_config
 ):
@@ -224,28 +224,25 @@ async def mock_session(
             s.add_all(cities)
             await s.commit()
 
-        yield session
+        async with session() as s:
+            yield s
 
 
 @pytest.fixture()
-def mock_database_client(mock_session):
-    client = DatabaseClient(mock_session)
-    yield client
+def database_client():
+    return DatabaseClient()
 
 
 @pytest.fixture()
-def mock_user_client(mock_session):
-    client = UserClient(mock_session)
-    yield client
+def user_client():
+    return UserClient()
 
 
 @pytest.fixture()
-def mock_game_client(mock_session):
-    client = GameClient(mock_session)
-    yield client
+def game_client():
+    return GameClient()
 
 
 @pytest.fixture()
-def mock_info_client(mock_session):
-    client = InfoClient(mock_session)
-    yield client
+def info_client():
+    return InfoClient()

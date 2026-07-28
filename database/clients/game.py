@@ -21,7 +21,6 @@ logger = logging.getLogger(__name__)
 
 
 class GameClient(DatabaseClient):
-    @DatabaseClient.get_transaction
     async def get_all_games(
         self, s: AsyncSession, every: bool = False
     ) -> list[GameDto]:
@@ -36,7 +35,6 @@ class GameClient(DatabaseClient):
         games = result.scalars().all()
         return TypeAdapter(list[GameDto]).validate_python(games)
 
-    @DatabaseClient.set_transaction
     async def create_game(
         self, s: AsyncSession,
         admin_id: int, pack: Pack,
@@ -65,7 +63,6 @@ class GameClient(DatabaseClient):
 
         return GameDto.model_validate(game)
 
-    @DatabaseClient.set_transaction
     async def end_game(self, s: AsyncSession, game_id: int) -> None:
         await s.execute(
             (update(Player).where(Player.game_id == game_id).values(game_id=None))
@@ -77,9 +74,8 @@ class GameClient(DatabaseClient):
             (update(Game).where(Game.id == game_id).values(status=GameStatus.ENDED))
         )
 
-        await self._clear_game_cache(game_id, True)
+        await self._clear_game_cache(s, game_id, True)
     
-    @DatabaseClient.get_transaction
     async def get_all_active_players(
         self, s: AsyncSession, game_id: int
     ) -> list[PlayerDto]:
@@ -90,7 +86,6 @@ class GameClient(DatabaseClient):
         players = result.scalars().all()
         return TypeAdapter(list[PlayerDto]).validate_python(players)
     
-    @DatabaseClient.get_transaction
     async def get_all_active_admins(
         self, s: AsyncSession, game_id: int
     ) -> list[PlayerDto]:
@@ -103,7 +98,6 @@ class GameClient(DatabaseClient):
 
     
     @alru_cache(ttl=database_config.EXPIRE_CACHE)
-    @DatabaseClient.get_transaction
     async def get_all_planets_in_game(
         self,
         s: AsyncSession,
@@ -125,7 +119,6 @@ class GameClient(DatabaseClient):
             results.scalars().all()
         )
 
-    @DatabaseClient.set_transaction
     async def build_shield_for_cities(self, s: AsyncSession, *city_ids: int) -> None:
         if len(city_ids) == 0:
             return
@@ -133,7 +126,6 @@ class GameClient(DatabaseClient):
         await s.execute(stmt)
 
 
-    @DatabaseClient.set_transaction
     async def develop_cities(self, s: AsyncSession, *city_ids: int) -> None:
         if len(city_ids) == 0:
             return
@@ -147,7 +139,6 @@ class GameClient(DatabaseClient):
         await s.execute(stmt)
 
 
-    @DatabaseClient.set_transaction
     async def invent_for_planets(self, s: AsyncSession, *planet_ids: int) -> None:
         if len(planet_ids) == 0:
             return
@@ -155,7 +146,6 @@ class GameClient(DatabaseClient):
         await s.execute(stmt)
 
 
-    @DatabaseClient.set_transaction
     async def create_meteorites(self, s: AsyncSession, planet_id: int, n: int) -> None:
         if n == 0:
             return
@@ -163,7 +153,6 @@ class GameClient(DatabaseClient):
         planet.meteorites += n
 
 
-    @DatabaseClient.set_transaction
     async def attack_cities(
         self, s: AsyncSession, *city_ids: int
     ) -> None:
@@ -208,7 +197,6 @@ class GameClient(DatabaseClient):
             await s.execute(stmt_for_once_shielded)
 
 
-    @DatabaseClient.set_transaction
     async def eco_boost(
         self, s: AsyncSession,
         game_id: int,
@@ -224,7 +212,6 @@ class GameClient(DatabaseClient):
         await s.execute(stmt)
 
 
-    @DatabaseClient.set_transaction
     async def send_sanctions(
         self, s: AsyncSession, sanctions: list[SanctionDto]
     ) -> None:
@@ -237,7 +224,6 @@ class GameClient(DatabaseClient):
         await s.execute(stmt_add_orders)
 
 
-    @DatabaseClient.set_transaction
     async def transfer(
         self, s: AsyncSession,
         planet_from_id: int,
@@ -261,7 +247,6 @@ class GameClient(DatabaseClient):
         return FailureReason.SUCCESS
 
 
-    @DatabaseClient.set_transaction
     async def spend(
         self, s: AsyncSession,
         planet_id: int,
@@ -283,14 +268,13 @@ class GameClient(DatabaseClient):
         await s.commit()
     
 
-    @DatabaseClient.set_transaction
     async def end_current_round(
         self,
         s: AsyncSession,
         game_id: int,
         orders: dict[int, OrderInfo],
     ) -> FailureReason:
-        await self._clear_game_cache(game_id)
+        await self._clear_game_cache(s, game_id)
 
         game = await s.get(Game, game_id)
         if not game:
@@ -307,7 +291,7 @@ class GameClient(DatabaseClient):
         num_eco_boosts = 0
 
         for planet_id in orders:
-            await self.create_meteorites(planet_id, orders[planet_id].get(OrderType.CREATE, 0))
+            await self.create_meteorites(s, planet_id, orders[planet_id].get(OrderType.CREATE, 0))
             num_eco_boosts += int(orders[planet_id].get(OrderType.ECO, 0))
             orders_by_action[OrderType.SANCTIONS].extend([
                 SanctionDto(
@@ -328,17 +312,17 @@ class GameClient(DatabaseClient):
         for action, objs in orders_by_action.items():
             match action:
                 case OrderType.DEVELOP:
-                    await self.develop_cities(*objs)
+                    await self.develop_cities(s, *objs)
                 case OrderType.ATTACK:
-                    await self.attack_cities(*objs)
+                    await self.attack_cities(s, *objs)
                 case OrderType.SHIELD:
-                    await self.build_shield_for_cities(*objs)
+                    await self.build_shield_for_cities(s, *objs)
                 case OrderType.INVENT:
-                    await self.invent_for_planets(*objs)
+                    await self.invent_for_planets(s, *objs)
                 case OrderType.SANCTIONS:
-                    await self.send_sanctions(objs)
+                    await self.send_sanctions(s, objs)
 
-        await self.eco_boost(game_id, num_eco_boosts)
+        await self.eco_boost(s, game_id, num_eco_boosts)
 
         await s.execute(
             (
@@ -353,17 +337,16 @@ class GameClient(DatabaseClient):
         )
 
 
-    @DatabaseClient.set_transaction
     async def save_round_info(self, s: AsyncSession, game_id: int) -> FailureReason:
         game = await s.get(Game, game_id)
         if game is None:
             return FailureReason.OBJECT_NOT_FOUND
 
-        planets = await self.get_planets_of_game(game_id)
+        planets = await self.get_planets_of_game(s, game_id)
         planets_data = []
 
         for planet in planets:
-            cities = await self.get_cities_of_planet(planet.id, False, False)
+            cities = await self.get_cities_of_planet(s, planet.id, False, False)
             cities_data = [
                 CityData(name=city.name, development=city.development)
                 for city in cities
@@ -384,7 +367,6 @@ class GameClient(DatabaseClient):
             ).model_dump()
         ))
 
-    @DatabaseClient.get_transaction
     async def get_round_info(self, s: AsyncSession, game_id: int, round: int) -> RoundInfoDto | None:
         round_info = await s.get(RoundInfo, {'game_id': game_id, 'round': round})
         if round_info is None:
@@ -393,7 +375,6 @@ class GameClient(DatabaseClient):
         return RoundInfoDto.model_validate(round_info)
 
 
-    @DatabaseClient.set_transaction
     async def start_new_round(self, s: AsyncSession, initiator_id: int) -> FailureReason:
         admin = await s.get(Admin, initiator_id)
         if admin is None:
@@ -406,7 +387,7 @@ class GameClient(DatabaseClient):
         if game.status not in (GameStatus.WAITING, GameStatus.MEETING):
             return FailureReason.CANNOT_START_ROUND
 
-        planets = await self.get_planets_of_game(game.id)
+        planets = await self.get_planets_of_game(s, game.id)
 
         if not all(map(lambda pl: pl.owner_id is not None, planets)):
             return FailureReason.NOT_ENOUGH_PLAYERS
@@ -414,7 +395,7 @@ class GameClient(DatabaseClient):
         if game.status == GameStatus.MEETING:
             for planet in planets:
                 income = await self._planet_income(
-                    planet.id, game.ecorate, len(planets)
+                    s, planet.id, game.ecorate, len(planets)
                 )
                 await s.execute(
                     (

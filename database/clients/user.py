@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 
 
 class UserClient(DatabaseClient):
-    @DatabaseClient.set_transaction
     async def make_new_user_if_not_exists(
         self, s: AsyncSession, tg_id: int, is_admin: bool
     ) -> UserDto:
@@ -43,7 +42,6 @@ class UserClient(DatabaseClient):
 
         return PlayerDto.model_validate(user)
 
-    @DatabaseClient.set_transaction
     async def make_new_user(
         self, s: AsyncSession, tg_id: int, is_admin: bool
     ) -> UserDto:
@@ -58,7 +56,6 @@ class UserClient(DatabaseClient):
 
         return PlayerDto.model_validate(user)
 
-    @DatabaseClient.get_transaction
     async def get_user(self, s: AsyncSession, tg_id: int) -> UserDto | None:
         user = await s.get(Player, tg_id)
         if user:
@@ -69,7 +66,6 @@ class UserClient(DatabaseClient):
 
         return user
 
-    @DatabaseClient.set_transaction
     async def join_user(
         self, s: AsyncSession, user_id: int, game_id: int
     ) -> FailureReason:
@@ -78,7 +74,7 @@ class UserClient(DatabaseClient):
             return await self._join_player(s, user, game_id)
         user = await s.get(Admin, user_id)
         if user:
-            return await self._join_admin(user, game_id)
+            return await self._join_admin(s, user, game_id)
 
         return FailureReason.OBJECT_NOT_FOUND
 
@@ -88,7 +84,7 @@ class UserClient(DatabaseClient):
         if player.game_id:
             return FailureReason.ALREADY_IN_GAME
 
-        game = await self.get_game(game_id)
+        game = await self.get_game(s, game_id)
         if not game:
             return FailureReason.OBJECT_NOT_FOUND
 
@@ -115,11 +111,11 @@ class UserClient(DatabaseClient):
 
         return FailureReason.SUCCESS
 
-    async def _join_admin(self, admin: Admin, game_id: int) -> FailureReason:
+    async def _join_admin(self, s: AsyncSession, admin: Admin, game_id: int) -> FailureReason:
         if admin.game_id:
             return FailureReason.ALREADY_IN_GAME
 
-        game = await self.get_game(game_id)
+        game = await self.get_game(s, game_id)
         if not game:
             return FailureReason.OBJECT_NOT_FOUND
 
@@ -127,14 +123,13 @@ class UserClient(DatabaseClient):
 
         return FailureReason.SUCCESS
 
-    @DatabaseClient.set_transaction
     async def kick_user(self, s: AsyncSession, user_id: int) -> FailureReason:
         user = await s.get(Player, user_id)
         if user:
             return await self._kick_player(s, user)
         user = await s.get(Admin, user_id)
         if user:
-            return await self._kick_admin(s, user)
+            return self._kick_admin(user)
 
         return FailureReason.OBJECT_NOT_FOUND
 
@@ -155,7 +150,7 @@ class UserClient(DatabaseClient):
 
         return FailureReason.SUCCESS
 
-    async def _kick_admin(self, s: AsyncSession, admin: Admin) -> FailureReason:
+    def _kick_admin(self, admin: Admin) -> FailureReason:
         if admin.game_id is None:
             return FailureReason.NOT_IN_GAME
 
@@ -163,7 +158,6 @@ class UserClient(DatabaseClient):
 
         return FailureReason.SUCCESS
     
-    @DatabaseClient.set_transaction
     async def promote_to_admin(self, s: AsyncSession, player_id: int) -> FailureReason:
         player = await s.get(Player, player_id)
         if player is None:
