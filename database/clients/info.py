@@ -54,5 +54,4 @@ class InfoClient(DatabaseClient):
             else:
                 all_orders[order.round - 1][order.planet_id].setdefault(order.action, []).append(order.argument)
 
-        logger.debug(all_orders)
         return all_orders
