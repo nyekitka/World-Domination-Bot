@@ -2,8 +2,7 @@ import json
 import psycopg
 import pymorphy3
 from num2words import num2words
-from database.schemas import CityDto, GameDto, PlanetDto
-from game_classes import City, Planet, Game
+from database.schemas import CityDto, PlanetDto
 
 _messages_file = open("./presets/messages.json", encoding="utf-8")
 Messages = json.load(_messages_file)
@@ -14,9 +13,6 @@ class Messager:
     """
     Class that contains all info messages
     """
-
-    def __init__(self, connection: psycopg.extensions.connection):
-        self.__conn = connection
 
     def start_msg(self, isadmin: bool, ingame: bool, name: str):
         if isadmin and ingame:

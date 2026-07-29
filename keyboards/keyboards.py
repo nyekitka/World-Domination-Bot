@@ -12,6 +12,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from database.schemas import CityDto, GameDto, PlanetDto
 from game.config import game_config
 from keyboards.schemas import Action, ActionType
+from web_app.app.settings import django_settings
 
 
 # Клавиатура админа в начале
@@ -314,10 +315,9 @@ def request_keyboard(id: int):
 def round_stats_keyboard(game: GameDto) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[[
-            # TODO: make site for statistics
             InlineKeyboardButton(
                 text='📊 Открыть статистику после раунда',
-                web_app=WebAppInfo(url=f'https://some_url.com/{game.id}/{game.round}')
+                web_app=WebAppInfo(url=f'https://{django_settings.HOST}:{django_settings.PORT}/{game.id}/{game.round}')
             )
         ]]
     )

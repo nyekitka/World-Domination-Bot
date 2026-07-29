@@ -2,14 +2,14 @@ from aiogram import Router, types
 from aiogram.filters import Command, CommandStart, CommandObject
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.filters.admin import AdminFilter, OwnerFilter
+from app.filters.buttons import InlineButtonFilter
 from app.utils import tag_person, method_executor_call, method_executor_msg
 from database.clients import UserClient
 from database.schemas import (
     AdminDto, UserDto
 )
-from filters.admin import AdminFilter, OwnerFilter
-from filters.buttons import InlineButtonFilter
-import keyboards as kb
+from keyboards import keyboards as kb
 from messages import messager
 
 
