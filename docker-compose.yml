@@ -16,7 +16,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql
     ports:
-      - "${DATABASE_PORT}:5432"
+      - "${DATABASE_OUTER_PORT}:${DATABASE_INNER_PORT}"
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready", "-U", "${DATABASE_USER}", "-d", "${DATABASE_NAME}", ]
       interval: 10s
@@ -45,8 +45,15 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+      web_app:
+        condition: service_started
     env_file:
       - .env
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - OWNER=${OWNER}
     ports:
       - "8000:8000"
     volumes:
@@ -66,9 +73,9 @@ services:
     volumes:
       - .:/test
     
-  site:
+  web_app:
     build:
-      dockerfile: site/Dockerfile
+      dockerfile: web_app/Dockerfile
       context: .
     depends_on:
       db:
