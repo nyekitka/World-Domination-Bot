@@ -8,7 +8,8 @@ class DatabaseConfig(BaseSettings):
     USER: str
     PASSWORD: str
     HOST: str
-    PORT: str
+    INNER_PORT: str
+    OUTER_PORT: str
     POOL_SIZE: int = 5
     POOL_TIMEOUT: int = 20
     EXPIRE_CACHE: int = 60 * 60
@@ -17,7 +18,7 @@ class DatabaseConfig(BaseSettings):
     def database_url(self):
         return (
             f"postgresql+asyncpg://{self.USER}:{self.PASSWORD}"
-            f"@{self.HOST}:{self.PORT}/{self.NAME}"
+            f"@{self.HOST}:{self.INNER_PORT}/{self.NAME}"
         )
 
 

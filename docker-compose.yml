@@ -16,11 +16,7 @@ services:
       - postgres_data:/var/lib/postgresql
       - ./init_database.sql:/docker-entrypoint-initdb.d/init_database.sql
     ports:
-      - "${DATABASE_PORT}:${DATABASE_PORT}"
-    command:
-      - "postgres"
-      - "c"
-      - "port=${DATABASE_PORT}"
+      - "${DATABASE_OUTER_PORT}:${DATABASE_INNER_PORT}"
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready", "-U", "${DATABASE_USER}", "-d", "${DATABASE_NAME}", ]
       interval: 10s
@@ -49,8 +45,15 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+      web_app:
+        condition: service_started
     env_file:
       - .env
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - OWNER=${OWNER}
     ports:
       - "8000:8000"
     volumes:
@@ -69,6 +72,24 @@ services:
       - .env
     volumes:
       - .:/test
+    
+  web_app:
+    build:
+      dockerfile: web_app/Dockerfile
+      context: .
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=app.settings
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - DJANGO_HOST=${DJANGO_HOST}
+      - DJANGO_PORT=${DJANGO_PORT}
+    ports:
+      - "${DJANGO_PORT}:${DJANGO_PORT}"
+    command: ["uvicorn", "app.asgi:application", "--host", "${DJANGO_HOST}", "--port", "${DJANGO_PORT}"]
 
 volumes:
   postgres_data:
