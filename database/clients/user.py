@@ -66,6 +66,10 @@ class UserClient(DatabaseClient):
 
         return user
 
+    async def is_user_admin(self, s: AsyncSession, tg_id: int) -> bool:
+        user = await s.get(Admin, tg_id)
+        return user is not None
+
     async def join_user(
         self, s: AsyncSession, user_id: int, game_id: int
     ) -> FailureReason:
