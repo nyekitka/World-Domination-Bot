@@ -9,12 +9,12 @@ services:
       - .env
     environment:
       POSTGRES_DB: "${DATABASE_NAME}"
-      POSTGRES_USER: "${DATABASE_USER}"
       PGUSER: "${DATABASE_USER}"
       POSTGRES_PASSWORD: "${DATABASE_PASSWORD}"
       
     volumes:
       - postgres_data:/var/lib/postgresql
+      - ./init_database.sql:/docker-entrypoint-initdb.d/init_database.sql
     ports:
       - "${DATABASE_OUTER_PORT}:${DATABASE_INNER_PORT}"
     healthcheck:
@@ -90,7 +90,23 @@ services:
     ports:
       - "${DJANGO_PORT}:${DJANGO_PORT}"
     command: ["uvicorn", "app.asgi:application", "--host", "${DJANGO_HOST}", "--port", "${DJANGO_PORT}"]
-
+  
+  redis:
+    image: redis:latest
+    container_name: wd_redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    env_file:
+      - .env
+    ports:
+      - "${REDIS_PORT}:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    
 volumes:
   postgres_data:
     driver: local
