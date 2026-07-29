@@ -175,3 +175,16 @@ class UserClient(DatabaseClient):
         await s.delete(player)
 
         return FailureReason.SUCCESS
+
+    async def fire_admin(self, s: AsyncSession, admin_id: int) -> FailureReason:
+        admin = await s.get(Admin, admin_id)
+        if admin is None:
+            return FailureReason.OBJECT_NOT_FOUND
+        
+        self._kick_admin(admin)
+        
+        player = Player(tg_id=admin.tg_id)
+        s.add(player)
+        await s.delete(admin)
+
+        return FailureReason.SUCCESS
