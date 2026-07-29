@@ -203,3 +203,15 @@ async def test_promote_to_admin_in_game(
         assert admin.tg_id == player_id and player is None
     else:
         assert player.tg_id == player_id and admin is None
+
+
+@pytest.mark.asyncio
+async def test_fire_admin(user_client, session, admin_id):
+    res = await user_client.fire_admin(session, admin_id)
+    assert res == FailureReason.SUCCESS
+    await session.commit()
+
+    admin = await session.get(Admin, admin_id)
+    assert admin is None
+    player = await session.get(Player, admin_id)
+    assert player.tg_id == admin_id
