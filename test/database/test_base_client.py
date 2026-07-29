@@ -4,8 +4,8 @@ from game.config import game_config
 
 
 @pytest.mark.asyncio
-async def test_get_game(mock_database_client, game_id):
-    game = await mock_database_client.get_game(game_id)
+async def test_get_game(database_client, session, game_id):
+    game = await database_client.get_game(session, game_id)
 
     assert game
     assert game.id == game_id
@@ -13,31 +13,31 @@ async def test_get_game(mock_database_client, game_id):
 
 
 @pytest.mark.asyncio
-async def test_get_non_existing_game(mock_database_client):
-    game = await mock_database_client.get_game(1234567)
+async def test_get_non_existing_game(database_client, session):
+    game = await database_client.get_game(session, 1234567)
 
     assert not game
 
 
 @pytest.mark.asyncio
-async def test_game_by_planet_id(mock_database_client, game_id, planet_id):
-    game = await mock_database_client.get_game_by_planet_id(planet_id)
+async def test_game_by_planet_id(database_client, session, game_id, planet_id):
+    game = await database_client.get_game_by_planet_id(session, planet_id)
 
     assert game
     assert game.id == game_id
 
 
 @pytest.mark.asyncio
-async def test_game_by_city_id(mock_database_client, game_id, city_id):
-    game = await mock_database_client.get_game_by_city_id(city_id)
+async def test_game_by_city_id(database_client, session, game_id, city_id):
+    game = await database_client.get_game_by_city_id(session, city_id)
 
     assert game
     assert game.id == game_id
 
 
 @pytest.mark.asyncio
-async def test_get_planet(mock_database_client, planet_id):
-    planet = await mock_database_client.get_planet(planet_id)
+async def test_get_planet(database_client, session, planet_id):
+    planet = await database_client.get_planet(session, planet_id)
 
     assert planet
     assert planet.balance == game_config.DEFAULT_BALANCE
@@ -45,13 +45,13 @@ async def test_get_planet(mock_database_client, planet_id):
     assert not planet.is_invented
     assert planet.development == game_config.DEFAULT_DEVELOPMENT * game_config.DEFAULT_GAME_ECO_RATE / 100
 
-    same_planet = await mock_database_client.get_planet(planet_id, False)
+    same_planet = await database_client.get_planet(session, planet_id, False)
     assert same_planet.development is None
 
 
 @pytest.mark.asyncio
-async def test_get_city(mock_database_client, city_id):
-    city = await mock_database_client.get_city(city_id)
+async def test_get_city(database_client, session, city_id):
+    city = await database_client.get_city(session, city_id)
 
     assert city
     assert not city.is_shielded
@@ -60,9 +60,9 @@ async def test_get_city(mock_database_client, city_id):
 
 @pytest.mark.asyncio
 async def test_get_cities_of_planet(
-    mock_database_client, planet_id, pack
+    database_client, session, planet_id, pack
 ):
-    cities = await mock_database_client.get_cities_of_planet(planet_id)
+    cities = await database_client.get_cities_of_planet(session, planet_id)
 
     assert cities
 
@@ -76,8 +76,8 @@ async def test_get_cities_of_planet(
 
 
 @pytest.mark.asyncio
-async def test_get_planets_of_game(mock_database_client, game_id, pack):
-    planets = await mock_database_client.get_planets_of_game(game_id)
+async def test_get_planets_of_game(database_client, session, game_id, pack):
+    planets = await database_client.get_planets_of_game(session, game_id)
 
     assert planets
 

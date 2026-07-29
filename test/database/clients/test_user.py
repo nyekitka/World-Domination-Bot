@@ -16,30 +16,28 @@ from game.schemas import FailureReason
     ],
 )
 @pytest.mark.asyncio
-async def test_make_new_user_if_not_exists(tg_id, is_admin, mock_user_client):
-    await mock_user_client.make_new_user_if_not_exists(tg_id, is_admin)
+async def test_make_new_user_if_not_exists(session, tg_id, is_admin, user_client):
+    await user_client.make_new_user_if_not_exists(session, tg_id, is_admin)
 
-    async with mock_user_client.session() as s:
-        if is_admin:
-            admin = await s.get(Admin, tg_id)
-            assert admin
-        else:
-            player = await s.get(Player, tg_id)
-            assert player
+    if is_admin:
+        admin = await session.get(Admin, tg_id)
+        assert admin
+    else:
+        player = await session.get(Player, tg_id)
+        assert player
 
 
 @pytest.mark.parametrize("is_admin", (True, False))
 @pytest.mark.asyncio
-async def test_make_new_user(is_admin, non_existing_user_id, mock_user_client):
-    await mock_user_client.make_new_user(non_existing_user_id, is_admin)
+async def test_make_new_user(session, is_admin, non_existing_user_id, user_client):
+    await user_client.make_new_user(session, non_existing_user_id, is_admin)
 
-    async with mock_user_client.session() as s:
-        if is_admin:
-            admin = await s.get(Admin, non_existing_user_id)
-            assert admin
-        else:
-            player = await s.get(Player, non_existing_user_id)
-            assert player
+    if is_admin:
+        admin = await session.get(Admin, non_existing_user_id)
+        assert admin
+    else:
+        player = await session.get(Player, non_existing_user_id)
+        assert player
 
 
 @pytest.mark.parametrize(
@@ -51,8 +49,8 @@ async def test_make_new_user(is_admin, non_existing_user_id, mock_user_client):
     ],
 )
 @pytest.mark.asyncio
-async def test_get_user(mock_user_client, tg_id, result):
-    res = await mock_user_client.get_user(tg_id)
+async def test_get_user(user_client, session, tg_id, result):
+    res = await user_client.get_user(session, tg_id)
 
     if res:
         assert res.tg_id == result
@@ -83,31 +81,30 @@ async def test_get_user(mock_user_client, tg_id, result):
 )
 @pytest.mark.asyncio
 async def test_join_user(
-    user_id, user_game_id, game_status, result, game_id, mock_user_client
+    session, user_id, user_game_id,
+    game_status, result, game_id, user_client
 ):
-    async with mock_user_client.session() as s:
-        user = await s.get(Player, user_id)
-        if user:
-            user.game_id = user_game_id
-        user = await s.get(Admin, user_id)
-        if user:
-            user.game_id = user_game_id
+    user = await session.get(Player, user_id)
+    if user:
+        user.game_id = user_game_id
+    user = await session.get(Admin, user_id)
+    if user:
+        user.game_id = user_game_id
 
-        game = await s.get(Game, game_id)
-        game.status = game_status
-        await s.commit()
+    game = await session.get(Game, game_id)
+    game.status = game_status
+    await session.commit()
 
-    res = await mock_user_client.join_user(user_id, game_id)
+    res = await user_client.join_user(session, user_id, game_id)
     assert res == result
 
     if res != FailureReason.GAME_ENDED:
-        async with mock_user_client.session() as s:
-            user = await s.get(Player, user_id)
-            if user:
-                assert user.game_id == game_id
-            user = await s.get(Admin, user_id)
-            if user:
-                assert user.game_id == game_id
+        user = await session.get(Player, user_id)
+        if user:
+            assert user.game_id == game_id
+        user = await session.get(Admin, user_id)
+        if user:
+            assert user.game_id == game_id
 
 
 @pytest.fixture()
@@ -117,66 +114,64 @@ def new_player_id():
 
 @pytest.mark.asyncio
 async def test_join_player_when_lobby_is_full(
-    mock_user_client, new_player_id, game_id, player_ids, planet_ids
+    user_client, session, new_player_id,
+    game_id, player_ids, planet_ids
 ):
-    async with mock_user_client.session() as s:
-        for player_id, planet_id in zip(player_ids, planet_ids):
-            planet = await s.get(Planet, planet_id)
-            planet.owner_id = player_id
-            await s.commit()
+    for player_id, planet_id in zip(player_ids, planet_ids):
+        planet = await session.get(Planet, planet_id)
+        planet.owner_id = player_id
+        await session.commit()
 
-        new_player = Player(tg_id=new_player_id)
-        s.add(new_player)
-        await s.commit()
+    new_player = Player(tg_id=new_player_id)
+    session.add(new_player)
+    await session.commit()
 
-    res = await mock_user_client.join_user(new_player_id, game_id)
+    res = await user_client.join_user(session, new_player_id, game_id)
     assert res == FailureReason.GAME_IS_FULL
 
 
 @pytest.mark.asyncio
-async def test_kick_user(mock_user_client, player_id, game_id, admin_id):
-    async with mock_user_client.session() as s:
-        player = await s.get(Player, player_id)
-        admin = await s.get(Admin, admin_id)
+async def test_kick_user(user_client, session, player_id, game_id, admin_id):
+    player = await session.get(Player, player_id)
+    admin = await session.get(Admin, admin_id)
 
-        player.game_id = game_id
-        admin.game_id = game_id
-        await s.commit()
+    player.game_id = game_id
+    admin.game_id = game_id
+    await session.commit()
 
-    res = await mock_user_client.kick_user(player_id)
+    res = await user_client.kick_user(session, player_id)
     assert res == FailureReason.SUCCESS
 
-    res = await mock_user_client.kick_user(admin_id)
+    res = await user_client.kick_user(session, admin_id)
     assert res == FailureReason.SUCCESS
 
-    async with mock_user_client.session() as s:
-        player = await s.get(Player, player_id)
-        admin = await s.get(Admin, admin_id)
+    player = await session.get(Player, player_id)
+    admin = await session.get(Admin, admin_id)
 
-        assert player.game_id is None
-        assert admin.game_id is None
+    assert player.game_id is None
+    assert admin.game_id is None
 
 
 @pytest.mark.asyncio
 async def test_kick_user_when_not_in_lobby(
-    mock_user_client, player_id, admin_id
+    user_client, session, player_id, admin_id
 ):
-    res = await mock_user_client.kick_user(player_id)
+    res = await user_client.kick_user(session, player_id)
     assert res == FailureReason.NOT_IN_GAME
 
-    res = await mock_user_client.kick_user(admin_id)
+    res = await user_client.kick_user(session, admin_id)
     assert res == FailureReason.NOT_IN_GAME
 
 
 @pytest.mark.asyncio
 async def test_promote_to_admin_not_in_game(
-    mock_user_client, player_id
+    user_client, session, player_id
 ):
-    res = await mock_user_client.promote_to_admin(player_id)
+    res = await user_client.promote_to_admin(session, player_id)
     assert res == FailureReason.SUCCESS
-    async with mock_user_client.session() as s:
-        admin = await s.get(Admin, player_id)
-        assert admin.tg_id == player_id
+
+    admin = await session.get(Admin, player_id)
+    assert admin.tg_id == player_id
 
 
 @pytest.mark.parametrize(
@@ -189,23 +184,22 @@ async def test_promote_to_admin_not_in_game(
 )
 @pytest.mark.asyncio
 async def test_promote_to_admin_in_game(
-    mock_user_client, player_id, game_status,
+    user_client, session, player_id, game_status,
     expected_result, game_id
 ):
-    async with mock_user_client.session() as s:
-        game = await s.get(Game, game_id)
-        game.status = game_status
-        player = await s.get(Player, player_id)
-        player.game_id = game_id
-        await s.commit()
+    game = await session.get(Game, game_id)
+    game.status = game_status
+    player = await session.get(Player, player_id)
+    player.game_id = game_id
+    await session.commit()
     
-    result = await mock_user_client.promote_to_admin(player_id)
+    result = await user_client.promote_to_admin(session, player_id)
     assert result == expected_result
+    await session.commit()
 
-    async with mock_user_client.session() as s:
-        player = await s.get(Player, player_id)
-        admin = await s.get(Admin, player_id)
-        if expected_result == FailureReason.SUCCESS:
-            assert admin.tg_id == player_id and player is None
-        else:
-            assert player.tg_id == player_id and admin is None
+    player = await session.get(Player, player_id)
+    admin = await session.get(Admin, player_id)
+    if expected_result == FailureReason.SUCCESS:
+        assert admin.tg_id == player_id and player is None
+    else:
+        assert player.tg_id == player_id and admin is None

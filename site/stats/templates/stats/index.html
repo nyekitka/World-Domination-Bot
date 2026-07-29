@@ -1,0 +1,52 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Результаты раунда</title>
+    <link rel="stylesheet" href="{% static 'statsview/style.css' %}">
+</head>
+<body>
+    <h3 class="title"><strong>Космическое господcтво 🚀</strong></h3>
+    <div class="wrapper">
+        <div class="panels">
+            {% for planet in planets %}
+                <p class="name"><strong>{{planet.name}}</strong></p>
+                <div class="panel">
+                    <div class="upper-half-{% cycle 1 2 3 4 5 6 %}">
+                        {% for city in planet.cities %}
+                            {% if city.development == 0 %}
+                                <div class="dead-city">{{city.name}}</div>
+                            {% else %}
+                                <div class="city">{{city.name}}</div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    <div class="lower-half">
+                        {% for city in planet.cities %}
+                            {% if city.development == 0 %}
+                                <div class="dead-percentage">{{city.development}}%</div>
+                            {% else %}
+                                <div class="city">{{city.development}}%</div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        <div class="chart-wrapper">
+            <div class="hist-name"> Уровень жизни на планетах</div>
+            <div class="chart">
+                {% for planet in planets %}
+                    <div class="bar" style="height: {{planet.bar_height}}%;">
+                        <span class="value">{{planet.development}}%</span>
+                        <span class="label">{{planet.name}}</span>
+                    </div>
+                {% endfor %}
+            </div>
+            <div class="eco"> Уровень аномалии 🌌: {{eco_rate}}%</div>
+        </div>
+    </div>
+</body>
+</html>
