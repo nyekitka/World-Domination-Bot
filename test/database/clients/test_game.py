@@ -189,10 +189,8 @@ async def test_attack_cities(
 
     await game_client.attack_cities(session, city_id, city_id, city_id_2, city_id_3)
 
-    await session.commit()
-
-    city1 = await session.get(City, city_id)
-    city2 = await session.get(City, city_id_2)
+    await session.refresh(city1)
+    await session.refresh(city2)
     city3 = await session.get(City, city_id_3)
 
     assert city1.development == 0

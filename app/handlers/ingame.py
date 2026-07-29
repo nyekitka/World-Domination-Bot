@@ -3,6 +3,7 @@ import asyncio
 from aiogram import Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.filters.admin import AdminFilter
 from app.filters.buttons import ReplyButtonFilter
@@ -31,18 +32,22 @@ async def start_round(
     game_client: GameClient,
     actions_client: ActionsClient,
     info_client: InfoClient,
+    session: AsyncSession,
 ):
     res = await method_executor_msg(
         message.bot,
         game_client.start_new_round,
-        message.from_user.id, message.from_user.id
+        message.from_user.id,
+        session, message.from_user.id
     )
     if res:
         return
+
+    await session.commit()
     
-    user = await user_client.get_user(message.from_user.id)
-    active_admins = await game_client.get_all_active_admins(user.game_id)
-    game: GameDto = await game_client.get_game(user.game_id)
+    user = await user_client.get_user(session, message.from_user.id)
+    active_admins = await game_client.get_all_active_admins(session, user.game_id)
+    game: GameDto = await game_client.get_game(session, user.game_id)
 
     for admin in active_admins:
         await message.bot.send_message(
@@ -52,11 +57,11 @@ async def start_round(
             reply_markup=types.ReplyKeyboardRemove(),
         )
     
-    planets: list[PlanetDto] = await game_client.get_all_planets_in_game(user.game_id, False)
+    planets: list[PlanetDto] = await game_client.get_all_planets_in_game(session, user.game_id, False)
     all_planets_and_cities = dict()
     for pl in planets:
         planet_cities = await game_client.get_cities_of_planet(
-            pl.id,
+            session, pl.id,
             False, False
         )
         all_planets_and_cities[pl.id] = (pl, planet_cities)
@@ -77,6 +82,7 @@ async def start_round(
         actions_client=actions_client,
         info_client=info_client,
         messages_client=messages_client,
+        session=session,
     )
     await round_notifier.run_loop()
 
@@ -92,6 +98,7 @@ async def start_game(
     game_client: GameClient,
     actions_client: ActionsClient,
     info_client: InfoClient,
+    session: AsyncSession
 ):
     await start_round(
         message,
@@ -100,6 +107,7 @@ async def start_game(
         game_client,
         actions_client,
         info_client,
+        session,
     )
 
 
@@ -114,6 +122,7 @@ async def start_new_round(
     game_client: GameClient,
     actions_client: ActionsClient,
     info_client: InfoClient,
+    session: AsyncSession,
 ):
     await start_round(
         message,
@@ -122,6 +131,7 @@ async def start_new_round(
         game_client,
         actions_client,
         info_client,
+        session,
     )
 
 
@@ -133,15 +143,16 @@ async def end_the_game(
     message: types.Message,
     user_client: UserClient,
     game_client: GameClient,
+    session: AsyncSession,
 ):
-    user: UserDto = await user_client.get_user(message.from_user.id)
+    user: UserDto = await user_client.get_user(session, message.from_user.id)
     if user.game_id is None:
         message.answer(messager.ending_outside())
         return
-    game: GameDto = await user_client.get_game(user.game_id)
-    
-    admins_list = await game_client.get_all_active_admins(game.id)
-    players_list = await game_client.get_all_active_players(game.id)
+    game: GameDto = await user_client.get_game(session, user.game_id)
+
+    admins_list = await game_client.get_all_active_admins(session, game.id)
+    players_list = await game_client.get_all_active_players(session, game.id)
 
     for admin in admins_list:
         await message.bot.send_message(
@@ -153,7 +164,7 @@ async def end_the_game(
             player.tg_id,
             messager.game_interrupted_message()
         )
-    await game_client.end_game(game.id)
+    await game_client.end_game(session, game.id)
 
 
 @ingame_router.callback_query(lambda call: validate_action_json(call.data))
@@ -163,16 +174,17 @@ async def handle_action(
     user_client: UserClient,
     game_client: GameClient,
     messages_client: MessagesClient,
-    actions_client: ActionsClient
+    actions_client: ActionsClient,
+    session: AsyncSession,
 ):
     action = Action.model_validate_json(call.data)
-    user = await user_client.get_user(call.from_user.id)
+    user = await user_client.get_user(session, call.from_user.id)
     if user.game_id is None:
         call.answer(messager.action_out_of_game())
         await call.bot.delete_message(call.from_user.id, call.message.message_id)
         return
-    game: GameDto = await game_client.get_game(user.game_id)
-    planet = await game_client.get_player_planet(call.from_user.id, user.game_id, False)
+    game: GameDto = await game_client.get_game(session, user.game_id)
+    planet = await game_client.get_player_planet(session, call.from_user.id, user.game_id, False)
     if planet is None:
         call.answer(messager.unexpected_error())
         await call.bot.delete_message(call.from_user.id, call.message.message_id)
@@ -190,6 +202,7 @@ async def handle_action(
         'game_client': game_client,
         'actions_client': actions_client,
         'messages_client': messages_client,
+        'session': session,
     }
     match action.action_type:
         case ActionType.ATTACK:
@@ -223,7 +236,7 @@ async def handle_action(
             planet.owner_id,
             MessageType.CITY,
         )
-        cities = await game_client.get_cities_of_planet(planet.id, False, False)
+        cities = await game_client.get_cities_of_planet(session, planet.id, False, False)
         planet.balance = new_balance
         await call.bot.edit_message_text(
             messager.city_stats_message(
@@ -261,6 +274,7 @@ async def handle_attack_action(
     game: GameDto,
     game_client: GameClient,
     actions_client: ActionsClient,
+    session: AsyncSession,
     *args, **kwargs,
 ):
     result = sync_method_executor_call(actions_client.attack_city, call, planet.id, action.argument)
@@ -268,8 +282,8 @@ async def handle_attack_action(
         return None
 
     attacked_cities = actions_client.get_attacked_cities(planet.id)
-    other_planet = await game_client.get_planet_by_city_id(action.argument)
-    all_cities = await game_client.get_cities_of_planet(other_planet.id, with_rates=False)
+    other_planet = await game_client.get_planet_by_city_id(session, action.argument)
+    all_cities = await game_client.get_cities_of_planet(session, other_planet.id, with_rates=False)
 
     await call.message.edit_reply_markup(
         reply_markup=kb.other_planets_keyboard(
@@ -286,6 +300,7 @@ async def handle_city_action(
     game: GameDto,
     game_client: GameClient,
     actions_client: ActionsClient,
+    session: AsyncSession,
     *args, **kwargs,
 ):
     if action.action_type == ActionType.DEVELOP:
@@ -299,7 +314,7 @@ async def handle_city_action(
     shielded_cities = actions_client.get_shielded_cities(planet.id)
     developed_cities = actions_client.get_developed_cities(planet.id)
 
-    all_cities = await game_client.get_cities_of_planet(planet.id, with_rates=False)
+    all_cities = await game_client.get_cities_of_planet(session, planet.id, with_rates=False)
 
     await call.message.edit_reply_markup(
         reply_markup=kb.city_keyboard(
@@ -362,6 +377,7 @@ async def handle_sanctions_action(
     game: GameDto,
     game_client: GameClient,
     actions_client: ActionsClient,
+    session: AsyncSession,
     *args, **kwargs,
 ):
     result = sync_method_executor_call(
@@ -373,7 +389,7 @@ async def handle_sanctions_action(
         return None
 
     sanctioned_planets = actions_client.get_sanctioned_planets(planet.id)
-    other_planets = await game_client.get_planets_of_game(game.id, False)
+    other_planets = await game_client.get_planets_of_game(session, game.id, False)
 
     await call.message.edit_reply_markup(
         reply_markup=kb.sanctions_keyboard(
@@ -410,10 +426,11 @@ async def handle_negotiate_action(
     planet: PlanetDto,
     game_client: GameClient,
     messages_client: MessagesClient,
+    session: AsyncSession,
     *args, **kwargs,
 ):
     call.answer()
-    planet_to = await game_client.get_planet(action.argument, False)
+    planet_to = await game_client.get_planet(session, action.argument, False)
     if planet_to.owner_id is None:
         await call.message.answer(
             messager.nobody_online(planet_to.name)
@@ -439,9 +456,10 @@ async def handle_accept_negotiations_action(
     game_client: GameClient,
     actions_client: ActionsClient,
     messages_client: MessagesClient,
+    session: AsyncSession,
     *args, **kwargs,    
 ):
-    from_planet = await game_client.get_planet(action.argument, False)
+    from_planet = await game_client.get_planet(session, action.argument, False)
     result = sync_method_executor_call(
         actions_client.make_negotiations,
         call,
@@ -460,7 +478,7 @@ async def handle_accept_negotiations_action(
     )
     await call.message.delete()
     
-    active_admins = await game_client.get_all_active_admins(game.id)
+    active_admins = await game_client.get_all_active_admins(session, game.id)
     for admin in active_admins:
         await call.bot.send_message(
             admin.tg_id,
@@ -481,11 +499,12 @@ async def handle_refuse_negotiations_action(
     planet: PlanetDto,
     game_client: GameClient,
     messages_client: MessagesClient,
+    session: AsyncSession,
     *args, **kwargs,   
 ):
     call.answer()
 
-    from_planet = await game_client.get_planet(action.argument, False)
+    from_planet = await game_client.get_planet(session, action.argument, False)
     await call.bot.send_message(
         from_planet.owner_id,
         messager.negotiations_denied(planet.name),
@@ -505,9 +524,10 @@ async def handle_end_negotiations_action(
     game_client: GameClient,
     actions_client: ActionsClient,
     messages_client: MessagesClient,
+    session: AsyncSession,
     *args, **kwargs,  
 ):
-    from_planet = await game_client.get_planet(action.argument)
+    from_planet = await game_client.get_planet(session, action.argument)
     result = sync_method_executor_call(
         actions_client.end_negotiations,
         call,
@@ -516,7 +536,7 @@ async def handle_end_negotiations_action(
     if not result:
         return
     
-    active_admins = await game_client.get_all_active_admins(game.id)
+    active_admins = await game_client.get_all_active_admins(session, game.id)
     for admin in active_admins:
         await call.bot.send_message(
             admin.tg_id,
@@ -537,11 +557,12 @@ async def handle_transaction_action(
     planet: PlanetDto,
     game: GameDto,
     game_client: GameClient,
+    session: AsyncSession,
     *args, **kwargs,
 ):
     call.answer()
 
-    other_planet = await game_client.get_planet(action.argument, False)
+    other_planet = await game_client.get_planet(session, action.argument, False)
 
     await state.set_state(BotStates.transaction_state)
     transaction_data = {
@@ -559,7 +580,7 @@ async def handle_transaction_action(
         return
     
     await state.clear()
-    game = await game_client.get_game(game.id)
+    game = await game_client.get_game(session, game.id)
     if game.status == GameStatus.ROUND:
         await call.message.answer(messager.waiting_time_expired())
 
@@ -571,6 +592,7 @@ async def set_amount_of_money(
     game_client: GameClient,
     actions_client: ActionsClient,
     messages_client: MessagesClient,
+    session: AsyncSession,
 ):
     amount = None
     try:
@@ -583,15 +605,16 @@ async def set_amount_of_money(
         return
     data = await state.get_data()
     game_id = data['game_id']
-    game: GameDto = await game_client.get_game(game_id)
-    from_planet = await game_client.get_planet(data['from_planet'])
-    from_planet_cities = await game_client.get_cities_of_planet(from_planet.id, False, False)
-    to_planet = await game_client.get_planet(data['to_planet'])
-    to_planet_cities = await game_client.get_cities_of_planet(to_planet.id, False, False)
+    game: GameDto = await game_client.get_game(session, game_id)
+    from_planet = await game_client.get_planet(session, data['from_planet'])
+    from_planet_cities = await game_client.get_cities_of_planet(session, from_planet.id, False, False)
+    to_planet = await game_client.get_planet(session, data['to_planet'])
+    to_planet_cities = await game_client.get_cities_of_planet(session, to_planet.id, False, False)
     res = await method_executor_msg(
+        message.bot,
         game_client.transfer,
         message.from_user.id,
-        from_planet.id, to_planet.id, amount
+        session, from_planet.id, to_planet.id, amount
     )
     if not res:
         return

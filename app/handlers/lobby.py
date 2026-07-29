@@ -1,5 +1,6 @@
 from aiogram import Router, types
 from aiogram.fsm.context import FSMContext
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.filters.admin import AdminFilter
 from app.filters.buttons import ReplyButtonFilter
@@ -56,6 +57,7 @@ async def set_number_of_planets(
     call: types.CallbackQuery,
     state: FSMContext,
     game_client: GameClient,
+    session: AsyncSession,
 ):
     number, pack_name = call.data.split(',')
     number = int(number)
@@ -64,6 +66,7 @@ async def set_number_of_planets(
             pack = p
             break
     game = await game_client.create_game(
+        session,
         admin_id=call.from_user.id,
         pack=pack,
         number_of_planets=number
@@ -84,11 +87,12 @@ async def enter_game_player(
     state: FSMContext,
     game_client: GameClient,
     user_client: UserClient,
+    session: AsyncSession,
 ):
-    is_admin = await user_client.is_admin(message.from_user.id)
+    is_admin = await user_client.is_admin(session, message.from_user.id)
     if not is_admin:
-        await user_client.make_new_user_if_not_exists(message.from_user.id)
-    all_games = await game_client.get_all_games()
+        await user_client.make_new_user_if_not_exists(session, message.from_user.id)
+    all_games = await game_client.get_all_games(session)
     if len(all_games) == 0:
         await message.answer(messager.no_games(), reply_markup=kb.start_keyboard(is_admin))
         return
@@ -107,33 +111,37 @@ async def leave_lobby(
     user_client: UserClient,
     game_client: GameClient,
     redis_messages_client: MessagesClient,
+    session: AsyncSession,
 ):
-    user = await user_client.get_user(message.from_user.id)
+    tg_id = message.from_user.id
+    user = await user_client.get_user(session, tg_id)
+    game_id = user.game_id
     res = await method_executor_msg(
         message.bot,
         user_client.kick_user,
-        user.tg_id,
-        user.tg_id,
+        tg_id,
+        session, tg_id,
     )
     if not res:
         return
+
     if isinstance(user, PlayerDto):
         await message.answer(
             messager.leaving_msg(),
             reply_markup=kb.start_keyboard(False)
         )
-        message_ids = redis_messages_client.find_all_messages(user.tg_id)
+        message_ids = redis_messages_client.find_all_messages(tg_id)
         if len(message_ids) > 0:
-            await message.bot.delete_messages(user.tg_id, message_ids)
-        redis_messages_client.delete_all_messages(user.tg_id)
-        game: GameDto = await user_client.get_game(user.game_id)
+            await message.bot.delete_messages(tg_id, message_ids)
+        redis_messages_client.delete_all_messages(tg_id)
+        game: GameDto = await user_client.get_game(session, game_id)
         if game.status == GameStatus.WAITING:
-            active_players = await game_client.get_all_active_players()
-            active_admins = await game_client.get_all_active_admins()
-            planet: PlanetDto = await user_client.get_player_planet(user.id, game.id)
+            active_players = await game_client.get_all_active_players(session, game_id)
+            active_admins = await game_client.get_all_active_admins(session, game_id)
+            planet: PlanetDto = await user_client.get_player_planet(session, tg_id, game_id)
             for ouser in active_admins + active_players:
                 await message.bot.send_message(
-                    ouser.id,
+                    ouser.tg_id,
                     messager.leave_for_others(
                         planet.name, len(active_players), game.num_planets
                     ),
@@ -151,15 +159,16 @@ async def chosen_lobby_admin(
     state: FSMContext,
     user_client: UserClient,
     game_client: GameClient,
+    session: AsyncSession,
 ):
     gamecode = int(call.data)
     tgid = call.from_user.id
-    game: GameDto = await game_client.get_game(gamecode)
+    game: GameDto = await game_client.get_game(session, gamecode)
     res = await method_executor_msg(
         call.bot,
         user_client.join_user,
         tgid,
-        tgid, game.id
+        session, tgid, game.id
     )
     if not res:
         return
@@ -178,26 +187,27 @@ async def chosen_lobby(
     game_client: GameClient,
     actions_client: ActionsClient,
     messages_client: MessagesClient,
+    session: AsyncSession,
 ):
     gamecode = int(call.data)
     tg_id = call.from_user.id
-    game: GameDto = await game_client.get_game(gamecode)
+    game: GameDto = await game_client.get_game(session, gamecode)
     res = await method_executor_msg(
         call.bot,
         user_client.join_user,
         tg_id,
-        tg_id, game.id
+        session, tg_id, game.id
     )
     if not res:
         return
-    planet = await game_client.get_player_planet(tg_id, game.id)
+    planet = await game_client.get_player_planet(session, tg_id, game.id)
     await call.message.answer(
         messager.success_enter(gamecode, planet.name()),
         reply_markup=kb.ingame_keyboard(False),
     )
     if game.status == GameStatus.WAITING:
-        active_players = await game_client.get_all_active_players(game.id)
-        active_admins = await game_client.get_all_active_admins(game.id)
+        active_players = await game_client.get_all_active_players(session, game.id)
+        active_admins = await game_client.get_all_active_admins(session, game.id)
         for player in active_players:
             await call.bot.send_message(
                 player.tg_id,
@@ -213,11 +223,11 @@ async def chosen_lobby(
                 ),
             )
     elif game.status == GameStatus.ROUND:
-        planets: list[PlanetDto] = await game_client.get_all_planets_in_game(game.id, False)
+        planets: list[PlanetDto] = await game_client.get_all_planets_in_game(session, game.id, False)
         all_planets_and_cities = dict()
         for pl in planets:
             planet_cities = await game_client.get_cities_of_planet(
-                pl.id,
+                session, pl.id,
                 False, False
             )
             all_planets_and_cities[pl.id] = (pl, planet_cities)

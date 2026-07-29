@@ -1,5 +1,6 @@
 from aiogram import Bot
 from aiogram.types import FSInputFile
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.notifier import Notifier
 from app.pivot_table import make_pivot_table
@@ -18,9 +19,11 @@ async def middle_handler(
     game: GameDto,
     game_client: GameClient,
     message: str,
+    session: AsyncSession,
 ):
-    active_players = await game_client.get_all_active_players(game.id)
-    active_admins = await game_client.get_all_active_admins(game.id)
+    active_players = await game_client.get_all_active_players(session, game.id)
+    active_admins = await game_client.get_all_active_admins(session, game.id)
+
     for user in active_admins + active_players:
         await bot.send_message(user.tg_id, message)
 
@@ -32,14 +35,15 @@ async def end_handler(
     actions_client: ActionsClient,
     info_client: InfoClient,
     messages_client: MessagesClient,
+    session: AsyncSession,
 ):
-    all_planets: list[PlanetDto] = await game_client.get_all_planets_in_game(game.id)
+    all_planets: list[PlanetDto] = await game_client.get_all_planets_in_game(session, game.id)
     orders = {
-        planet.id : actions_client.get_order_info(planet.id) 
+        planet.id: actions_client.get_order_info(planet.id)
         for planet in all_planets
     }
 
-    all_players = await game_client.get_all_active_players(game.id)
+    all_players = await game_client.get_all_active_players(session, game.id)
     for player in all_players:
         messages = messages_client.find_all_messages(player.tg_id)
         await bot.delete_messages(player.tg_id, messages)
@@ -49,25 +53,27 @@ async def end_handler(
             messager.round_end(game.round),
             parse_mode='MarkdownV2',
         )
-    
-    await game_client.end_current_round(game.id, orders)
-    
-    all_admins = await game_client.get_all_active_admins(game.id)
+
+    await game_client.end_current_round(session, game.id, orders)
+
+    all_admins = await game_client.get_all_active_admins(session, game.id)
     for admin in all_admins:
         await bot.send_message(
             admin.tg_id,
             messager.admin_round_end(game.round),
             reply_markup=kb.round_stats_keyboard(game),
         )
-    
+
     if game.round != game_config.ROUND_NUM:
         return
-    
+
     all_cities = []
     for planet in all_planets:
-        cities = await game_client.get_cities_of_planet(planet.id, False, False)
+        cities = await game_client.get_cities_of_planet(session, planet.id, False, False)
         all_cities.extend(cities)
-    game_orders_info = await info_client.get_all_orders_in_game(game.id)
+
+    game_orders_info = await info_client.get_all_orders_in_game(session, game.id)
+
     make_pivot_table(
         f'tmp/excel/game_{game.id}_results.xlsx',
         all_planets,
@@ -82,21 +88,20 @@ async def end_handler(
                 f'tmp/excel/game_{game.id}_results.xlsx',
                 filename='Результаты игры'
             ),
-            caption=messager.game_results()
+            caption=messager.game_results(),
         )
-    
+
     for player in all_players:
         await bot.send_message(
             player.tg_id,
             messager.end_of_the_game(),
-            parse_mode='MarkdownV2'
+            parse_mode='MarkdownV2',
         )
-
         await bot.send_message(player.tg_id, messager.goodbye())
-    
-    await game_client.end_game(game.id)
 
-    
+    await game_client.end_game(session, game.id)
+
+
 def get_round_notifier(
     bot: Bot,
     game: GameDto,
@@ -104,6 +109,7 @@ def get_round_notifier(
     actions_client: ActionsClient,
     info_client: InfoClient,
     messages_client: MessagesClient,
+    session: AsyncSession,
 ) -> Notifier:
     return Notifier(
         checkpoints={
@@ -114,11 +120,11 @@ def get_round_notifier(
         handlers={
             'middle_5': middle_handler,
             'middle_9': middle_handler,
-            'end': end_handler
+            'end': end_handler,
         },
         handler_args={
-            'middle_5': (bot, game, game_client, messager.fivemin()),
-            'middle_9': (bot, game, game_client, messager.onemin()),
-            'end': (bot, game, game_client, actions_client, info_client, messages_client)
-        }
+            'middle_5': (bot, game, game_client, messager.fivemin(), session),
+            'middle_9': (bot, game, game_client, messager.onemin(), session),
+            'end': (bot, game, game_client, actions_client, info_client, messages_client, session),
+        },
     )
