@@ -89,7 +89,7 @@ async def enter_game_player(
     user_client: UserClient,
     session: AsyncSession,
 ):
-    is_admin = await user_client.is_admin(session, message.from_user.id)
+    is_admin = await user_client.is_user_admin(session, message.from_user.id)
     if not is_admin:
         await user_client.make_new_user_if_not_exists(session, message.from_user.id)
     all_games = await game_client.get_all_games(session)
@@ -110,7 +110,7 @@ async def leave_lobby(
     message: types.Message,
     user_client: UserClient,
     game_client: GameClient,
-    redis_messages_client: MessagesClient,
+    messages_client: MessagesClient,
     session: AsyncSession,
 ):
     tg_id = message.from_user.id
@@ -130,10 +130,10 @@ async def leave_lobby(
             messager.leaving_msg(),
             reply_markup=kb.start_keyboard(False)
         )
-        message_ids = redis_messages_client.find_all_messages(tg_id)
+        message_ids = messages_client.find_all_messages(tg_id)
         if len(message_ids) > 0:
             await message.bot.delete_messages(tg_id, message_ids)
-        redis_messages_client.delete_all_messages(tg_id)
+        messages_client.delete_all_messages(tg_id)
         game: GameDto = await user_client.get_game(session, game_id)
         if game.status == GameStatus.WAITING:
             active_players = await game_client.get_all_active_players(session, game_id)

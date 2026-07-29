@@ -12,9 +12,9 @@ class AdminFilter(Filter):
     async def __call__(
         self,
         message: types.Message,
-        psql_user_client: UserClient
+        user_client: UserClient
     ) -> bool:
-        res = await psql_user_client.is_admin(message.from_user.id)
+        res = await user_client.is_user_admin(message.from_user.id)
         return res ^ self.inverse
     
     def __invert__(self) -> Self:
