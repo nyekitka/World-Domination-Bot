@@ -1,6 +1,6 @@
 FROM python:3.14
 
-WORKDIR /site
+WORKDIR /web_app
 
 RUN pip install -U pip setuptools
 RUN pip install poetry
@@ -16,4 +16,4 @@ RUN apt-get update \
     && apt-get install postgresql-client -y
 
 COPY database ./database
-COPY site ./site
+COPY web_app ./web_app
