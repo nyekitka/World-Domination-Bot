@@ -215,3 +215,12 @@ async def test_fire_admin(user_client, session, admin_id):
     assert admin is None
     player = await session.get(Player, admin_id)
     assert player.tg_id == admin_id
+
+
+@pytest.mark.asyncio
+async def test_is_user_admin(user_client, session, admin_id, player_id):
+    res = await user_client.is_user_admin(session, admin_id)
+    assert res is True
+
+    res = await user_client.is_user_admin(session, player_id)
+    assert res is False
