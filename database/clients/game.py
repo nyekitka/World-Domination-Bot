@@ -8,7 +8,7 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from database.base_client import DatabaseClient
 from database.models import Admin, City, Game, Order, Planet, Player, RoundInfo, Sanction
-from database.schemas import AdminDto, CityData, GameData, GameDto, GameStatus, OrderDto, PlanetData, PlanetDto, PlayerDto, RoundInfoDto, SanctionDto
+from database.schemas import AdminDto, CityData, CityDto, GameData, GameDto, GameStatus, OrderDto, PlanetData, PlanetDto, PlayerDto, RoundInfoDto, SanctionDto
 from game.config import game_config
 from game.schemas import FailureReason, OrderInfo, OrderType
 from presets.pack import Pack
@@ -373,6 +373,27 @@ class GameClient(DatabaseClient):
             return None
 
         return RoundInfoDto.model_validate(round_info)
+
+
+    async def get_all_planets_and_cities(
+        self, s: AsyncSession, game_id: int
+    ) -> dict[int, tuple[PlanetDto, list[CityDto]]]:
+        planets_result = await s.execute(
+            select(Planet)
+            .where(Planet.game_id == game_id)
+            .options(
+                selectinload(Planet.cities),
+                joinedload(Planet.game)
+            )
+        )
+        planets = planets_result.scalars().all()
+        result = dict()
+        for planet in planets:
+            planet_dto = PlanetDto.model_validate(planet)
+            cities_dto = TypeAdapter(list[CityDto]).validate_python(planet.cities)
+            result[planet_dto.id] = (planet_dto, cities_dto)
+
+        return result
 
 
     async def start_new_round(self, s: AsyncSession, initiator_id: int) -> FailureReason:
