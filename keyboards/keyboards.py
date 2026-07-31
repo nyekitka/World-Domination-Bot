@@ -12,6 +12,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from database.schemas import CityDto, GameDto, PlanetDto
 from game.config import game_config
 from keyboards.schemas import Action, ActionType
+from presets.pack import packs
 from web_app.app.settings import django_settings
 
 
@@ -22,12 +23,12 @@ def start_keyboard(isadmin: bool):
     if isadmin:
         return ReplyKeyboardMarkup(
             keyboard=[
-                [KeyboardButton(text='Создать игру')],
-                [KeyboardButton(text='Войти в игру')],
+                [KeyboardButton(text='Создать лобби')],
+                [KeyboardButton(text='Войти в лобби')],
             ]
         )
     else:
-        return ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Войти в игру')]])
+        return ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Войти в лобби')]])
 
 
 def choose_lobby_keyboard(games: list[GameDto]):
@@ -280,11 +281,11 @@ def ingame_keyboard(isadmin: bool):
         return ReplyKeyboardMarkup(
             keyboard=[
                 [KeyboardButton(text='Начать игру')],
-                [KeyboardButton(text='Выйти из игры')],
+                [KeyboardButton(text='Выйти из лобби')],
             ]
         )
     else:
-        return ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Выйти из игры')]])
+        return ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Выйти из лобби')]])
 
 
 conversations_admin_keyboard = ReplyKeyboardMarkup(
@@ -294,11 +295,9 @@ conversations_admin_keyboard = ReplyKeyboardMarkup(
 
 # Клавиатура выбора паков
 def pack_keyboard():
-    file = open('./presets/planets_and_cities.json', encoding='utf-8')
-    d = json.load(file)
     builder = InlineKeyboardBuilder()
-    for key in d.keys():
-        builder.add(InlineKeyboardButton(text=key, callback_data=key))
+    for pack in packs:
+        builder.add(InlineKeyboardButton(text=pack.name, callback_data=pack.name))
     return builder.adjust(2).as_markup()
 
 

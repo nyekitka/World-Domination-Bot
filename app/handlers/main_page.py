@@ -112,7 +112,7 @@ async def fire_admin(
         return
     user = await message.bot.get_chat(username)
     db_user = await user_client.get_user(session, user.id)
-    was_in_game = db_user.game_id is None
+    was_in_game = db_user.game_id is not None
     res = await method_executor_msg(
         message.bot, user_client.fire_admin,
         message.from_user.id, session, user.id
@@ -122,5 +122,5 @@ async def fire_admin(
     
     await message.bot.send_message(user.id, messager.unknight())
     if was_in_game:
-        await message.bot.send_message(user.id, messager.kick_due_to_admin())
+        await message.bot.send_message(user.id, messager.kick_due_to_not_admin())
     await message.answer(messager.unknighting_for_leader(user.first_name))

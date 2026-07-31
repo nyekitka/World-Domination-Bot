@@ -262,5 +262,8 @@ class Messager:
     def unexpected_error(self):
         return Messages['unexpected_error']
 
+    def choose_pack(self):
+        return Messages['choose_pack']
+
 
 messager = Messager()

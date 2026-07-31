@@ -1,4 +1,6 @@
-from aiogram import Router, types
+from typing import Callable
+
+from aiogram import Bot, Router, types
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,8 +10,8 @@ from app.filters.state import BotStates
 from app.utils import method_executor_msg, send_all_info
 from database.clients.game import GameClient
 from database.clients.user import UserClient
-from database.schemas import GameDto, GameStatus, PlanetDto, PlayerDto
-import keyboards as kb
+from database.schemas import AdminDto, GameDto, GameStatus, PlanetDto, PlayerDto
+from keyboards import keyboards as kb
 from messages import messager
 from presets.pack import packs
 from storage.clients.actions import ActionsClient
@@ -28,7 +30,7 @@ async def create_game(
     state: FSMContext
 ):
     await message.answer(
-        'Выберите набор планет и городов для игры',
+        messager.choose_pack(),
         reply_markup=kb.pack_keyboard()
     )
     await state.set_state(BotStates.choose_pack)
@@ -40,14 +42,10 @@ async def set_pack(
     state: FSMContext
 ):
     pack_name = call.data
-    for p in packs:
-        if p.name == pack_name:
-            pack = p
-            break
     call.answer()
     await call.message.answer(
         messager.choose_number_of_planets(),
-        reply_markup=kb.number_of_planets_keyboard(pack),
+        reply_markup=kb.number_of_planets_keyboard(pack_name),
     )
     await state.set_state(BotStates.planets_numbers)
 
@@ -73,7 +71,7 @@ async def set_number_of_planets(
     )
     call.answer()
     await call.message.answer(
-        text=messager.game_created(game.id, number),
+        messager.game_created(game.id, number),
         reply_markup=kb.start_keyboard(True),
     )
     await state.clear()
@@ -105,7 +103,27 @@ async def enter_game_player(
     )
 
 
-@lobby_router.message(ReplyButtonFilter('Выйти из игры'))
+async def notify_lobby_on_join_leave(
+    bot: Bot,
+    game: GameDto,
+    planet: PlanetDto,
+    game_client: GameClient,
+    session: AsyncSession,
+    message: Callable[[str, int, int], str]
+):
+    active_players = await game_client.get_all_active_players(session, game.id)
+    active_admins = await game_client.get_all_active_admins(session, game.id)
+
+    for ouser in active_admins + active_players:
+        await bot.send_message(
+            ouser.tg_id,
+            message(
+                planet.name, len(active_players), game.num_planets
+            ),
+        )
+
+
+@lobby_router.message(ReplyButtonFilter('Выйти из лобби'))
 async def leave_lobby(
     message: types.Message,
     user_client: UserClient,
@@ -124,33 +142,30 @@ async def leave_lobby(
     )
     if not res:
         return
+        
+    await message.answer(
+        messager.leaving_msg(),
+        reply_markup=kb.start_keyboard(isinstance(user, AdminDto))
+    )
 
-    if isinstance(user, PlayerDto):
-        await message.answer(
-            messager.leaving_msg(),
-            reply_markup=kb.start_keyboard(False)
-        )
-        message_ids = messages_client.find_all_messages(tg_id)
-        if len(message_ids) > 0:
-            await message.bot.delete_messages(tg_id, message_ids)
-        messages_client.delete_all_messages(tg_id)
-        game: GameDto = await user_client.get_game(session, game_id)
-        if game.status == GameStatus.WAITING:
-            active_players = await game_client.get_all_active_players(session, game_id)
-            active_admins = await game_client.get_all_active_admins(session, game_id)
-            planet: PlanetDto = await user_client.get_player_planet(session, tg_id, game_id)
-            for ouser in active_admins + active_players:
-                await message.bot.send_message(
-                    ouser.tg_id,
-                    messager.leave_for_others(
-                        planet.name, len(active_players), game.num_planets
-                    ),
-                )
-    else:
-        await message.answer(
-            messager.leaving_msg(),
-            reply_markup=kb.start_keyboard(True)
-        )
+    if isinstance(user, AdminDto):
+        return
+    
+    message_ids = messages_client.find_all_messages(tg_id)
+    if len(message_ids) > 0:
+        await message.bot.delete_messages(tg_id, message_ids)
+    messages_client.delete_all_messages(tg_id)
+    game: GameDto = await user_client.get_game(session, game_id)
+    
+    if game.status != GameStatus.WAITING:
+        return
+    
+    planet = await game_client.get_player_planet(session, tg_id, game.id)
+    await notify_lobby_on_join_leave(
+        message.bot, game, planet,
+        game_client, session,
+        messager.leave_for_others
+    )
 
 
 @lobby_router.callback_query(BotStates.choose_lobby_admin)
@@ -158,12 +173,11 @@ async def chosen_lobby_admin(
     call: types.CallbackQuery,
     state: FSMContext,
     user_client: UserClient,
-    game_client: GameClient,
     session: AsyncSession,
 ):
     gamecode = int(call.data)
     tgid = call.from_user.id
-    game: GameDto = await game_client.get_game(session, gamecode)
+    game: GameDto = await user_client.get_game(session, gamecode)
     res = await method_executor_msg(
         call.bot,
         user_client.join_user,
@@ -173,7 +187,7 @@ async def chosen_lobby_admin(
     if not res:
         return
     await call.message.answer(
-        messager.success_admin_enter(gamecode),
+        messager.success_admin_enter(game.id),
         reply_markup=kb.ingame_keyboard(True),
     )
     await state.clear()
@@ -202,26 +216,15 @@ async def chosen_lobby(
         return
     planet = await game_client.get_player_planet(session, tg_id, game.id)
     await call.message.answer(
-        messager.success_enter(gamecode, planet.name()),
+        messager.success_enter(game.id, planet.name),
         reply_markup=kb.ingame_keyboard(False),
     )
     if game.status == GameStatus.WAITING:
-        active_players = await game_client.get_all_active_players(session, game.id)
-        active_admins = await game_client.get_all_active_admins(session, game.id)
-        for player in active_players:
-            await call.bot.send_message(
-                player.tg_id,
-                messager.success_enter_for_others(
-                    planet.name, len(active_players), game.num_planets
-                ),
-            )
-        for admin in active_admins:
-            await call.bot.send_message(
-                admin.tg_id,
-                messager.success_enter_for_others(
-                    planet.name, len(active_players), game.num_planets
-                ),
-            )
+        await notify_lobby_on_join_leave(
+            call.bot, game, planet,
+            game_client, session,
+            messager.success_enter_for_others
+        )
     elif game.status == GameStatus.ROUND:
         planets: list[PlanetDto] = await game_client.get_all_planets_in_game(session, game.id, False)
         all_planets_and_cities = dict()

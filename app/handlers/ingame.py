@@ -9,7 +9,7 @@ from app.filters.admin import AdminFilter
 from app.filters.buttons import ReplyButtonFilter
 from app.filters.state import BotStates
 from app.handlers.round_loop import get_round_notifier
-from app.utils import method_executor_call, method_executor_msg, send_all_info, sync_method_executor_call
+from app.utils import method_executor_msg, send_all_info, sync_method_executor_call
 from database.clients.game import GameClient
 from database.clients.info import InfoClient
 from database.clients.user import UserClient
