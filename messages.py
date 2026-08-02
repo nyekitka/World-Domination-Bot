@@ -2,7 +2,7 @@ import json
 import psycopg
 import pymorphy3
 from num2words import num2words
-from game_classes import City, Planet, Game
+from database.schemas import CityDto, PlanetDto
 
 _messages_file = open("./presets/messages.json", encoding="utf-8")
 Messages = json.load(_messages_file)
@@ -13,9 +13,6 @@ class Messager:
     """
     Class that contains all info messages
     """
-
-    def __init__(self, connection: psycopg.extensions.connection):
-        self.__conn = connection
 
     def start_msg(self, isadmin: bool, ingame: bool, name: str):
         if isadmin and ingame:
@@ -45,19 +42,24 @@ class Messager:
     def already_logged(self):
         return Messages["already_logged"]
 
-    def success_enter(self, id, planetname):
-        return Messages["success_enter"].format(id, planetname)
+    def success_enter(self, id: int, planet_name: str):
+        return Messages["success_enter"].format(id, planet_name)
 
-    def success_admin_enter(self, id):
+    def success_admin_enter(self, id: int):
         return Messages["success_admin_enter"].format(id)
 
-    def success_enter_for_others(self, planetname: str, active_num: int, all_num: int):
+    def success_enter_for_others(
+        self, planet_name: str, active_num: int, all_num: int
+    ):
         return Messages["success_enter_for_others"].format(
-            planetname, active_num, all_num
+            planet_name, active_num, all_num
         )
 
-    def leave_for_others(self, planetname: str, active_num: int, all_num: int):
-        return Messages["leave_for_others"].format(planetname, active_num, all_num)
+    def leave_for_others(
+        self, planet_name: str,
+        active_num: int, all_num: int
+    ):
+        return Messages["leave_for_others"].format(planet_name, active_num, all_num)
 
     def leaving_msg(self):
         return Messages["leaving_msg"]
@@ -84,38 +86,39 @@ class Messager:
                 num2words(n, lang="ru", to="ordinal").capitalize()
             )
 
-    def city_stats_message(self, planet: Planet) -> str:
-        all_info = [planet.name(), planet.balance(), planet.rate_of_life()]
-        cities = planet.cities(False)
+    def city_stats_message(
+        self, planet: PlanetDto, cities: list[CityDto]
+    ) -> str:
+        planet_info = Messages['planet_info'].format(planet.name, planet.balance, planet.development)
+        cities_info = []
         for city in cities:
-            addition = ""
-            if city.is_under_shield():
-                addition = " 🛡️"
-            elif city.development() == 0:
-                addition = " ❌"
-            all_info.extend(
-                [
-                    city.name() + addition,
-                    city.development(),
-                    city.rate_of_life(),
-                    city.income(),
-                ]
+            addition = ''
+            if city.is_shielded:
+                addition = ' 🛡️'
+            elif city.development == 0:
+                addition = ' ❌'
+            cities_info.append(
+                Messages['city_info'].format(
+                    city.name + addition,
+                    city.development,
+                    city.rate_of_life,
+                    city.income
+                )
             )
-        return Messages["city_info"].format(*all_info)
+        return planet_info + ''.join(cities_info)
 
-    def sanctions_message(self, planet: Planet) -> str:
-        sanctions = planet.get_sanc_set()
-        if len(sanctions) == 0:
+    def sanctions_message(self, sanctioned_planets: list[PlanetDto]) -> str:
+        if len(sanctioned_planets) == 0:
             return Messages["sanctions_info"].format(
                 "Ни одна из планет не наложила на вас санкции"
             )
         else:
             return Messages["sanctions_info"].format(
-                "На вас наложили санкции: " + ", ".join(sanctions)
+                "На вас наложили санкции: " + ", ".join([planet.name for planet in sanctioned_planets])
             )
 
-    def meteorites_message(self, planet: Planet) -> str:
-        if planet.is_invented():
+    def meteorites_message(self, planet: PlanetDto) -> str:
+        if planet.is_invented:
             word = morph.parse("метеорит")[0]
             meteorites_count = planet.meteorites()
             word = word.make_agree_with_number(meteorites_count).word
@@ -123,16 +126,16 @@ class Messager:
         else:
             return "*Метеориты:*\n_У вас не разработана технология отправки метеоритов_"
 
-    def eco_message(self, game: Game) -> str:
-        return Messages["eco_info"].format(100 - game.eco_rate())
+    def eco_message(self, eco_rate: int) -> str:
+        return Messages["eco_info"].format(100 - eco_rate)
 
-    def other_planets_message(self, planet: Planet) -> str:
-        args = [planet.name()]
-        for city in planet.cities(False):
+    def other_planets_message(self, planet: PlanetDto, cities: list[CityDto]) -> str:
+        args = [planet.name]
+        for city in cities:
             args.extend(
                 [
-                    city.name() + (" ❌" if city.development() == 0 else ""),
-                    city.development(),
+                    city.name + (" ❌" if city.development == 0 else ""),
+                    city.development,
                 ]
             )
         return Messages["other_planet"].format(*args)
@@ -145,6 +148,9 @@ class Messager:
 
     def choose_lobby(self):
         return Messages["choose_lobby"]
+    
+    def choose_number_of_planets(self):
+        return Messages['choose_number_of_planets']
 
     def no_games(self):
         return Messages["no games"]
@@ -173,41 +179,41 @@ class Messager:
     def negotiations_ended(self):
         return Messages["negotiations_ended"]
 
-    def negotiations_ended_admin(self, planetname):
-        return Messages["negotiations_ended_for_admin"].format(planetname)
+    def negotiations_ended_admin(self, planet_name: str):
+        return Messages["negotiations_ended_for_admin"].format(planet_name)
 
-    def wait_for_diplomatist(self, planetname):
-        return Messages["waiting_for_diplomatist"].format(planetname)
+    def wait_for_diplomatist(self, planet_name: str):
+        return Messages["waiting_for_diplomatist"].format(planet_name)
 
-    def neg_accept_for_admin(self, planet1, planet2):
-        return Messages["negotiations_for_admin"].format(planet1, planet2)
+    def neg_accept_for_admin(self, to_planet: str, from_planet: str):
+        return Messages["negotiations_for_admin"].format(to_planet, from_planet)
 
-    def negotiations_accepted(self, planet):
-        return Messages["negotiations_accepted"].format(planet)
+    def negotiations_accepted(self, planet_name: str):
+        return Messages["negotiations_accepted"].format(planet_name)
 
-    def negotiations_denied(self, planet):
-        return Messages["negotiations_denied"].format(planet)
+    def negotiations_denied(self, planet_name: str):
+        return Messages["negotiations_denied"].format(planet_name)
 
-    def wait_for_acception(self, planet):
-        return Messages["wait_for_acception"].format(planet)
+    def wait_for_acception(self, planet_name: str):
+        return Messages["wait_for_acception"].format(planet_name)
 
-    def nobody_online(self, planet):
-        return Messages["nobody_online"].format(planet)
+    def nobody_online(self, planet_name: str):
+        return Messages["nobody_online"].format(planet_name)
 
-    def negotiations_offer(self, planet):
-        return Messages["negotiations_offer"].format(planet)
+    def negotiations_offer(self, planet_name: str):
+        return Messages["negotiations_offer"].format(planet_name)
 
-    def how_much_money(self, planet):
-        return Messages["how_much_money"].format(planet)
+    def how_much_money(self, planet_name: str):
+        return Messages["how_much_money"].format(planet_name)
 
     def waiting_time_expired(self):
         return Messages["waiting_time_expired"]
 
-    def successful_transaction(self, planet):
-        return Messages["successful_transaction"].format(planet)
+    def successful_transaction(self, planet_name: str):
+        return Messages["successful_transaction"].format(planet_name)
 
-    def transaction_notification(self, planet, amount):
-        return Messages["transaction_notification"].format(planet, amount)
+    def transaction_notification(self, planet_name: str, amount: int):
+        return Messages["transaction_notification"].format(planet_name, amount)
 
     def wrong_answer(self):
         return Messages["wrong_answer"]
@@ -227,19 +233,19 @@ class Messager:
     def unknight(self):
         return Messages["unknight"]
 
-    def knighting_for_leader(self, name):
+    def knighting_for_leader(self, name: str):
         return Messages["knighting_for_leader"].format(name)
 
-    def unknighting_for_leader(self, name):
+    def unknighting_for_leader(self, name: str):
         return Messages["unknighting_for_leader"].format(name)
 
     def request_for_user(self):
         return Messages["request_for_user"]
 
-    def request_for_leader(self, name):
+    def request_for_leader(self, name: str):
         return Messages["request_for_leader"].format(name)
 
-    def notknight_for_leader(self, name):
+    def notknight_for_leader(self, name: str):
         return Messages["notknight_leader"].format(name)
 
     def notknight(self):
@@ -250,3 +256,21 @@ class Messager:
 
     def kick_due_to_not_admin(self):
         return Messages["kick_due_to_not_admin"]
+    
+    def action_out_of_game(self):
+        return Messages['action_out_of_game']
+    
+    def unexpected_error(self):
+        return Messages['unexpected_error']
+
+    def choose_pack(self):
+        return Messages['choose_pack']
+
+    def not_enough_money_for_transaction(self):
+        return Messages['not_enogh_money_for_transaction']
+
+    def already_in_game(self):
+        return Messages['already_in_game']
+
+
+messager = Messager()

@@ -17,14 +17,14 @@ class UserClient(DatabaseClient):
         self, s: AsyncSession, tg_id: int, is_admin: bool
     ) -> UserDto:
         user: Player | Admin | None = None
-        if is_admin:
+
+        user = await s.get(Player, tg_id)
+        if user:
+            return PlayerDto.model_validate(user)
+        else:
             user = await s.get(Admin, tg_id)
             if user:
                 return AdminDto.model_validate(user)
-        else:
-            user = await s.get(Player, tg_id)
-            if user:
-                return PlayerDto.model_validate(user)
 
         logger.info(
             "Creating new user with tg_id=%s and is_admin=%s",

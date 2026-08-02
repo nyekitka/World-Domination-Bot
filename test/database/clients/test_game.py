@@ -189,10 +189,8 @@ async def test_attack_cities(
 
     await game_client.attack_cities(session, city_id, city_id, city_id_2, city_id_3)
 
-    await session.commit()
-
-    city1 = await session.get(City, city_id)
-    city2 = await session.get(City, city_id_2)
+    await session.refresh(city1)
+    await session.refresh(city2)
     city3 = await session.get(City, city_id_3)
 
     assert city1.development == 0
@@ -373,6 +371,7 @@ async def test_start_new_round(
         game = await session.get(Game, game_id)
         new_round = game.round
         assert new_round - round == 1
+        assert game.status == GameStatus.ROUND
 
 
 @pytest.mark.asyncio
@@ -468,3 +467,31 @@ async def test_get_all_planets_and_cities(
                 city.name == pack_city.name
                 for pack_city in pack_planet.cities
             ])
+@pytest.mark.parametrize(
+    ('sanction_round', 'expected_result'),
+    [
+        (1, [lf('planet_id_2'), lf('planet_id_3')]),
+        (2, [])
+    ]
+)
+@pytest.mark.asyncio
+async def test_get_sanctioned_planets(
+    game_client, session, planet_id, planet_id_2, planet_id_3,
+    game_id, sanction_round, expected_result
+):
+    game = await session.get(Game, game_id)
+    game.round = 2
+    
+    sanctions = [Sanction(
+        planet_from=planet_id,
+        planet_to=other_planet,
+        num_round=sanction_round
+    ) for other_planet in (planet_id_2, planet_id_3)]
+    session.add_all(sanctions)
+    await session.commit()
+    
+    result = await game_client.get_sanctioned_planets(session, planet_id)
+    sanctioned_ids = [
+        planet.id for planet in result
+    ]
+    assert sanctioned_ids == expected_result

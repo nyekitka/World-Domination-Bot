@@ -88,7 +88,7 @@ class GameClient(DatabaseClient):
     
     async def get_all_active_admins(
         self, s: AsyncSession, game_id: int
-    ) -> list[PlayerDto]:
+    ) -> list[AdminDto]:
         result = await s.execute(
             select(Admin)
             .where(Admin.game_id == game_id)
@@ -253,6 +253,9 @@ class GameClient(DatabaseClient):
         money: int,
         meteorites: int,
     ) -> FailureReason:
+        if money == 0 and meteorites == 0:
+            return
+        
         planet = await s.get(Planet, planet_id)
         if planet is None:
             return FailureReason.OBJECT_NOT_FOUND
@@ -426,5 +429,31 @@ class GameClient(DatabaseClient):
                     )
                 )
         game.round = 1 if game.round is None else game.round + 1
+        game.status = GameStatus.ROUND
         await s.commit()
         return FailureReason.SUCCESS
+
+
+    async def get_sanctioned_planets(
+        self, s: AsyncSession, planet_id: int
+    ) -> list[PlanetDto]:
+        """
+        Returns all planets that were sanctioned in previous round.
+        """
+        num_round = (await s.execute(
+            select(Game)
+            .join(Planet, Game.id == Planet.game_id)
+            .where(Planet.id == planet_id)
+        )).scalar_one().round
+        if num_round == 1:
+            return []
+        sanctioned_planets_result = await s.execute(
+            select(Planet)
+            .join(Sanction, Sanction.planet_to == Planet.id)
+            .where(
+                Sanction.planet_from == planet_id,
+                Sanction.num_round == num_round - 1
+            )
+        )
+        sanction_planets = sanctioned_planets_result.scalars().all()
+        return TypeAdapter(list[PlanetDto]).validate_python(sanction_planets)
