@@ -371,6 +371,7 @@ async def test_start_new_round(
         game = await session.get(Game, game_id)
         new_round = game.round
         assert new_round - round == 1
+        assert game.status == GameStatus.ROUND
 
 
 @pytest.mark.asyncio

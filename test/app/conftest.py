@@ -115,12 +115,18 @@ def other_chat():
 
 
 @pytest.fixture()
-def message(mock_bot, chat, user):
+def message(mock_bot, chat, user, request):
+    message_text = (
+        request.param
+        if hasattr(request, 'param')
+        else None
+    )
     message = types.Message(
         message_id=52,
         date=datetime.datetime.now(),
         chat=chat,
-        from_user=user
+        from_user=user,
+        text=message_text
     )
     message._bot = mock_bot
     return message
@@ -186,3 +192,8 @@ def fsm_context(storage, mock_bot, chat, user_id):
             user_id=user_id,
         )
     )
+
+
+@pytest.fixture(autouse=True)
+def mock_answer_call(mocker):
+    mocker.patch('aiogram.types.CallbackQuery.answer', new_callable=AsyncMock)

@@ -1,4 +1,5 @@
 from typing import Callable
+import logging
 
 from aiogram import Bot, Router, types
 from aiogram.fsm.context import FSMContext
@@ -7,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.filters.admin import AdminFilter
 from app.filters.buttons import ReplyButtonFilter
 from app.filters.state import BotStates
-from app.utils import method_executor_msg, send_all_info
+from app.utils import method_executor_call, method_executor_msg, send_all_info
 from database.clients.game import GameClient
 from database.clients.user import UserClient
 from database.schemas import AdminDto, GameDto, GameStatus, PlanetDto, PlayerDto
@@ -19,7 +20,7 @@ from storage.clients.messages import MessagesClient
 
 
 lobby_router = Router()
-
+logger = logging.getLogger(__name__)
 
 @lobby_router.message(
     ReplyButtonFilter('Создать лобби'),
@@ -29,6 +30,10 @@ async def create_game(
     message: types.Message,
     state: FSMContext
 ):
+    logger.info(
+        'lobby_router.create_game: Admin id=%s is creating a new game',
+        message.from_user.id
+    )
     await message.answer(
         messager.choose_pack(),
         reply_markup=kb.pack_keyboard()
@@ -41,8 +46,12 @@ async def set_pack(
     call: types.CallbackQuery,
     state: FSMContext
 ):
+    logger.info(
+        'lobby_router.set_pack: Admin id=%s is setting pack for new game',
+        call.from_user.id
+    )
     pack_name = call.data
-    call.answer()
+    await call.answer()
     await call.message.answer(
         messager.choose_number_of_planets(),
         reply_markup=kb.number_of_planets_keyboard(pack_name),
@@ -57,6 +66,11 @@ async def set_number_of_planets(
     game_client: GameClient,
     session: AsyncSession,
 ):
+    logger.info(
+        'lobby_router.set_number_of_planets: Admin id=%s is setting number of planets for new game',
+        call.from_user.id
+    )
+    await call.answer()
     number, pack_name = call.data.split(',')
     number = int(number)
     for p in packs:
@@ -69,10 +83,10 @@ async def set_number_of_planets(
         pack=pack,
         number_of_planets=number
     )
-    call.answer()
+    await call.answer()
     await call.message.answer(
         messager.game_created(game.id, number),
-        reply_markup=kb.start_keyboard(True),
+        reply_markup=kb.ingame_keyboard(True),
     )
     await state.clear()
 
@@ -87,9 +101,18 @@ async def enter_game_player(
     user_client: UserClient,
     session: AsyncSession,
 ):
-    is_admin = await user_client.is_user_admin(session, message.from_user.id)
-    if not is_admin:
-        await user_client.make_new_user_if_not_exists(session, message.from_user.id)
+    logger.info(
+        'lobby_router.enter_game_player: User id=%s is entering a game',
+        message.from_user.id
+    )
+    user = await user_client.make_new_user_if_not_exists(session, message.from_user.id, False)
+    is_admin = isinstance(user, AdminDto)
+    if user.game_id is not None:
+        await message.answer(
+            messager.already_in_game(),
+            reply_markup=kb.ingame_keyboard(is_admin)
+        )
+        return
     all_games = await game_client.get_all_games(session)
     if len(all_games) == 0:
         await message.answer(messager.no_games(), reply_markup=kb.start_keyboard(is_admin))
@@ -131,9 +154,14 @@ async def leave_lobby(
     messages_client: MessagesClient,
     session: AsyncSession,
 ):
+    logger.info(
+        'lobby_router.leave_lobby: User id=%s is leaving a lobby',
+        message.from_user.id
+    )
     tg_id = message.from_user.id
     user = await user_client.get_user(session, tg_id)
     game_id = user.game_id
+    planet = await game_client.get_player_planet(session, tg_id, game_id, False)
     res = await method_executor_msg(
         message.bot,
         user_client.kick_user,
@@ -160,7 +188,6 @@ async def leave_lobby(
     if game.status != GameStatus.WAITING:
         return
     
-    planet = await game_client.get_player_planet(session, tg_id, game.id)
     await notify_lobby_on_join_leave(
         message.bot, game, planet,
         game_client, session,
@@ -175,13 +202,16 @@ async def chosen_lobby_admin(
     user_client: UserClient,
     session: AsyncSession,
 ):
+    logger.info(
+        'lobby_router.chosen_lobby_admin: Admin id=%s is choosing a lobby to enter',
+        call.from_user.id
+    )
     gamecode = int(call.data)
     tgid = call.from_user.id
     game: GameDto = await user_client.get_game(session, gamecode)
-    res = await method_executor_msg(
-        call.bot,
+    res = await method_executor_call(
         user_client.join_user,
-        tgid,
+        call,
         session, tgid, game.id
     )
     if not res:
@@ -203,13 +233,16 @@ async def chosen_lobby(
     messages_client: MessagesClient,
     session: AsyncSession,
 ):
+    logger.info(
+        'lobby_router.chosen_lobby: Player id=%s is choosing a lobby to enter',
+        call.from_user.id
+    )
     gamecode = int(call.data)
     tg_id = call.from_user.id
     game: GameDto = await game_client.get_game(session, gamecode)
-    res = await method_executor_msg(
-        call.bot,
+    res = await method_executor_call(
         user_client.join_user,
-        tg_id,
+        call,
         session, tg_id, game.id
     )
     if not res:
@@ -226,14 +259,7 @@ async def chosen_lobby(
             messager.success_enter_for_others
         )
     elif game.status == GameStatus.ROUND:
-        planets: list[PlanetDto] = await game_client.get_all_planets_in_game(session, game.id, False)
-        all_planets_and_cities = dict()
-        for pl in planets:
-            planet_cities = await game_client.get_cities_of_planet(
-                session, pl.id,
-                False, False
-            )
-            all_planets_and_cities[pl.id] = (pl, planet_cities)
+        all_planets_and_cities = await game_client.get_all_planets_and_cities(session, game.id)
         order_info = actions_client.get_order_info(planet.id)
         await send_all_info(
             bot=call.bot,

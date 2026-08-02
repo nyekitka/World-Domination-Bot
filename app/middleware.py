@@ -46,6 +46,6 @@ class AppMiddleware(BaseMiddleware):
 
         async with self.session_factory() as session:
             data['session'] = session
-            async with session.begin():
-                result = await handler(event, data)
-                return result
+            result = await handler(event, data)
+            await session.commit()
+            return result

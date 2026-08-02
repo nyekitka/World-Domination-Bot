@@ -1,4 +1,7 @@
+import logging
+
 from aiogram import Router, types
+from aiogram.enums import ParseMode
 from aiogram.filters import Command, CommandStart, CommandObject
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,13 +17,14 @@ from messages import messager
 
 
 main_page_router = Router()
+logger = logging.getLogger(__name__)
 
 
 @main_page_router.message(Command('help'))
 async def help(message: types.Message):
     with open('./presets/help.txt', 'r', encoding='UTF-8') as file:
         text = ''.join(file.readlines())
-        await message.answer(text=text, parse_mode='MarkdownV2')
+        await message.answer(text=text, parse_mode=ParseMode.MARKDOWN_V2)
 
 
 @main_page_router.message(CommandStart())
@@ -29,6 +33,10 @@ async def start(
     user_client: UserClient,
     session: AsyncSession,
 ):
+    logger.info(
+        'main_page_router.start: User id=%s is starting the bot',
+        message.from_user.id
+    )
     tg_id = message.from_user.id
     user: UserDto | None = await user_client.get_user(session, tg_id)
     if user is None:
@@ -39,12 +47,17 @@ async def start(
         )
     else:
         is_admin = isinstance(user, AdminDto)
+        keyboard = (
+            kb.start_keyboard(is_admin)
+            if user.game_id is None
+            else kb.ingame_keyboard(is_admin)
+        )
         await message.answer(
             messager.start_msg(
                 is_admin, user.game_id is not None,
                 message.from_user.first_name
             ),
-            reply_markup=kb.start_keyboard(is_admin),
+            reply_markup=keyboard,
         )
 
 
@@ -56,13 +69,17 @@ async def request(
     message: types.Message,
     owner_id: int,
 ):
+    logger.info(
+        'main_page_router.request: User id=%s is requesting to become an admin',
+        message.from_user.id
+    )
     user_id = message.from_user.id
     await message.answer(messager.request_for_user())
     await message.bot.send_message(
         owner_id,
         messager.request_for_leader(tag_person(message.from_user.full_name, user_id)),
         reply_markup=kb.request_keyboard(user_id),
-        parse_mode='MarkdownV2',
+        parse_mode=ParseMode.MARKDOWN_V2,
     )
 
 
@@ -75,6 +92,10 @@ async def accept_knight(
     user_client: UserClient,
     session: AsyncSession,
 ):
+    logger.info(
+        'main_page_router.accept_knight: Owner id=%s is accepting an admin request from user id=%s',
+        call.from_user.id, call.data.split()[1]
+    )
     id = int(call.data.split()[1])
     user = await call.bot.get_chat(id)
     res = await method_executor_call(user_client.promote_to_admin, call, session, id)
@@ -90,7 +111,11 @@ async def accept_knight(
 async def refuse_knight(
     call: types.CallbackQuery,
 ):
-    call.answer()
+    logger.info(
+        'main_page_router.refuse_knight: Owner id=%s is refusing an admin request from user id=%s',
+        call.from_user.id, call.data.split()[1]
+    )
+    await call.answer()
     id = int(call.data.split()[1])
     user = await call.bot.get_chat(id)
     await call.message.answer(messager.notknight_for_leader(user.full_name))
@@ -110,6 +135,10 @@ async def fire_admin(
     username = command.args.strip()
     if not username.startswith('@'):
         return
+    logger.info(
+        'main_page_router.fire_admin: Owner id=%s is firing an admin with username=%s',
+        message.from_user.id, username
+    )
     user = await message.bot.get_chat(username)
     db_user = await user_client.get_user(session, user.id)
     was_in_game = db_user.game_id is not None

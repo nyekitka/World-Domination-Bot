@@ -1,6 +1,7 @@
 from typing import Any, Awaitable, Callable, ParamSpec
 
 from aiogram import Bot, types
+from aiogram.enums import ParseMode
 
 from database.schemas import CityDto, GameDto, PlanetDto
 from game.schemas import FailureReason, FAILURE_INTERPRETATIONS, OrderInfo, OrderType
@@ -30,10 +31,10 @@ async def method_executor_call(
     if result != FailureReason.SUCCESS:
         call.answer(FAILURE_INTERPRETATIONS[result], True)
         return False
-    call.answer()
+    await call.answer()
     return True
 
-def sync_method_executor_call(
+async def sync_method_executor_call(
     method: Callable[P, FailureReason],
     call: types.CallbackQuery,
     *args: P.args,
@@ -42,7 +43,7 @@ def sync_method_executor_call(
     if result != FailureReason.SUCCESS:
         call.answer(FAILURE_INTERPRETATIONS[result], True)
         return False
-    call.answer()
+    await call.answer()
     return True
 
 async def method_executor_msg(
@@ -80,7 +81,7 @@ async def send_all_info(
     await bot.send_message(
         user_id,
         messager.round_message(game.round),
-        parse_mode='MarkdownV2'
+        parse_mode=ParseMode.MARKDOWN_V2,
     )
     city_msg = await bot.send_message(
         user_id,
@@ -89,46 +90,46 @@ async def send_all_info(
             game.round,
             planet,
             planet_cities,
-            order_info[OrderType.SHIELD],
-            order_info[OrderType.DEVELOP]
+            order_info.get(OrderType.SHIELD, []),
+            order_info.get(OrderType.DEVELOP, [])
         ),
-        parse_mode='MarkdownV2',
+        parse_mode=ParseMode.MARKDOWN_V2,
     )
     messages_client.set_info_message_id(user_id, MessageType.CITY, city_msg.message_id)
 
     ikm = (
-        kb.invent_meteorites_keyboard(planet, order_info[OrderType.INVENT])
+        kb.invent_meteorites_keyboard(planet, order_info.get(OrderType.INVENT, False))
         if not planet.is_invented
-        else kb.meteorites_keyboard(planet, order_info[OrderType.CREATE])
+        else kb.meteorites_keyboard(planet, order_info.get(OrderType.CREATE, 0))
     )
     meteorites_msg = await bot.send_message(
         user_id,
         messager.meteorites_message(planet),
         reply_markup=ikm,
-        parse_mode='MarkdownV2',
+        parse_mode=ParseMode.MARKDOWN_V2,
     )
     messages_client.set_info_message_id(user_id, MessageType.METEORITES, meteorites_msg.message_id)
 
     sanctioned_planets = [
         planet
         for planet in other_planets
-        if planet.id in order_info[OrderType.SANCTIONS]
+        if planet.id in order_info.get(OrderType.SANCTIONS, [])
     ]
     sanctions_msg = await bot.send_message(
         user_id,
         messager.sanctions_message(sanctioned_planets),
         reply_markup=kb.sanctions_keyboard(
-            planet, other_planets, order_info[OrderType.SANCTIONS]
+            planet, other_planets, order_info.get(OrderType.SANCTIONS, [])
         ),
-        parse_mode='MarkdownV2',
+        parse_mode=ParseMode.MARKDOWN_V2,
     )
     messages_client.set_info_message_id(user_id, MessageType.SANCTIONS, sanctions_msg.message_id)
 
     eco_msg = await bot.send_message(
         user_id,
         messager.eco_message(game.ecorate),
-        reply_markup=kb.eco_keyboard(planet, order_info[OrderType.ECO]),
-        parse_mode='MarkdownV2',
+        reply_markup=kb.eco_keyboard(planet, order_info.get(OrderType.ECO, False)),
+        parse_mode=ParseMode.MARKDOWN_V2,
     )
     messages_client.set_info_message_id(user_id, MessageType.ECO, eco_msg.message_id)
 
@@ -141,9 +142,9 @@ async def send_all_info(
                 planet,
                 other_planet,
                 other_cities,
-                order_info[OrderType.ATTACK],
+                order_info.get(OrderType.ATTACK, []),
             ),
-            parse_mode='MarkdownV2',
+            parse_mode=ParseMode.MARKDOWN_V2,
         )
         messages_client.set_planet_message_id(
             user_id,

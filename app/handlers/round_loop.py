@@ -1,4 +1,5 @@
 from aiogram import Bot
+from aiogram.enums import ParseMode
 from aiogram.types import FSInputFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -51,7 +52,7 @@ async def end_handler(
         await bot.send_message(
             player.tg_id,
             messager.round_end(game.round),
-            parse_mode='MarkdownV2',
+            parse_mode=ParseMode.MARKDOWN_V2,
         )
 
     await game_client.end_current_round(session, game.id, orders)
@@ -95,7 +96,7 @@ async def end_handler(
         await bot.send_message(
             player.tg_id,
             messager.end_of_the_game(),
-            parse_mode='MarkdownV2',
+            parse_mode=ParseMode.MARKDOWN_V2,
         )
         await bot.send_message(player.tg_id, messager.goodbye())
 

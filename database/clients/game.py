@@ -253,6 +253,9 @@ class GameClient(DatabaseClient):
         money: int,
         meteorites: int,
     ) -> FailureReason:
+        if money == 0 and meteorites == 0:
+            return
+        
         planet = await s.get(Planet, planet_id)
         if planet is None:
             return FailureReason.OBJECT_NOT_FOUND
@@ -426,6 +429,7 @@ class GameClient(DatabaseClient):
                     )
                 )
         game.round = 1 if game.round is None else game.round + 1
+        game.status = GameStatus.ROUND
         await s.commit()
         return FailureReason.SUCCESS
 

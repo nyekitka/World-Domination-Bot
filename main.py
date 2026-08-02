@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import sys
 
 from aiogram import Bot, Dispatcher
 
@@ -20,6 +21,12 @@ from storage.clients import (
 )
 from storage.config import redis_config
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    stream=sys.stdout
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -34,7 +41,6 @@ async def main():
     logger.info('Creating database tables...')
     async with engine.begin() as conn:
         await conn.run_sync(ModelBase.metadata.create_all)
-        # await conn.commit()
 
     logger.info('Creating owner user...')
     async with session_factory() as session, session.begin():
@@ -64,7 +70,7 @@ async def main():
         ingame_router
     )
 
-    logging.info('Starting polling...')
+    logger.info('Starting polling...')
     await dp.start_polling(bot)
 
 

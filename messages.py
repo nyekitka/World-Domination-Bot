@@ -89,22 +89,23 @@ class Messager:
     def city_stats_message(
         self, planet: PlanetDto, cities: list[CityDto]
     ) -> str:
-        all_info = [planet.name, planet.balance, planet.development]
+        planet_info = Messages['planet_info'].format(planet.name, planet.balance, planet.development)
+        cities_info = []
         for city in cities:
             addition = ''
             if city.is_shielded:
                 addition = ' 🛡️'
             elif city.development == 0:
                 addition = ' ❌'
-            all_info.extend(
-                [
+            cities_info.append(
+                Messages['city_info'].format(
                     city.name + addition,
                     city.development,
                     city.rate_of_life,
                     city.income
-                ]
+                )
             )
-        return Messages['city_info'].format(*all_info)
+        return planet_info + ''.join(cities_info)
 
     def sanctions_message(self, sanctioned_planets: list[PlanetDto]) -> str:
         if len(sanctioned_planets) == 0:
@@ -264,6 +265,12 @@ class Messager:
 
     def choose_pack(self):
         return Messages['choose_pack']
+
+    def not_enough_money_for_transaction(self):
+        return Messages['not_enogh_money_for_transaction']
+
+    def already_in_game(self):
+        return Messages['already_in_game']
 
 
 messager = Messager()

@@ -32,7 +32,11 @@ from test.app.mock_utils import mock_answer_message
         (
             PlayerDto(tg_id=1, game_id=1),
             'С возвращением, {0}!',
-            types.ReplyKeyboardMarkup(keyboard=[[types.KeyboardButton(text='Войти в лобби')]]),
+            types.ReplyKeyboardMarkup(
+                keyboard=[
+                    [types.KeyboardButton(text='Выйти из лобби')],
+                ]
+            ),
         ),
         (
             AdminDto(tg_id=1, game_id=None),
@@ -42,7 +46,12 @@ from test.app.mock_utils import mock_answer_message
         (
             AdminDto(tg_id=1, game_id=1),
             'С возвращением, {0}!',
-            types.ReplyKeyboardMarkup(keyboard=[[types.KeyboardButton(text='Создать лобби')], [types.KeyboardButton(text='Войти в лобби')]]),
+            types.ReplyKeyboardMarkup(
+                keyboard=[
+                    [types.KeyboardButton(text='Начать игру')],
+                    [types.KeyboardButton(text='Выйти из лобби')],
+                ]
+            ),
         ),
     ]
 )

@@ -4,6 +4,7 @@ from aiogram.methods import DeleteMessages, SendMessage
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
 import pytest
 from pytest_lazy_fixtures import lf
+from pytest_mock import mocker
 
 from app.handlers.lobby import chosen_lobby, chosen_lobby_admin, create_game, enter_game_player, leave_lobby, notify_lobby_on_join_leave, set_number_of_planets, set_pack
 from app.filters.state import BotStates
@@ -74,7 +75,6 @@ async def test_set_number_of_planets(
     game_client, mock_session,
 ):
     answer_mock = mock_answer_message(mocker)
-    call_answer_mock = mocker.patch.object(CallbackQuery, 'answer')
     mocker.patch.object(game_client, 'create_game', return_value=GameDto(id=34, num_planets=5))
     await set_number_of_planets(
         call, fsm_context, game_client, mock_session,
@@ -86,38 +86,52 @@ async def test_set_number_of_planets(
         'Игра 34 на 5 человек успешно создана.',
         reply_markup=ReplyKeyboardMarkup(
             keyboard=[
-                [KeyboardButton(text='Создать лобби')],
-                [KeyboardButton(text='Войти в лобби')],
+                [KeyboardButton(text='Начать игру')],
+                [KeyboardButton(text='Выйти из лобби')],
             ]
         ),
     )
-    call_answer_mock.assert_called_once_with()
     assert state is None
 
 
 @pytest.mark.parametrize(
-    ('is_admin', 'games'),
+    ('is_admin', 'games', 'user_game_id'),
     [
-        (True, [GameDto(id=1, num_planets=3)]),
-        (False, [GameDto(id=1, num_planets=3)]),
-        (True, []),
+        (True, [GameDto(id=1, num_planets=3)], None),
+        (True, [GameDto(id=1, num_planets=3)], 1),
+        (False, [GameDto(id=1, num_planets=3)], None),
+        (True, [], None),
     ]
 )
 @pytest.mark.asyncio
 async def test_enter_game_player(
     mocker, message, fsm_context,
     game_client, user_client, mock_session,
-    is_admin, games,
+    is_admin, games, user_game_id
 ):
-    mocker.patch.object(user_client, 'is_user_admin', return_value=is_admin)
-    make_user_mock = mocker.patch.object(user_client, 'make_new_user_if_not_exists')
+    if is_admin:
+        user_dto = AdminDto(tg_id=message.from_user.id, game_id=user_game_id)
+    else:
+        user_dto = PlayerDto(tg_id=message.from_user.id, game_id=user_game_id)
+    mocker.patch.object(user_client, 'make_new_user_if_not_exists', return_value=user_dto)
     mocker.patch.object(game_client, 'get_all_games', return_value=games)
     mock_answer = mock_answer_message(mocker)
 
     await enter_game_player(message, fsm_context, game_client, user_client, mock_session)
     state = await fsm_context.get_state()
 
-    if len(games) == 0 and is_admin:
+    if user_game_id is not None:
+        mock_answer.assert_awaited_once_with(
+            'Вы уже находитесь в лобби. Сначала выйдите из текущего лобби, а затем войдите в другое.',
+            reply_markup=ReplyKeyboardMarkup(
+                keyboard=[
+                    [KeyboardButton(text='Начать игру')],
+                    [KeyboardButton(text='Выйти из лобби')],
+                ]
+            ),
+        )
+        assert state is None
+    elif len(games) == 0 and is_admin:
         mock_answer.assert_awaited_once_with(
             'На данный момент нет ни одной доступной игры.',
             reply_markup=ReplyKeyboardMarkup(
@@ -152,10 +166,6 @@ async def test_enter_game_player(
         else:
             assert state == BotStates.choose_lobby.state
     
-    if not is_admin:
-        make_user_mock.assert_awaited_once()
-    else:
-        make_user_mock.assert_not_awaited()
 
 
 @pytest.mark.parametrize(
@@ -255,7 +265,7 @@ async def test_chosen_lobby(
     mocker.patch.object(game_client, 'get_game', return_value=GameDto(id=game_id, num_planets=3, status=game_status))
     mocker.patch.object(user_client, 'join_user', return_value=FailureReason.SUCCESS)
     mocker.patch.object(game_client, 'get_player_planet', return_value=PlanetDto(id=1, name='planet', game_id=game_id))
-    mocker.patch.object(game_client, 'get_all_planets_in_game', return_value=[])
+    mocker.patch.object(game_client, 'get_all_planets_and_cities', return_value=dict())
     mocker.patch.object(actions_client, 'get_order_info')
     notify_mock = mocker.patch('app.handlers.lobby.notify_lobby_on_join_leave')
     send_all_info_mock = mocker.patch('app.handlers.lobby.send_all_info')
