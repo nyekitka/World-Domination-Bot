@@ -1,0 +1,323 @@
+on_start_for_player_without_game:
+  template: |-
+    Привет, {{user.first_name}} 👋.
+    Ты не находишься ни в одном из лобби.
+    Чтобы войти в лобби нажми кнопку "Войти в лобби".
+  markdown: false
+on_start_for_user_in_game:
+  template: С возвращением, {{user.first_name}}!
+  markdown: false
+on_start_for_admin_without_game:
+  template: |-
+    Приветствую, {{user.first_name}} 👋.
+    Ты не администрируешь ни одну из игр.
+    Чтобы войти в игру как администратор нажмите кнопку "Войти в лобби".
+  markdown: false
+on_choose_lobby:
+  template: Выберите игру, в которую вы хотите зайти.
+  markdown: false
+choose_number_of_planets:
+  template: Выберите количество планет в игре.
+  markdown: false
+no_games_available:
+  template: На данный момент нет ни одной доступной игры.
+  markdown: false
+on_game_created:
+  template: Игра {{game.id}} на {{game.num_planets}} человек успешно создана.
+  markdown: false
+on_success_enter_player:
+  template: |-
+    Вы вошли в игру {{game.id}}!
+    Ваша планета - {{planet.name}}.
+  markdown: false
+on_success_enter_admin:
+  template: |-
+    Вы присоединились к игре {{game.id}}.
+    Теперь вам доступна панель администрации игры, а также вся информация о ней.
+  markdown: false
+player_enter_notification:
+  template: |-
+    Команда от планеты {{planet.name}} присоединилась к нам!
+    В игре: {{current_players}}/{{game.num_planets}} 👤
+  markdown: false
+player_leave_notification:
+  template: |-
+    Команда от планеты {{planet.name}} вышла из лобби.
+    В игре: {{current_players}}/{{game.num_planets}} 👤
+  markdown: false
+on_leave_lobby:
+  template: Вы вышли из игры.
+  markdown: false
+starting_game_not_being_in:
+  template: |-
+    Вы не неходитесь ни в какой в игре.
+    Сначала войдите в игру!
+  markdown: false
+not_enough_players:
+  template: |-
+    Недостаточно игроков в игре ({{current_players}}/{{game.num_planets}} 👤 присоединилось).
+    Подождите пока войдут все, а затем начинайте игру
+  markdown: false
+half_time_passed:
+  template: Внимание, до конца раунда осталось {{time | time_filter('ru')}} ⏳. Не забывайте
+    заполнить свои приказы.
+  markdown: false
+hurry_up:
+  template: Внимание, до конца раунда осталась {{time | time_filter('ru')}} ⌛. Если ещё не
+    заполнили свои приказы, то самое время это сделать, иначе приказы отправятся пустыми.
+  markdown: false
+first_round_for_players:
+  template: |-
+    *Первый раунд начался*
+    В течение этого раунда вы должны обсудить в команде свою стратегию на игру\.
+    Также вы уже можете вложить деньги в разработку технологии отправки метеоритов для последующей атаки аномалии или чужих городов, либо же вложить их в развитие собственных городов \(Развитие 📈\)\.
+  markdown: true
+common_round_for_players:
+  template: |-
+    *{{num_round}} раунд начался*
+    У вас есть 10 минут, чтобы обсудить действия в этом раунде как внутри своей команды, так и с другими командами на переговорах\. Не забывайте заполнять приказ\!
+  markdown: true
+first_round_for_admins:
+  template: |-
+    *Первый раунд начался*
+  markdown: true
+common_round_for_admins:
+  template: |-
+    *{{game.round}} раунд начался*
+
+    Вам будут приходить запросы на переговоры от игроков\.
+    Как только придёт запрос, направляйтесь к команде, отправившей запрос и сопроводите дипломата до другой команды\.
+  markdown: true
+common_planet_info:
+  template: |-
+    __*{{planet.name | escape_md}}*__
+
+    *Доступный бюджет:* _{{planet.balance}}_ 💵
+    *Сред\. ур\. жизни на планете:* _{{planet.development}}%_
+
+    {% for city in cities -%}
+    {% if city.development == 0 -%}
+    *{{ city.name | escape_md }}* ❌:
+    {%- elif city.is_shielded -%}
+    *{{ city.name | escape_md }}* 🛡️:
+    {%- else -%}
+    *{{ city.name | escape_md }}*:
+    {%- endif %}
+    Развитие {{ city.development }}%, Ур\. жизни {{ city.rate_of_life }}%, Доход {{ city.income }} 💵
+
+    {% endfor %}
+  markdown: true
+sanctions_info:
+  template: |-
+    *Санкции:*
+    {% if sanctioned_planets -%}
+    _На вас наложили санкции: {{sanctioned_planets | join(', ') | escape_md}}_
+    {%- else -%}
+    _Ни одна из планет не наложила на вас санкции_
+    {%- endif %}
+  markdown: true
+meteorites_info:
+  template: |-
+    *Метеориты*
+    {% if planet.is_invented -%}
+    У вас есть {{planet.meteorites}} {{ 'метеорит' | make_agree_with(planet.meteorites, 'ru') }}  ☄️\.
+    {%- else -%}
+    _У вас не разработана технология отправки метеоритов_
+    {%- endif %}
+  markdown: true
+eco_info:
+  template: |-
+    *Аномалия*
+    Уровень аномалии 💥: _{{eco_rate}} %_
+  markdown: true
+other_planet_info:
+  template: |-
+    __*{{planet.name | escape_md}}*__
+
+    {% for city in cities -%}
+    {% if city.development == 0 -%}
+    *{{ city.name | escape_md }}*  ❌ (Развитие {{ city.development }}%)
+    {%- else -%}
+    *{{ city.name | escape_md }}* (Развитие {{ city.development }}%)
+    {%- endif %}
+    {% endfor -%}
+  markdown: true
+not_enough_money:
+  template: |-
+    У вас недостаточно средств для выполнения этого действия.
+    Отмените предыдущие и попробуйте заново.
+  markdown: false
+not_enough_meteorites:
+  template: |-
+    У вас недостаточно метеоритов для этого действия.
+    Отмените предыдущие действия или закупите метеориты.
+  markdown: false
+not_enough_for_transaction:
+  template: |-
+    У вас недостаточно средств для перевода.
+    Введите меньшую сумму для перевода или 0 для отмены перевода.
+  markdown: false
+wrong_answer:
+  template: |-
+    Неверный ввод.
+    Введите неотрицательное число, обозначающее сумму, которую вы хотите перевести планете.
+  markdown: false
+successful_transaction:
+  template: Перевод планете {{to_planet.name}} успешно выполнен!
+  markdown: false
+transaction_notification:
+  template: Планета {{from_planet.name}} перевела вам {{amount}} 💵!
+  markdown: false
+already_built:
+  template: |-
+    Вы не можете поставить щит на этот город, т.к. щит на этом городе уже поставлен.
+  markdown: false
+round_end_for_admin:
+  template: |-
+    _*{{game.round | ordinal('ru')}} раунд закончен\!*_
+    Перейдите в приложение для просмотра результатов раунда\!
+  markdown: true
+game_results:
+  template: Статистика всей игры
+  markdown: false
+round_end_for_players:
+  template: |-
+    _*{{game.round | ordinal('ru')}} раунд закончен\!*_
+    Отправляйтесь на межпланетные переговоры, чтобы увидеть результаты раунда и обсудить их\.
+  markdown: true
+how_much_money:
+  template: Напишите сколько вы готовы перевести планете {{to_planet.name}}.
+  markdown: false
+negotiations_offer:
+  template: Планета {{from_planet.name}} предлагает принять их дипломата для переговоров.
+  markdown: false
+negotiations_accepted:
+  template: |-
+    Планета {{to_planet.name}} приняла ваше предложение о переговорах!
+    Ждите организатора, который подойдёт к вам для того, чтобы сопроводить дипломата.
+  markdown: false
+negotiations_denied:
+  template: Планета {{to_planet.name}} отказалась от вашего предложения о переговорах.
+  markdown: false
+waiting_for_diplomatist:
+  template: |-
+    Вы приняли предложение о переговорах с {{from_planet.name}}.
+    Ожидайте дипломата.
+    Как только закончите переговоры, нажмите кнопку снизу.
+  markdown: false
+negotiations_for_admin:
+  template: Планета {{to_planet.name}} хочет принять дипломата от планеты {{from_planet.name}}
+  markdown: false
+negotiations_outside_the_round:
+  template: Вы не можете принять дипломата, т.к. находитесь на галактических переговорах.
+  markdown: false
+negotiations_ended:
+  template: |-
+    Переговоры закончены.
+    Ожидайте организатора, который сопроводит дипломата до его планеты.
+  markdown: false
+negotiations_ended_for_admin:
+  template: Планета {{to_planet.name}} закончила переговоры. Сопроводите дипломата до его планеты.
+  markdown: false
+busy_at_the_moment:
+  template: Вы не можете принять к себе дипломата, т.к. на вашей планете уже ведутся переговоры.
+  markdown: false
+bilateral_negotiations:
+  template: Вы не можете принять к себе эту планету, т.к. дипломат от вашей планеты уже переговаривает с ней
+  markdown: false
+wait_for_acception:
+  template: |-
+    Запрос на переговоры отправлен!
+    Как только {{to_planet.name}} примет решение, вам придёт сообщение.
+  markdown: false
+negotiatior_offline:
+  template: |-
+    К сожалению, владелец планеты {{to_planet.name}} не в игре.
+    Попробуйте снова или обратитесь к администратору.
+  markdown: false
+end_of_the_game:
+  template: |-
+    *Игра закончена\!*
+    Отправляйтесь на собрание, чтобы увидеть результаты игры\.
+    Создатель бота: [Клинов Никита](https://vk.com/nyekitka)\.
+    Поддержать создателя: [тык](https://www.donationalerts.com/r/nyekitkaa)
+  markdown: true
+goodbye:
+  template: Вы автоматически вышли, т.к. ваша игра закончилась.
+  markdown: false
+ending_outside:
+  template: |-
+    Вы не можете закончить никакую игру, т.к. не находитесь ни в одной из них.
+  markdown: false
+ending_when_not_started:
+  template: Вы не можете закончить неначавшуюся игру.
+  markdown: false
+game_interrupted_report:
+  template: Игра была прервана. Вы автоматически вышли из игры.
+  markdown: false
+game_interrupted_message:
+  template: Игра была прервана администратором. О подробностях узнавайте у организаторов.
+  markdown: false
+waiting_time_expired:
+  template: Время ожидания ответа превышено. Перевод отменён.
+  markdown: false
+already_started:
+  template: Вы не можете начать игру, т.к. игра уже в процессе.
+  markdown: false
+skipping_round:
+  template: Вы не можете начать новый раунд, т.к. не закончился старый.
+  markdown: false
+start_game_before:
+  template: |-
+    Вы не можете использовать эту команду, т.к. игра не запущена.
+    Сначала начните игру, нажав на соответсвующую кнопку.
+  markdown: false
+knight:
+  template: 👑 Верховный лидер назначил вас администратором!
+  markdown: false
+unknight:
+  template: 👎 Верховный лидер лишил вас статуса администратора.
+  markdown: false
+refuse_request_notification:
+  template: Вы отказали пользователю {{user.first_name}}.
+  markdown: false
+fire_admin_notification_for_user:
+  template: Верховный лидер посчитал вас недостойным статуса администратора.
+  markdown: false
+prmote_notification_for_admin:
+  template: Вы успешно назначили {{user.first_name}} администратором!
+  markdown: false
+fire_admin_notification_for_admin:
+  template: Вы сняли полномочия администратора с {{user.first_name}}.
+  markdown: false
+request_notification_for_leader:
+  template: Пользователь {{user.first_name}} отправил вам запрос на право администратора\.
+  markdown: false
+request_for_user:
+  template: |-
+    Запрос отправлен верховному лидителю.
+    Ждите его ответа.
+  markdown: false
+kick_due_to_admin:
+  template: Вы были выкинуты из игры, поскольку теперь вы являетесь администратором.
+  markdown: false
+kick_due_to_not_admin:
+  template: Вы были выкинуты из игры, поскольку теперь вы не являетесь администратором.
+  markdown: false
+action_out_of_game:
+  template: Вы не можете выполнить данное действие, т.к. находитесь вне игры.
+  markdown: false
+unexpected_error:
+  template: Произошла непредвиденная ошибка.
+  markdown: false
+choose_pack:
+  template: Выберите набор планет и городов для игры.
+  markdown: false
+not_enogh_money_for_transaction:
+  template: Недостаточно средств для перевода. Укажите сумму меньше.
+  markdown: false
+already_in_game:
+  template: |-
+    Вы уже находитесь в лобби.
+    Сначала выйдите из текущего лобби, а затем войдите в другое.
+  markdown: false

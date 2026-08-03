@@ -13,7 +13,7 @@ from database.clients.game import GameClient
 from database.clients.user import UserClient
 from database.schemas import AdminDto, GameDto, GameStatus, PlanetDto, PlayerDto
 from keyboards import keyboards as kb
-from messages import messager
+from messager import messager
 from presets.pack import packs
 from storage.clients.actions import ActionsClient
 from storage.clients.messages import MessagesClient

@@ -1,0 +1,324 @@
+on_start_for_player_without_game:
+  template: |-
+    Hi, {{user.first_name}} 👋.
+    You're not in any lobby.
+    To enter a lobby, press the "Enter lobby" button.
+  markdown: false
+on_start_for_user_in_game:
+  template: Welcome back, {{user.first_name}}!
+  markdown: false
+on_start_for_admin_without_game:
+  template: |-
+    Greetings, {{user.first_name}} 👋.
+    You are not administering any games.
+    To enter a game as an administrator, press the "Enter lobby" button.
+  markdown: false
+on_choose_lobby:
+  template: Choose the game you want to join.
+  markdown: false
+choose_number_of_planets:
+  template: Choose the number of planets in the game.
+  markdown: false
+no_games_available:
+  template: There are no available games at the moment.
+  markdown: false
+on_game_created:
+  template: Game {{game.id}} for {{game.num_planets}} players has been successfully created.
+  markdown: false
+on_success_enter_player:
+  template: |-
+    You have joined game {{game.id}}!
+    Your planet is {{planet.name}}.
+  markdown: false
+on_success_enter_admin:
+  template: |-
+    You have joined game {{game.id}}.
+    You now have access to the game's admin panel and all information about it.
+  markdown: false
+player_enter_notification:
+  template: |-
+    The team from planet {{planet.name}} has joined us!
+    Players in game: {{current_players}}/{{game.num_planets}} 👤
+  markdown: false
+player_leave_notification:
+  template: |-
+    The team from planet {{planet.name}} has left the lobby.
+    Players in game: {{current_players}}/{{game.num_planets}} 👤
+  markdown: false
+on_leave_lobby:
+  template: You have left the game.
+  markdown: false
+starting_game_not_being_in:
+  template: |-
+    You are not in any game.
+    Enter a game first!
+  markdown: false
+not_enough_players:
+  template: |-
+    Not enough players in the game ({{current_players}}/{{game.num_planets}} 👤 joined).
+    Wait until everyone joins, then start the game
+  markdown: false
+half_time_passed:
+  template: Attention, {{time | time_filter}} left until the end of the round ⏳. Don't
+    forget to fill in your orders.
+  markdown: false
+hurry_up:
+  template: Attention, {{time | time_filter}} left until the end of the round ⌛. If you
+    haven't filled in your orders yet, now is the time to do it, otherwise they will
+    be submitted empty.
+  markdown: false
+first_round_for_players:
+  template: |-
+    *The first round has begun*
+    During this round you should discuss your team's strategy for the game\.
+    You can also invest money in developing meteorite launching technology to later attack the anomaly or other cities, or invest it in developing your own cities \(Development 📈\)\.
+  markdown: true
+common_round_for_players:
+  template: |-
+    *Round {{num_round}} has begun*
+    You have 10 minutes to discuss your actions for this round, both within your team and with other teams during negotiations\. Don't forget to fill in your orders\!
+  markdown: true
+first_round_for_admins:
+  template: |-
+    *The first round has begun*
+  markdown: true
+common_round_for_admins:
+  template: |-
+    *Round {{game.round}} has begun*
+
+    You will receive negotiation requests from players\.
+    As soon as a request comes in, head to the team that sent it and escort the diplomat to the other team\.
+  markdown: true
+common_planet_info:
+  template: |-
+    __*{{planet.name | escape_md}}*__
+
+    *Available budget:* _{{planet.balance}}_ 💵
+    *Avg\. life rate on the planet:* _{{planet.development}}%_
+
+    {% for city in cities -%}
+    {% if city.development == 0 -%}
+    *{{ city.name | escape_md }}* ❌:
+    {%- elif city.is_shielded -%}
+    *{{ city.name | escape_md }}* 🛡️:
+    {%- else -%}
+    *{{ city.name | escape_md }}*:
+    {%- endif %}
+    Development {{ city.development }}%, Life rate {{ city.rate_of_life }}%, Income {{ city.income }} 💵
+
+    {% endfor %}
+  markdown: true
+sanctions_info:
+  template: |-
+    *Sanctions:*
+    {% if sanctioned_planets -%}
+    _Sanctions have been imposed on you by: {{sanctioned_planets | join(', ') | escape_md}}_
+    {%- else -%}
+    _No planet has imposed sanctions on you_
+    {%- endif %}
+  markdown: true
+meteorites_info:
+  template: |-
+    *Meteorites*
+    {% if planet.is_invented -%}
+    You have {{planet.meteorites}} meteorites ☄️\.
+    {%- else -%}
+    _You haven't developed meteorite launching technology_
+    {%- endif %}
+  markdown: true
+eco_info:
+  template: |-
+    *Anomaly*
+    Anomaly level 💥: _{{eco_rate}} %_
+  markdown: true
+other_planet_info:
+  template: |-
+    __*{{planet.name | escape_md}}*__
+
+    {% for city in cities -%}
+    {% if city.development == 0 -%}
+    *{{ city.name | escape_md }}*  ❌ (Development {{ city.development }}%)
+    {%- else -%}
+    *{{ city.name | escape_md }}* (Development {{ city.development }}%)
+    {%- endif %}
+    {% endfor -%}
+  markdown: true
+not_enough_money:
+  template: |-
+    You don't have enough funds to perform this action.
+    Cancel the previous ones and try again.
+  markdown: false
+not_enough_meteorites:
+  template: |-
+    You don't have enough meteorites for this action.
+    Cancel previous actions or purchase more meteorites.
+  markdown: false
+not_enough_for_transaction:
+  template: |-
+    You don't have enough funds for the transfer.
+    Enter a smaller amount to transfer, or 0 to cancel the transfer.
+  markdown: false
+wrong_answer:
+  template: |-
+    Invalid input.
+    Enter a non-negative number representing the amount you want to transfer to the planet.
+  markdown: false
+successful_transaction:
+  template: The transfer to planet {{to_planet.name}} was successful!
+  markdown: false
+transaction_notification:
+  template: Planet {{from_planet.name}} has transferred {{amount}} 💵 to you!
+  markdown: false
+already_built:
+  template: |-
+    You can't put a shield on this city, because it already has one.
+  markdown: false
+round_end_for_admin:
+  template: |-
+    _*The {{game.round | ordinal}} round has ended\!*_
+    Go to the app to view the round results\!
+  markdown: true
+game_results:
+  template: Full game statistics
+  markdown: false
+round_end_for_players:
+  template: |-
+    _*The {{game.round | ordinal}} round has ended\!*_
+    Head to interplanetary negotiations to see the round results and discuss them\.
+  markdown: true
+how_much_money:
+  template: Write how much you're willing to transfer to planet {{to_planet.name}}.
+  markdown: false
+negotiations_offer:
+  template: Planet {{from_planet.name}} offers to send their diplomat for negotiations.
+  markdown: false
+negotiations_accepted:
+  template: |-
+    Planet {{to_planet.name}} has accepted your negotiation offer!
+    Wait for the organizer, who will come to escort the diplomat.
+  markdown: false
+negotiations_denied:
+  template: Planet {{to_planet.name}} has declined your negotiation offer.
+  markdown: false
+waiting_for_diplomatist:
+  template: |-
+    You have accepted the negotiation offer from {{from_planet.name}}.
+    Wait for the diplomat.
+    Once you finish negotiating, press the button below.
+  markdown: false
+negotiations_for_admin:
+  template: Planet {{to_planet.name}} wants to receive a diplomat from planet {{from_planet.name}}
+  markdown: false
+negotiations_outside_the_round:
+  template: You can't receive a diplomat, because you are at galactic negotiations.
+  markdown: false
+negotiations_ended:
+  template: |-
+    Negotiations have ended.
+    Wait for the organizer, who will escort the diplomat back to their planet.
+  markdown: false
+negotiations_ended_for_admin:
+  template: Planet {{to_planet.name}} has finished negotiations. Escort the diplomat back to their planet.
+  markdown: false
+busy_at_the_moment:
+  template: You can't receive a diplomat, because negotiations are already underway on your planet.
+  markdown: false
+bilateral_negotiations:
+  template: You can't receive this planet, because a diplomat from your planet is already negotiating with them
+  markdown: false
+wait_for_acception:
+  template: |-
+    Negotiation request sent!
+    You'll receive a message as soon as {{to_planet.name}} makes a decision.
+  markdown: false
+negotiatior_offline:
+  template: |-
+    Unfortunately, the owner of planet {{to_planet.name}} is not in the game.
+    Try again or contact an administrator.
+  markdown: false
+end_of_the_game:
+  template: |-
+    *The game has ended\!*
+    Head to the assembly to see the game results\.
+    Bot creator: [Nikita Klinov](https://vk.com/nyekitka)\.
+    Support the creator: [here](https://www.donationalerts.com/r/nyekitkaa)
+  markdown: true
+goodbye:
+  template: You have been automatically logged out, because your game has ended.
+  markdown: false
+ending_outside:
+  template: |-
+    You can't end any game, because you are not in one.
+  markdown: false
+ending_when_not_started:
+  template: You can't end a game that hasn't started.
+  markdown: false
+game_interrupted_report:
+  template: The game was interrupted. You have automatically left the game.
+  markdown: false
+game_interrupted_message:
+  template: The game was interrupted by an administrator. Ask the organizers for details.
+  markdown: false
+waiting_time_expired:
+  template: The response waiting time has expired. The transfer has been cancelled.
+  markdown: false
+already_started:
+  template: You can't start the game, because it's already in progress.
+  markdown: false
+skipping_round:
+  template: You can't start a new round, because the previous one hasn't ended.
+  markdown: false
+start_game_before:
+  template: |-
+    You can't use this command, because the game hasn't started.
+    Start the game first by pressing the corresponding button.
+  markdown: false
+knight:
+  template: 👑 The Supreme Leader has appointed you as administrator!
+  markdown: false
+unknight:
+  template: 👎 The Supreme Leader has stripped you of administrator status.
+  markdown: false
+refuse_request_notification:
+  template: You have declined user {{user.first_name}}.
+  markdown: false
+fire_admin_notification_for_user:
+  template: The Supreme Leader has deemed you unworthy of administrator status.
+  markdown: false
+prmote_notification_for_admin:
+  template: You have successfully appointed {{user.first_name}} as administrator!
+  markdown: false
+fire_admin_notification_for_admin:
+  template: You have removed administrator privileges from {{user.first_name}}.
+  markdown: false
+request_notification_for_leader:
+  template: User {{user.first_name}} has sent you a request for administrator rights.
+  markdown: false
+request_for_user:
+  template: |-
+    Request sent to the Supreme Leader.
+    Wait for their response.
+  markdown: false
+kick_due_to_admin:
+  template: You have been kicked from the game, because you are now an administrator.
+  markdown: false
+kick_due_to_not_admin:
+  template: You have been kicked from the game, because you are no longer an administrator.
+  markdown: false
+action_out_of_game:
+  template: You can't perform this action, because you are outside the game.
+  markdown: false
+unexpected_error:
+  template: An unexpected error occurred.
+  markdown: false
+choose_pack:
+  template: Choose a set of planets and cities for the game.
+  markdown: false
+not_enogh_money_for_transaction:
+  template: Not enough funds for the transfer. Specify a smaller amount.
+  markdown: false
+already_in_game:
+  template: |-
+    You are already in a lobby.
+    Leave the current lobby first, then join another one.
+  markdown: false

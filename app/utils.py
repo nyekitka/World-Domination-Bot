@@ -6,7 +6,7 @@ from aiogram.enums import ParseMode
 from database.schemas import CityDto, GameDto, PlanetDto
 from game.schemas import FailureReason, FAILURE_INTERPRETATIONS, OrderInfo, OrderType
 from keyboards import keyboards as kb
-from messages import messager
+from messager import messager
 from storage.clients.messages import MessagesClient
 from storage.schemas import MessageType
 
