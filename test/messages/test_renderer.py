@@ -321,70 +321,89 @@ def test_hurry_up(renderer_ru, renderer_en):
     }
 
 
-def test_first_round_for_players(renderer_ru, renderer_en):
-    assert renderer_ru.render('first_round_for_players') == {
-        'text': (
-            '*Первый раунд начался*\n'
-            'В течение этого раунда вы должны обсудить в команде свою стратегию на игру\\.\n'
-            'Также вы уже можете вложить деньги в разработку технологии отправки метеоритов для последующей атаки аномалии или чужих городов, либо же вложить их в развитие собственных городов \\(Развитие 📈\\)\\.'
-        ),
-        'parse_mode': 'MarkdownV2',
-    }
-    assert renderer_en.render('first_round_for_players') == {
-        'text': (
-            '*The first round has begun*\n'
-            "During this round you should discuss your team's strategy for the game\\.\n"
-            'You can also invest money in developing meteorite launching technology to later attack the anomaly or other cities, or invest it in developing your own cities \\(Development 📈\\)\\.'
-        ),
-        'parse_mode': 'MarkdownV2',
-    }
+@pytest.mark.parametrize(
+    ('round', 'ordinal_ru', 'ordinal_en'),
+    [
+        (1, 'Первый', 'First'),
+        (2, 'Второй', 'Second'),
+    ]
+)
+def test_start_round_for_players(
+    round, game, renderer_ru, renderer_en,
+    ordinal_ru, ordinal_en
+):
+    game.round = round
+    if round == 1:
+        assert renderer_ru.render('start_round_for_players', game=game) == {
+            'text': (
+                f'*{ordinal_ru} раунд начался*\n'
+                'В течение этого раунда вы должны обсудить в команде свою стратегию на игру\\.\n'
+                'Также вы уже можете вложить деньги в разработку технологии отправки метеоритов для последующей атаки аномалии или чужих городов, либо же вложить их в развитие собственных городов \\(Развитие 📈\\)\\.'
+            ),
+            'parse_mode': 'MarkdownV2',
+        }
+        assert renderer_en.render('start_round_for_players', game=game) == {
+            'text': (
+                f'*{ordinal_en} round has begun*\n'
+                "During this round you should discuss your team's strategy for the game\\.\n"
+                'You can also invest money in developing meteorite launching technology to later attack the anomaly or other cities, or invest it in developing your own cities \\(Development 📈\\)\\.'
+            ),
+            'parse_mode': 'MarkdownV2',
+        }
+    else:
+        assert renderer_ru.render('start_round_for_players', game=game,) == {
+            'text': (
+                f'*{ordinal_ru} раунд начался*\n'
+                'У вас есть 10 минут, чтобы обсудить действия в этом раунде как внутри своей команды, так и с другими командами на переговорах\\. Не забывайте заполнять приказ\\!'
+            ),
+            'parse_mode': 'MarkdownV2',
+        }
+        assert renderer_en.render('start_round_for_players', game=game) == {
+            'text': (
+                f'*{ordinal_en} round has begun*\n'
+                "You have 10 minutes to discuss your actions for this round, both within your team and with other teams during negotiations\\. Don't forget to fill in your orders\\!"
+            ),
+            'parse_mode': 'MarkdownV2',
+        }
 
-
-def test_common_round_for_players(renderer_ru, renderer_en):
-    assert renderer_ru.render('common_round_for_players', num_round=3) == {
-        'text': (
-            '*3 раунд начался*\n'
-            'У вас есть 10 минут, чтобы обсудить действия в этом раунде как внутри своей команды, так и с другими командами на переговорах\\. Не забывайте заполнять приказ\\!'
-        ),
-        'parse_mode': 'MarkdownV2',
-    }
-    assert renderer_en.render('common_round_for_players', num_round=3) == {
-        'text': (
-            '*Round 3 has begun*\n'
-            "You have 10 minutes to discuss your actions for this round, both within your team and with other teams during negotiations\\. Don't forget to fill in your orders\\!"
-        ),
-        'parse_mode': 'MarkdownV2',
-    }
-
-
-def test_first_round_for_admins(renderer_ru, renderer_en):
-    assert renderer_ru.render('first_round_for_admins') == {
-        'text': '*Первый раунд начался*',
-        'parse_mode': 'MarkdownV2',
-    }
-    assert renderer_en.render('first_round_for_admins') == {
-        'text': '*The first round has begun*',
-        'parse_mode': 'MarkdownV2',
-    }
-
-
-def test_common_round_for_admins(renderer_ru, renderer_en, game):
-    assert renderer_ru.render('common_round_for_admins', game=game) == {
-        'text': (
-            '*2 раунд начался*\n\n'
-            'Вам будут приходить запросы на переговоры от игроков\\.\n'
-            'Как только придёт запрос, направляйтесь к команде, отправившей запрос и сопроводите дипломата до другой команды\\.'
-        ),
-        'parse_mode': 'MarkdownV2',
-    }
-    assert renderer_en.render('common_round_for_admins', game=game) == {
-        'text': (
-            '*Round 2 has begun*\n\n'
-            'You will receive negotiation requests from players\\.\n'
-            'As soon as a request comes in, head to the team that sent it and escort the diplomat to the other team\\.'
-        ),
-        'parse_mode': 'MarkdownV2',
-    }
+@pytest.mark.parametrize(
+    ('round', 'ordinal_ru', 'ordinal_en'),
+    [
+        (1, 'Первый', 'First'),
+        (2, 'Второй', 'Second'),
+    ]
+)
+def test_start_round_for_admins(
+    game, round, renderer_ru, renderer_en,
+    ordinal_ru, ordinal_en
+):
+    game.round = round
+    if round == 1:
+        assert renderer_ru.render('start_round_for_admins', game=game) == {
+            'text': f'*{ordinal_ru} раунд начался*',
+            'parse_mode': 'MarkdownV2',
+        }
+        assert renderer_en.render('start_round_for_admins', game=game) == {
+            'text': f'*{ordinal_en} round has begun*',
+            'parse_mode': 'MarkdownV2',
+        }
+    else:
+        assert renderer_ru.render('start_round_for_admins', game=game) == {
+            'text': (
+                f'*{ordinal_ru} раунд начался*\n\n'
+                'Вам будут приходить запросы на переговоры от игроков\\.\n'
+                'Как только придёт запрос, направляйтесь к команде, отправившей запрос и сопроводите дипломата до другой команды\\.'
+            ),
+            'parse_mode': 'MarkdownV2',
+        }
+        assert renderer_en.render('start_round_for_admins', game=game) == {
+            'text': (
+                f'*{ordinal_en} round has begun*\n\n'
+                'You will receive negotiation requests from players\\.\n'
+                'As soon as a request comes in, head to the team that sent it and escort the diplomat to the other team\\.'
+            ),
+            'parse_mode': 'MarkdownV2',
+        }
 
 
 def test_common_planet_info(renderer_ru, renderer_en, planet, cities):
