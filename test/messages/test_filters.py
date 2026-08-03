@@ -11,7 +11,7 @@ from datetime import timedelta
 
 import pytest
 
-from messages.filters import time_filter, escape_md, ordinal, make_agree_with
+from messages.filters import tag_person, time_filter, escape_md, ordinal, make_agree_with
 
 
 @pytest.mark.parametrize(
@@ -180,3 +180,14 @@ def test_make_agree_with_ru_zero():
 )
 def test_make_agree_with_en(word, number, expected):
     assert make_agree_with(word, number, "en") == expected
+
+
+@pytest.mark.parametrize(
+    ('id', 'name', 'expected'),
+    [
+        (1, 'Nikita', '[Nikita](tg://user?id=1)'),
+        (2, 'Alesha Popovich', '[Alesha Popovich](tg://user?id=2)')
+    ]
+)
+def test_tag_person(id, name, expected):
+    assert tag_person(id, name) == expected

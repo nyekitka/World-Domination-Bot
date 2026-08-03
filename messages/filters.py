@@ -51,10 +51,14 @@ def make_agree_with(word: str, number: int, locale: str = 'en') -> str:
     else:
         return inflect_engine.plural_noun(word, number)
 
+def tag_person(id: int, name: str) -> str:
+    return f'[{name}](tg://user?id={id})'
+
 
 ALL_FILTERS = (
     time_filter,
     escape_md,
     ordinal,
     make_agree_with,
+    tag_person,
 )
