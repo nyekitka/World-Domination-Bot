@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -25,5 +27,9 @@ class GameConfig(BaseSettings):
     INCOME_COEFFICIENT: float = 3
     MAX_METEORITES_TO_BUY: int = 3
     TIME_WAITING_AMOUNT_ANSWER: int = 30
+
+    @property
+    def timedelta_round_length(self) -> RoundInfo:
+        return timedelta(seconds=self.ROUND_LENGTH)
 
 game_config = GameConfig()

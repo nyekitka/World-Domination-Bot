@@ -321,3 +321,29 @@ already_in_game:
     You are already in a lobby.
     Leave the current lobby first, then join another one.
   markdown: false
+help:
+  template: |-
+    This game consists of {{game_config.ROUND_NUM}} rounds, each lasting {{game_config.timedelta_round_length | time_filter('en')}}, followed by a general discussion with no time limit\. After all {{game_config.ROUND_NUM}} rounds have ended, the planet with the highest average development level wins, provided the anomaly activity has not reached 100%\. If the anomaly activity reaches this threshold, all planets lose\.
+
+    Each planet has 4 cities, all of which start with the same development level and quality of life\. A city's quality of life depends on its development level and the anomaly activity\. A city's income each round depends on its quality of life\. If a city is destroyed, both its development level and quality of life become zero\. If all cities on your planet are destroyed, you lose, but you may still perform actions\.
+
+    During each round, you create an order \- a list of actions you want to perform after the round ends\. All selected actions are applied only after the end of the current round, and the results of every planet's actions are announced during the general discussion\. The following actions are available in your order:
+
+    📈 *Develop city* \- invest money into developing one of your cities, increasing its development level and, consequently, its quality of life\. Destroyed cities cannot be developed\. _Cost: {{game_config.DEVELOPMENT_COST}} 💵_
+
+    🛡️ *Protect city* \- place a shield over one of your cities, protecting it from incoming meteors\. A shield can protect a city from only one meteor\. If a meteorite strikes a shielded city, the shield is destroyed, but the city remains intact\. A city cannot have more than one shield at the same time\. A shield remains in place until it is destroyed\. This action becomes available starting from Round 2\. _Cost: {{game_config.SHIELD_COST}} 💵_
+
+    🛠️ *Research meteorite launch technology* \- develop the technology required to launch meteors, unlocking the ability to send meteorites to enemy cities or into the anomaly\. Increases anomaly activity\. Can only be performed once per game\. _Cost: {{game_config.INVENTION_COST}} 💵_
+
+    ☄️ *Launch meteorites at cities* \- send a meteorite toward an enemy city in an attempt to destroy it\. A single meteorite destroys an unshielded city or destroys the shield protecting it\. Only one meteorite may be sent to each city per round, so if you want to guarantee its destruction, you will need to coordinate with other planets\. The target planet does not know who launched the meteor\. Increases anomaly activity\. Available after researching the launch technology\.
+
+    💥 *Launch a meteorite into the anomaly* \- send a meteorite into the anomaly, reducing its activity by {{game_config.ECO_BOOST_RATE}}%\. Only one meteorite can be launched into the anomaly per round\.
+
+    🧾 *Sanctions* \- send a package of sanctions to another planet, reducing its income for the current round\. Sending sanctions is free, but the target planet knows who imposed them\.
+
+    In addition to these actions, there are also instant actions that are not included in your order\.
+
+    📞 *Negotiations* \- send a negotiation request to another planet\. If they accept, you send one diplomat to their planet\. They may also decline or leave your request pending\. You may host only one foreign planet on your territory at a time, but you may send your diplomats to multiple planets simultaneously \(except for a planet with which you are already conducting negotiations\)\.
+
+    💸 *Transfer money* \- transfer a specified amount of money to another planet\. Transfers are instant and irreversible\.
+  markdown: true
