@@ -67,27 +67,26 @@ hurry_up:
     haven't filled in your orders yet, now is the time to do it, otherwise they will
     be submitted empty.
   markdown: false
-first_round_for_players:
+start_round_for_players:
   template: |-
-    *The first round has begun*
+    *{{game.round | ordinal('en') | capitalize}} round has begun*
+    {% if game.round == 1 -%}
     During this round you should discuss your team's strategy for the game\.
     You can also invest money in developing meteorite launching technology to later attack the anomaly or other cities, or invest it in developing your own cities \(Development 📈\)\.
-  markdown: true
-common_round_for_players:
-  template: |-
-    *Round {{num_round}} has begun*
+    {%- else -%}
     You have 10 minutes to discuss your actions for this round, both within your team and with other teams during negotiations\. Don't forget to fill in your orders\!
+    {%- endif %}
   markdown: true
-first_round_for_admins:
+start_round_for_admins:
   template: |-
-    *The first round has begun*
-  markdown: true
-common_round_for_admins:
-  template: |-
-    *Round {{game.round}} has begun*
+    {% if game.round == 1 -%}
+    *First round has begun*
+    {%- else -%}
+    *{{game.round | ordinal('en') | capitalize}} round has begun*
 
     You will receive negotiation requests from players\.
     As soon as a request comes in, head to the team that sent it and escort the diplomat to the other team\.
+    {%- endif %}
   markdown: true
 common_planet_info:
   template: |-

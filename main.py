@@ -5,7 +5,7 @@ import sys
 
 from aiogram import Bot, Dispatcher
 
-from app.middleware import AppMiddleware
+from app.middlewares.db import DBMiddleware
 from app.handlers import (
     ingame_router, main_page_router, lobby_router
 )
@@ -51,7 +51,7 @@ async def main():
         )
 
     logger.info('Setting up dispatcher')
-    middleware = AppMiddleware(
+    middleware = DBMiddleware(
         psql_user_client=UserClient(),
         psql_game_client=GameClient(),
         psql_info_client=InfoClient(),
