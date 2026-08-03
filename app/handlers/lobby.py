@@ -1,5 +1,7 @@
-from typing import Callable
+from functools import partial
 import logging
+from typing import Callable
+
 
 from aiogram import Bot, Router, types
 from aiogram.fsm.context import FSMContext
@@ -13,7 +15,7 @@ from database.clients.game import GameClient
 from database.clients.user import UserClient
 from database.schemas import AdminDto, GameDto, GameStatus, PlanetDto, PlayerDto
 from keyboards import keyboards as kb
-from messager import messager
+from messages.renderer import MessageRenderer
 from presets.pack import packs
 from storage.clients.actions import ActionsClient
 from storage.clients.messages import MessagesClient
@@ -28,14 +30,15 @@ logger = logging.getLogger(__name__)
 )
 async def create_game(
     message: types.Message,
-    state: FSMContext
+    state: FSMContext,
+    renderer: MessageRenderer,
 ):
     logger.info(
         'lobby_router.create_game: Admin id=%s is creating a new game',
         message.from_user.id
     )
     await message.answer(
-        messager.choose_pack(),
+        **renderer.render('choose_pack'),
         reply_markup=kb.pack_keyboard()
     )
     await state.set_state(BotStates.choose_pack)
@@ -44,7 +47,8 @@ async def create_game(
 @lobby_router.callback_query(BotStates.choose_pack)
 async def set_pack(
     call: types.CallbackQuery,
-    state: FSMContext
+    state: FSMContext,
+    renderer: MessageRenderer,
 ):
     logger.info(
         'lobby_router.set_pack: Admin id=%s is setting pack for new game',
@@ -53,7 +57,7 @@ async def set_pack(
     pack_name = call.data
     await call.answer()
     await call.message.answer(
-        messager.choose_number_of_planets(),
+        **renderer.render('choose_pack'),
         reply_markup=kb.number_of_planets_keyboard(pack_name),
     )
     await state.set_state(BotStates.planets_numbers)
@@ -65,6 +69,7 @@ async def set_number_of_planets(
     state: FSMContext,
     game_client: GameClient,
     session: AsyncSession,
+    renderer: MessageRenderer,
 ):
     logger.info(
         'lobby_router.set_number_of_planets: Admin id=%s is setting number of planets for new game',
@@ -85,7 +90,7 @@ async def set_number_of_planets(
     )
     await call.answer()
     await call.message.answer(
-        messager.game_created(game.id, number),
+        **renderer.render('on_game_created', game=game),
         reply_markup=kb.ingame_keyboard(True),
     )
     await state.clear()
@@ -100,6 +105,7 @@ async def enter_game_player(
     game_client: GameClient,
     user_client: UserClient,
     session: AsyncSession,
+    renderer: MessageRenderer,
 ):
     logger.info(
         'lobby_router.enter_game_player: User id=%s is entering a game',
@@ -109,20 +115,24 @@ async def enter_game_player(
     is_admin = isinstance(user, AdminDto)
     if user.game_id is not None:
         await message.answer(
-            messager.already_in_game(),
+            **renderer.render('already_in_game'),
             reply_markup=kb.ingame_keyboard(is_admin)
         )
         return
     all_games = await game_client.get_all_games(session)
     if len(all_games) == 0:
-        await message.answer(messager.no_games(), reply_markup=kb.start_keyboard(is_admin))
+        await message.answer(
+            **renderer.render('no_games_available'),
+            reply_markup=kb.start_keyboard(is_admin),
+        )
         return
     if is_admin:
         await state.set_state(BotStates.choose_lobby_admin)
     else:
         await state.set_state(BotStates.choose_lobby)
     await message.answer(
-        messager.choose_lobby(), reply_markup=kb.choose_lobby_keyboard(all_games)
+        **renderer.render('on_choose_lobby'),
+        reply_markup=kb.choose_lobby_keyboard(all_games),
     )
 
 
@@ -132,7 +142,7 @@ async def notify_lobby_on_join_leave(
     planet: PlanetDto,
     game_client: GameClient,
     session: AsyncSession,
-    message: Callable[[str, int, int], str]
+    message: Callable[..., dict[str, str | None]],
 ):
     active_players = await game_client.get_all_active_players(session, game.id)
     active_admins = await game_client.get_all_active_admins(session, game.id)
@@ -140,8 +150,10 @@ async def notify_lobby_on_join_leave(
     for ouser in active_admins + active_players:
         await bot.send_message(
             ouser.tg_id,
-            message(
-                planet.name, len(active_players), game.num_planets
+            **message(
+                planet=planet,
+                game=game,
+                current_players=len(active_players), 
             ),
         )
 
@@ -153,6 +165,7 @@ async def leave_lobby(
     game_client: GameClient,
     messages_client: MessagesClient,
     session: AsyncSession,
+    renderer: MessageRenderer,
 ):
     logger.info(
         'lobby_router.leave_lobby: User id=%s is leaving a lobby',
@@ -172,7 +185,7 @@ async def leave_lobby(
         return
         
     await message.answer(
-        messager.leaving_msg(),
+        **renderer.render('on_leave_lobby'),
         reply_markup=kb.start_keyboard(isinstance(user, AdminDto))
     )
 
@@ -191,7 +204,7 @@ async def leave_lobby(
     await notify_lobby_on_join_leave(
         message.bot, game, planet,
         game_client, session,
-        messager.leave_for_others
+        partial(renderer.render, key='player_leave_notification'),
     )
 
 
@@ -201,6 +214,7 @@ async def chosen_lobby_admin(
     state: FSMContext,
     user_client: UserClient,
     session: AsyncSession,
+    renderer: MessageRenderer,
 ):
     logger.info(
         'lobby_router.chosen_lobby_admin: Admin id=%s is choosing a lobby to enter',
@@ -217,7 +231,7 @@ async def chosen_lobby_admin(
     if not res:
         return
     await call.message.answer(
-        messager.success_admin_enter(game.id),
+        **renderer.render('on_success_enter_admin', game=game),
         reply_markup=kb.ingame_keyboard(True),
     )
     await state.clear()
@@ -232,6 +246,7 @@ async def chosen_lobby(
     actions_client: ActionsClient,
     messages_client: MessagesClient,
     session: AsyncSession,
+    renderer: MessageRenderer,
 ):
     logger.info(
         'lobby_router.chosen_lobby: Player id=%s is choosing a lobby to enter',
@@ -249,14 +264,14 @@ async def chosen_lobby(
         return
     planet = await game_client.get_player_planet(session, tg_id, game.id)
     await call.message.answer(
-        messager.success_enter(game.id, planet.name),
+        **renderer.render('on_success_enter_player', game=game, planet=planet),
         reply_markup=kb.ingame_keyboard(False),
     )
     if game.status == GameStatus.WAITING:
         await notify_lobby_on_join_leave(
             call.bot, game, planet,
             game_client, session,
-            messager.success_enter_for_others
+            partial(renderer.render, key='player_enter_notification')
         )
     elif game.status == GameStatus.ROUND:
         all_planets_and_cities = await game_client.get_all_planets_and_cities(session, game.id)

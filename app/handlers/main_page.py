@@ -7,13 +7,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.filters.admin import AdminFilter, OwnerFilter
 from app.filters.buttons import InlineButtonFilter
-from app.utils import tag_person, method_executor_call, method_executor_msg
+from app.utils import method_executor_call, method_executor_msg
 from database.clients import UserClient
 from database.schemas import (
     AdminDto, UserDto
 )
+from game.config import game_config
 from keyboards import keyboards as kb
-from messager import messager
+from messages.renderer import MessageRenderer
 
 
 main_page_router = Router()
@@ -21,10 +22,13 @@ logger = logging.getLogger(__name__)
 
 
 @main_page_router.message(Command('help'))
-async def help(message: types.Message):
-    with open('./presets/help.txt', 'r', encoding='UTF-8') as file:
-        text = ''.join(file.readlines())
-        await message.answer(text=text, parse_mode=ParseMode.MARKDOWN_V2)
+async def help(
+    message: types.Message,
+    renderer: MessageRenderer,
+):
+    await message.answer(
+        **renderer.render('help', game_config=game_config),
+    )
 
 
 @main_page_router.message(CommandStart())
@@ -32,33 +36,28 @@ async def start(
     message: types.Message,
     user_client: UserClient,
     session: AsyncSession,
+    renderer: MessageRenderer,
 ):
     logger.info(
         'main_page_router.start: User id=%s is starting the bot',
         message.from_user.id
     )
+    name = message.from_user.first_name
     tg_id = message.from_user.id
     user: UserDto | None = await user_client.get_user(session, tg_id)
     if user is None:
-        await user_client.make_new_user(session, tg_id, False)
-        await message.answer(
-            messager.start_msg(False, False, message.from_user.first_name),
-            reply_markup=kb.start_keyboard(False),
-        )
-    else:
-        is_admin = isinstance(user, AdminDto)
-        keyboard = (
-            kb.start_keyboard(is_admin)
-            if user.game_id is None
-            else kb.ingame_keyboard(is_admin)
-        )
-        await message.answer(
-            messager.start_msg(
-                is_admin, user.game_id is not None,
-                message.from_user.first_name
-            ),
-            reply_markup=keyboard,
-        )
+        user = await user_client.make_new_user(session, tg_id, False)
+
+    is_admin = isinstance(user, AdminDto)
+    keyboard = (
+        kb.start_keyboard(is_admin)
+        if user.game_id is None
+        else kb.ingame_keyboard(is_admin)
+    )
+    await message.answer(
+        **renderer.render('on_start', is_admin=is_admin, user=user, name=name),
+        reply_markup=keyboard,
+    )
 
 
 @main_page_router.message(
@@ -68,18 +67,18 @@ async def start(
 async def request(
     message: types.Message,
     owner_id: int,
+    renderer: MessageRenderer,
 ):
     logger.info(
         'main_page_router.request: User id=%s is requesting to become an admin',
         message.from_user.id
     )
     user_id = message.from_user.id
-    await message.answer(messager.request_for_user())
+    await message.answer(**renderer.render('request_notification_for_user'))
     await message.bot.send_message(
         owner_id,
-        messager.request_for_leader(tag_person(message.from_user.full_name, user_id)),
+        **renderer.render('request_notification_for_leader', user=message.from_user),
         reply_markup=kb.request_keyboard(user_id),
-        parse_mode=ParseMode.MARKDOWN_V2,
     )
 
 
@@ -91,6 +90,7 @@ async def accept_knight(
     call: types.CallbackQuery,
     user_client: UserClient,
     session: AsyncSession,
+    renderer: MessageRenderer,
 ):
     logger.info(
         'main_page_router.accept_knight: Owner id=%s is accepting an admin request from user id=%s',
@@ -100,8 +100,8 @@ async def accept_knight(
     user = await call.bot.get_chat(id)
     res = await method_executor_call(user_client.promote_to_admin, call, session, id)
     if res:
-        await call.message.answer(messager.knighting_for_leader(user.full_name))
-        await call.bot.send_message(id, messager.knight())
+        await call.message.answer(**renderer.render('promote_notification_for_leader', user=user))
+        await call.bot.send_message(id, **renderer.render('promote_notification_for_user'))
 
 
 @main_page_router.callback_query(
@@ -110,6 +110,7 @@ async def accept_knight(
 )
 async def refuse_knight(
     call: types.CallbackQuery,
+    renderer: MessageRenderer,
 ):
     logger.info(
         'main_page_router.refuse_knight: Owner id=%s is refusing an admin request from user id=%s',
@@ -118,8 +119,8 @@ async def refuse_knight(
     await call.answer()
     id = int(call.data.split()[1])
     user = await call.bot.get_chat(id)
-    await call.message.answer(messager.notknight_for_leader(user.full_name))
-    await call.bot.send_message(id, messager.notknight())
+    await call.message.answer(**renderer.render('refuse_request_notification_for_leader', user=user))
+    await call.bot.send_message(id, **renderer.render('refuse_request_notification_for_user'))
 
 
 @main_page_router.message(
@@ -131,6 +132,7 @@ async def fire_admin(
     command: CommandObject,
     user_client: UserClient,
     session: AsyncSession,
+    renderer: MessageRenderer,
 ):
     username = command.args.strip()
     if not username.startswith('@'):
@@ -149,7 +151,7 @@ async def fire_admin(
     if not res:
         return
     
-    await message.bot.send_message(user.id, messager.unknight())
+    await message.bot.send_message(user.id, **renderer.render('fire_admin_notification_for_user'))
     if was_in_game:
-        await message.bot.send_message(user.id, messager.kick_due_to_not_admin())
-    await message.answer(messager.unknighting_for_leader(user.first_name))
+        await message.bot.send_message(user.id, **renderer.render('kick_due_to_not_admin'))
+    await message.answer(**renderer.render('fire_admin_notification_for_admin', user=user))
