@@ -19,7 +19,7 @@ from database.schemas import GameDto, GameStatus, PlanetDto, UserDto
 from game.config import game_config
 from keyboards import keyboards as kb
 from keyboards.schemas import Action, ActionType, validate_action_json
-from messages import messager
+from messager import messager
 from storage.clients.actions import ActionsClient
 from storage.clients.messages import MessagesClient
 from storage.schemas import MessageType

@@ -13,7 +13,7 @@ from database.schemas import (
     AdminDto, UserDto
 )
 from keyboards import keyboards as kb
-from messages import messager
+from messager import messager
 
 
 main_page_router = Router()
