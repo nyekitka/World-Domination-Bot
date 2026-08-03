@@ -3,42 +3,51 @@ from types import SimpleNamespace
 
 import pytest
 
-from database.schemas import CityDto, GameDto, PlanetDto
+from database.schemas import AdminDto, CityDto, GameDto, PlanetDto, PlayerDto
 from game.config import game_config
 from messages.renderer import MessageRenderer
 
 
 @pytest.fixture(scope='module')
-def renderer_ru():
+def renderer_ru() -> MessageRenderer:
     return MessageRenderer('ru')
 
 
 @pytest.fixture(scope='module')
-def renderer_en():
+def renderer_en() -> MessageRenderer:
     return MessageRenderer('en')
 
 
 @pytest.fixture
 def user_ru():
-    return SimpleNamespace(first_name='Иван')
-
-
-@pytest.fixture
-def user_en():
-    return SimpleNamespace(first_name='Alice')
-
-
-@pytest.fixture
-def game():
-    return GameDto(
+    return SimpleNamespace(
+        first_name='Иван',
+        full_name='Иван Попов',
         id=1,
-        num_planets=4,
-        round=2,
     )
 
 
 @pytest.fixture
-def planet():
+def user_en():
+    return SimpleNamespace(
+        first_name='Alice',
+        full_name='Alice Smith',
+        id=2,
+    )
+
+
+@pytest.fixture
+def game() -> GameDto:
+    return GameDto(
+        id=1,
+        num_planets=4,
+        round=2,
+        ecorate=67,
+    )
+
+
+@pytest.fixture
+def planet() -> PlanetDto:
     return PlanetDto(
         id=1,
         game_id=1,
@@ -50,7 +59,7 @@ def planet():
 
 
 @pytest.fixture
-def planet_not_invented():
+def planet_not_invented() -> PlanetDto:
     return PlanetDto(
         id=2,
         game_id=1,
@@ -62,7 +71,7 @@ def planet_not_invented():
 
 
 @pytest.fixture
-def to_planet():
+def to_planet() -> PlanetDto:
     return PlanetDto(
         id=3,
         game_id=1,
@@ -71,7 +80,7 @@ def to_planet():
 
 
 @pytest.fixture
-def from_planet():
+def from_planet() -> PlanetDto:
     return PlanetDto(
         id=4,
         game_id=1,
@@ -80,7 +89,7 @@ def from_planet():
 
 
 @pytest.fixture
-def cities():
+def cities() -> list[CityDto]:
     return [
         CityDto(
             id=1,
@@ -100,8 +109,32 @@ def cities():
     ]
 
 
-def test_on_start_for_player_without_game(renderer_ru, renderer_en, user_ru, user_en):
-    assert renderer_ru.render('on_start_for_player_without_game', user=user_ru) == {
+@pytest.fixture()
+def user_dto() -> PlayerDto:
+    return PlayerDto(
+        tg_id=1,
+        game_id=1,
+    )
+
+
+@pytest.fixture()
+def user_dto_without_game() -> PlayerDto:
+    return PlayerDto(
+        tg_id=1,
+        game_id=None,
+    )
+
+
+
+def test_on_start_for_player_without_game(
+    renderer_ru, renderer_en, user_ru, user_en, user_dto_without_game
+):
+    assert renderer_ru.render(
+        'on_start',
+        is_admin=False,
+        user=user_dto_without_game,
+        name=user_ru.first_name,
+    ) == {
         'text': (
             'Привет, Иван 👋.\n'
             'Ты не находишься ни в одном из лобби.\n'
@@ -109,7 +142,12 @@ def test_on_start_for_player_without_game(renderer_ru, renderer_en, user_ru, use
         ),
         'parse_mode': None,
     }
-    assert renderer_en.render('on_start_for_player_without_game', user=user_en) == {
+    assert renderer_en.render(
+        'on_start',
+        is_admin=False,
+        user=user_dto_without_game,
+        name=user_en.first_name,
+    ) == {
         'text': (
             'Hi, Alice 👋.\n'
             "You're not in any lobby.\n"
@@ -118,20 +156,42 @@ def test_on_start_for_player_without_game(renderer_ru, renderer_en, user_ru, use
         'parse_mode': None,
     }
 
-
-def test_on_start_for_user_in_game(renderer_ru, renderer_en, user_ru, user_en):
-    assert renderer_ru.render('on_start_for_user_in_game', user=user_ru) == {
+@pytest.mark.parametrize(
+    'is_admin',
+    (True, False)
+)
+def test_on_start_for_user_in_game(
+    renderer_ru, renderer_en,
+    user_ru, user_en,
+    user_dto, is_admin
+):
+    assert renderer_ru.render(
+        'on_start',
+        name=user_ru.first_name,
+        user=user_dto,
+        is_admin=is_admin,
+    ) == {
         'text': 'С возвращением, Иван!',
         'parse_mode': None,
     }
-    assert renderer_en.render('on_start_for_user_in_game', user=user_en) == {
+    assert renderer_en.render(
+        'on_start',
+        name=user_en.first_name,
+        user=user_dto,
+        is_admin=is_admin,
+    ) == {
         'text': 'Welcome back, Alice!',
         'parse_mode': None,
     }
 
 
 def test_on_start_for_admin_without_game(renderer_ru, renderer_en, user_ru, user_en):
-    assert renderer_ru.render('on_start_for_admin_without_game', user=user_ru) == {
+    assert renderer_ru.render(
+        'on_start',
+        name=user_ru.first_name,
+        user=user_dto_without_game,
+        is_admin=True,
+    ) == {
         'text': (
             'Приветствую, Иван 👋.\n'
             'Ты не администрируешь ни одну из игр.\n'
@@ -139,7 +199,12 @@ def test_on_start_for_admin_without_game(renderer_ru, renderer_en, user_ru, user
         ),
         'parse_mode': None,
     }
-    assert renderer_en.render('on_start_for_admin_without_game', user=user_en) == {
+    assert renderer_en.render(
+            'on_start',
+            name=user_en.first_name,
+            user=user_dto_without_game,
+            is_admin=True,
+        ) == {
         'text': (
             'Greetings, Alice 👋.\n'
             'You are not administering any games.\n'
@@ -519,18 +584,18 @@ def test_meteorites_info_not_invented(renderer_ru, renderer_en, planet_not_inven
     }
 
 
-def test_eco_info(renderer_ru, renderer_en):
-    assert renderer_ru.render('eco_info', eco_rate=87) == {
+def test_eco_info(renderer_ru, renderer_en, game):
+    assert renderer_ru.render('eco_info', game=game) == {
         'text': (
             '*Аномалия*\n'
-            'Уровень аномалии 💥: _87 %_'
+            'Уровень аномалии 💥: _67 %_'
         ),
         'parse_mode': 'MarkdownV2',
     }
-    assert renderer_en.render('eco_info', eco_rate=87) == {
+    assert renderer_en.render('eco_info', game=game) == {
         'text': (
             '*Anomaly*\n'
-            'Anomaly level 💥: _87 %_'
+            'Anomaly level 💥: _67 %_'
         ),
         'parse_mode': 'MarkdownV2',
     }
@@ -589,15 +654,15 @@ def test_not_enough_meteorites(renderer_ru, renderer_en):
     }
 
 
-def test_not_enough_for_transaction(renderer_ru, renderer_en):
-    assert renderer_ru.render('not_enough_for_transaction') == {
+def test_not_enough_money_for_transaction(renderer_ru, renderer_en):
+    assert renderer_ru.render('not_enough_money_for_transaction') == {
         'text': (
             'У вас недостаточно средств для перевода.\n'
             'Введите меньшую сумму для перевода или 0 для отмены перевода.'
         ),
         'parse_mode': None,
     }
-    assert renderer_en.render('not_enough_for_transaction') == {
+    assert renderer_en.render('not_enough_money_for_transaction') == {
         'text': (
             "You don't have enough funds for the transfer.\n"
             'Enter a smaller amount to transfer, or 0 to cancel the transfer.'
@@ -734,12 +799,12 @@ def test_negotiations_accepted(renderer_ru, renderer_en, to_planet):
     }
 
 
-def test_negotiations_denied(renderer_ru, renderer_en, to_planet):
-    assert renderer_ru.render('negotiations_denied', to_planet=to_planet) == {
+def test_negotiations_refused(renderer_ru, renderer_en, to_planet):
+    assert renderer_ru.render('negotiations_refused', to_planet=to_planet) == {
         'text': 'Планета Юпитер отказалась от вашего предложения о переговорах.',
         'parse_mode': None,
     }
-    assert renderer_en.render('negotiations_denied', to_planet=to_planet) == {
+    assert renderer_en.render('negotiations_refused', to_planet=to_planet) == {
         'text': 'Planet Юпитер has declined your negotiation offer.',
         'parse_mode': None,
     }
@@ -996,34 +1061,34 @@ def test_start_game_before(renderer_ru, renderer_en):
     }
 
 
-def test_knight(renderer_ru, renderer_en):
-    assert renderer_ru.render('knight') == {
+def test_promote_notification_for_user(renderer_ru, renderer_en):
+    assert renderer_ru.render('promote_notification_for_user') == {
         'text': '👑 Верховный лидер назначил вас администратором!',
         'parse_mode': None,
     }
-    assert renderer_en.render('knight') == {
+    assert renderer_en.render('promote_notification_for_user') == {
         'text': '👑 The Supreme Leader has appointed you as administrator!',
         'parse_mode': None,
     }
 
 
-def test_unknight(renderer_ru, renderer_en):
-    assert renderer_ru.render('unknight') == {
+def test_refuse_request_notification_for_user(renderer_ru, renderer_en):
+    assert renderer_ru.render('refuse_request_notification_for_user') == {
         'text': '👎 Верховный лидер лишил вас статуса администратора.',
         'parse_mode': None,
     }
-    assert renderer_en.render('unknight') == {
+    assert renderer_en.render('refuse_request_notification_for_user') == {
         'text': '👎 The Supreme Leader has stripped you of administrator status.',
         'parse_mode': None,
     }
 
 
-def test_refuse_request_notification(renderer_ru, renderer_en, user_ru, user_en):
-    assert renderer_ru.render('refuse_request_notification', user=user_ru) == {
+def test_refuse_request_notification_for_leader(renderer_ru, renderer_en, user_ru, user_en):
+    assert renderer_ru.render('refuse_request_notification_for_leader', user=user_ru) == {
         'text': 'Вы отказали пользователю Иван.',
         'parse_mode': None,
     }
-    assert renderer_en.render('refuse_request_notification', user=user_en) == {
+    assert renderer_en.render('refuse_request_notification_for_leader', user=user_en) == {
         'text': 'You have declined user Alice.',
         'parse_mode': None,
     }
@@ -1040,23 +1105,23 @@ def test_fire_admin_notification_for_user(renderer_ru, renderer_en):
     }
 
 
-def test_prmote_notification_for_admin(renderer_ru, renderer_en, user_ru, user_en):
-    assert renderer_ru.render('prmote_notification_for_admin', user=user_ru) == {
+def test_promote_notification_for_leader(renderer_ru, renderer_en, user_ru, user_en):
+    assert renderer_ru.render('promote_notification_for_leader', user=user_ru) == {
         'text': 'Вы успешно назначили Иван администратором!',
         'parse_mode': None,
     }
-    assert renderer_en.render('prmote_notification_for_admin', user=user_en) == {
+    assert renderer_en.render('promote_notification_for_leader', user=user_en) == {
         'text': 'You have successfully appointed Alice as administrator!',
         'parse_mode': None,
     }
 
 
-def test_fire_admin_notification_for_admin(renderer_ru, renderer_en, user_ru, user_en):
-    assert renderer_ru.render('fire_admin_notification_for_admin', user=user_ru) == {
+def test_fire_admin_notification_for_leader(renderer_ru, renderer_en, user_ru, user_en):
+    assert renderer_ru.render('fire_admin_notification_for_leader', user=user_ru) == {
         'text': 'Вы сняли полномочия администратора с Иван.',
         'parse_mode': None,
     }
-    assert renderer_en.render('fire_admin_notification_for_admin', user=user_en) == {
+    assert renderer_en.render('fire_admin_notification_for_leader', user=user_en) == {
         'text': 'You have removed administrator privileges from Alice.',
         'parse_mode': None,
     }
@@ -1064,24 +1129,24 @@ def test_fire_admin_notification_for_admin(renderer_ru, renderer_en, user_ru, us
 
 def test_request_notification_for_leader(renderer_ru, renderer_en, user_ru, user_en):
     assert renderer_ru.render('request_notification_for_leader', user=user_ru) == {
-        'text': 'Пользователь Иван отправил вам запрос на право администратора\\.',
-        'parse_mode': None,
+        'text': 'Пользователь [Иван Попов](tg://user?id=1) отправил вам запрос на право администратора\\.',
+        'parse_mode': 'MarkdownV2',
     }
     assert renderer_en.render('request_notification_for_leader', user=user_en) == {
-        'text': 'User Alice has sent you a request for administrator rights.',
-        'parse_mode': None,
+        'text': 'User [Alice Smith](tg://user?id=2) has sent you a request for administrator rights.',
+        'parse_mode': 'MarkdownV2',
     }
 
 
-def test_request_for_user(renderer_ru, renderer_en):
-    assert renderer_ru.render('request_for_user') == {
+def test_request_notification_for_user(renderer_ru, renderer_en):
+    assert renderer_ru.render('request_notification_for_user') == {
         'text': (
             'Запрос отправлен верховному лидителю.\n'
             'Ждите его ответа.'
         ),
         'parse_mode': None,
     }
-    assert renderer_en.render('request_for_user') == {
+    assert renderer_en.render('request_notification_for_user') == {
         'text': (
             'Request sent to the Supreme Leader.\n'
             'Wait for their response.'
@@ -1144,16 +1209,6 @@ def test_choose_pack(renderer_ru, renderer_en):
         'parse_mode': None,
     }
 
-
-def test_not_enogh_money_for_transaction(renderer_ru, renderer_en):
-    assert renderer_ru.render('not_enogh_money_for_transaction') == {
-        'text': 'Недостаточно средств для перевода. Укажите сумму меньше.',
-        'parse_mode': None,
-    }
-    assert renderer_en.render('not_enogh_money_for_transaction') == {
-        'text': 'Not enough funds for the transfer. Specify a smaller amount.',
-        'parse_mode': None,
-    }
 
 
 def test_already_in_game(renderer_ru, renderer_en):

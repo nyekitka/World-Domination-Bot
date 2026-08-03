@@ -1,17 +1,16 @@
-on_start_for_player_without_game:
+on_start:
   template: |-
-    Hi, {{user.first_name}} 👋.
-    You're not in any lobby.
-    To enter a lobby, press the "Enter lobby" button.
-  markdown: false
-on_start_for_user_in_game:
-  template: Welcome back, {{user.first_name}}!
-  markdown: false
-on_start_for_admin_without_game:
-  template: |-
-    Greetings, {{user.first_name}} 👋.
+    {% if user.game_id -%}
+    Welcome back, {{name}}!
+    {%- elif is_admin -%}
+    Greetings, {{name}} 👋.
     You are not administering any games.
     To enter a game as an administrator, press the "Enter lobby" button.
+    {%- else -%}
+    Hi, {{name}} 👋.
+    You're not in any lobby.
+    To enter a lobby, press the "Enter lobby" button.
+    {%- endif %}
   markdown: false
 on_choose_lobby:
   template: Choose the game you want to join.
@@ -128,7 +127,7 @@ meteorites_info:
 eco_info:
   template: |-
     *Anomaly*
-    Anomaly level 💥: _{{eco_rate}} %_
+    Anomaly level 💥: _{{game.ecorate}} %_
   markdown: true
 other_planet_info:
   template: |-
@@ -152,7 +151,7 @@ not_enough_meteorites:
     You don't have enough meteorites for this action.
     Cancel previous actions or purchase more meteorites.
   markdown: false
-not_enough_for_transaction:
+not_enough_money_for_transaction:
   template: |-
     You don't have enough funds for the transfer.
     Enter a smaller amount to transfer, or 0 to cancel the transfer.
@@ -196,7 +195,7 @@ negotiations_accepted:
     Planet {{to_planet.name}} has accepted your negotiation offer!
     Wait for the organizer, who will come to escort the diplomat.
   markdown: false
-negotiations_denied:
+negotiations_refused:
   template: Planet {{to_planet.name}} has declined your negotiation offer.
   markdown: false
 waiting_for_diplomatist:
@@ -272,28 +271,28 @@ start_game_before:
     You can't use this command, because the game hasn't started.
     Start the game first by pressing the corresponding button.
   markdown: false
-knight:
+promote_notification_for_user:
   template: 👑 The Supreme Leader has appointed you as administrator!
   markdown: false
-unknight:
+refuse_request_notification_for_user:
   template: 👎 The Supreme Leader has stripped you of administrator status.
   markdown: false
-refuse_request_notification:
+refuse_request_notification_for_leader:
   template: You have declined user {{user.first_name}}.
   markdown: false
 fire_admin_notification_for_user:
   template: The Supreme Leader has deemed you unworthy of administrator status.
   markdown: false
-prmote_notification_for_admin:
+promote_notification_for_leader:
   template: You have successfully appointed {{user.first_name}} as administrator!
   markdown: false
-fire_admin_notification_for_admin:
+fire_admin_notification_for_leader:
   template: You have removed administrator privileges from {{user.first_name}}.
   markdown: false
 request_notification_for_leader:
-  template: User {{user.first_name}} has sent you a request for administrator rights.
-  markdown: false
-request_for_user:
+  template: User {{user.id | tag_person(user.full_name)}} has sent you a request for administrator rights.
+  markdown: true
+request_notification_for_user:
   template: |-
     Request sent to the Supreme Leader.
     Wait for their response.
@@ -312,9 +311,6 @@ unexpected_error:
   markdown: false
 choose_pack:
   template: Choose a set of planets and cities for the game.
-  markdown: false
-not_enogh_money_for_transaction:
-  template: Not enough funds for the transfer. Specify a smaller amount.
   markdown: false
 already_in_game:
   template: |-

@@ -1,17 +1,16 @@
-on_start_for_player_without_game:
+on_start:
   template: |-
-    Привет, {{user.first_name}} 👋.
-    Ты не находишься ни в одном из лобби.
-    Чтобы войти в лобби нажми кнопку "Войти в лобби".
-  markdown: false
-on_start_for_user_in_game:
-  template: С возвращением, {{user.first_name}}!
-  markdown: false
-on_start_for_admin_without_game:
-  template: |-
-    Приветствую, {{user.first_name}} 👋.
+    {% if user.game_id -%}
+    С возвращением, {{name}}!
+    {%- elif is_admin -%}
+    Приветствую, {{name}} 👋.
     Ты не администрируешь ни одну из игр.
     Чтобы войти в игру как администратор нажмите кнопку "Войти в лобби".
+    {%- else -%}
+    Привет, {{name}} 👋.
+    Ты не находишься ни в одном из лобби.
+    Чтобы войти в лобби нажми кнопку "Войти в лобби".
+    {%- endif %}
   markdown: false
 on_choose_lobby:
   template: Выберите игру, в которую вы хотите зайти.
@@ -128,7 +127,7 @@ meteorites_info:
 eco_info:
   template: |-
     *Аномалия*
-    Уровень аномалии 💥: _{{eco_rate}} %_
+    Уровень аномалии 💥: _{{game.ecorate}} %_
   markdown: true
 other_planet_info:
   template: |-
@@ -152,7 +151,7 @@ not_enough_meteorites:
     У вас недостаточно метеоритов для этого действия.
     Отмените предыдущие действия или закупите метеориты.
   markdown: false
-not_enough_for_transaction:
+not_enough_money_for_transaction:
   template: |-
     У вас недостаточно средств для перевода.
     Введите меньшую сумму для перевода или 0 для отмены перевода.
@@ -196,7 +195,7 @@ negotiations_accepted:
     Планета {{to_planet.name}} приняла ваше предложение о переговорах!
     Ждите организатора, который подойдёт к вам для того, чтобы сопроводить дипломата.
   markdown: false
-negotiations_denied:
+negotiations_refused:
   template: Планета {{to_planet.name}} отказалась от вашего предложения о переговорах.
   markdown: false
 waiting_for_diplomatist:
@@ -272,28 +271,28 @@ start_game_before:
     Вы не можете использовать эту команду, т.к. игра не запущена.
     Сначала начните игру, нажав на соответсвующую кнопку.
   markdown: false
-knight:
+promote_notification_for_user:
   template: 👑 Верховный лидер назначил вас администратором!
   markdown: false
-unknight:
+refuse_request_notification_for_user:
   template: 👎 Верховный лидер лишил вас статуса администратора.
   markdown: false
-refuse_request_notification:
+refuse_request_notification_for_leader:
   template: Вы отказали пользователю {{user.first_name}}.
   markdown: false
 fire_admin_notification_for_user:
   template: Верховный лидер посчитал вас недостойным статуса администратора.
   markdown: false
-prmote_notification_for_admin:
+promote_notification_for_leader:
   template: Вы успешно назначили {{user.first_name}} администратором!
   markdown: false
-fire_admin_notification_for_admin:
+fire_admin_notification_for_leader:
   template: Вы сняли полномочия администратора с {{user.first_name}}.
   markdown: false
 request_notification_for_leader:
-  template: Пользователь {{user.first_name}} отправил вам запрос на право администратора\.
-  markdown: false
-request_for_user:
+  template: Пользователь {{user.id | tag_person(user.full_name)}} отправил вам запрос на право администратора\.
+  markdown: true
+request_notification_for_user:
   template: |-
     Запрос отправлен верховному лидителю.
     Ждите его ответа.
@@ -312,9 +311,6 @@ unexpected_error:
   markdown: false
 choose_pack:
   template: Выберите набор планет и городов для игры.
-  markdown: false
-not_enogh_money_for_transaction:
-  template: Недостаточно средств для перевода. Укажите сумму меньше.
   markdown: false
 already_in_game:
   template: |-
