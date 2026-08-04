@@ -343,3 +343,51 @@ help:
 
     💸 *Transfer money* \- transfer a specified amount of money to another planet\. Transfers are instant and irreversible\.
   markdown: true
+untimely_negotiations:
+  template: Now is not the time for negotiations!
+  markdown: false
+planet_is_busy:
+  template: This planet is already negotiating.
+  markdown: false
+already_negotiating:
+  template: You are already negotiating with this planet.
+  markdown: false
+object_not_found:
+  template: Requested object is not found.
+  markdown: false
+already_invented:
+  template: You have already invented meteorite launch technology
+  markdown: false
+not_enough_players_short:
+  template: There's not enough players to start the game.
+  markdown: false
+not_in_game:
+  template: You are currently not in a lobby, so you can't leave any.
+  markdown: false
+negative_amount:
+  template: You cannot transfer non-positive amount of money.
+  markdown: false
+is_not_invented:
+  template: You cannot buy meteorites because you haven't invented the launch technology yet.
+  markdown: false
+self_attack:
+  template: It's impossible to attack your city.
+  markdown: false
+round_is_not_going:
+  template: You can't finish the round because there's no round going on right now.
+  markdown: false
+game_ended:
+  template: Game has already ended.
+  markdown: false
+game_is_full:
+  template: There are no free planets in this game. Log into another game.
+  markdown: false
+cannot_start_round:
+  template: You cannot start a new round.
+  markdown: false
+different_games:
+  template: You cannot transfer to a planet from other lobbies.
+  markdown: false
+wait_till_game_ends:
+  template: This operation cannot be performed because the player is in the game. Wait until it's over.
+  markdown: false
