@@ -92,7 +92,7 @@ common_planet_info:
     __*{{planet.name | escape_md}}*__
 
     *Available budget:* _{{planet.balance}}_ 💵
-    *Avg\. life rate on the planet:* _{{planet.development}}%_
+    *Avg\. life rate on the planet:* _{{planet.development | string | escape_md}}%_
 
     {% for city in cities -%}
     {% if city.development == 0 -%}
@@ -102,7 +102,7 @@ common_planet_info:
     {%- else -%}
     *{{ city.name | escape_md }}*:
     {%- endif %}
-    Development {{ city.development }}%, Life rate {{ city.rate_of_life }}%, Income {{ city.income }} 💵
+    Development {{ city.development | string | escape_md }}%, Life rate {{ city.rate_of_life | string | escape_md }}%, Income {{ city.income | string | escape_md }} 💵
 
     {% endfor %}
   markdown: true
@@ -135,9 +135,9 @@ other_planet_info:
 
     {% for city in cities -%}
     {% if city.development == 0 -%}
-    *{{ city.name | escape_md }}*  ❌ (Development {{ city.development }}%)
+    *{{ city.name | escape_md }}*  ❌ \(Development {{ city.development | string | escape_md }}%\)
     {%- else -%}
-    *{{ city.name | escape_md }}* (Development {{ city.development }}%)
+    *{{ city.name | escape_md }}* \(Development {{ city.development | string | escape_md }}%\)
     {%- endif %}
     {% endfor -%}
   markdown: true
@@ -290,7 +290,7 @@ fire_admin_notification_for_leader:
   template: You have removed administrator privileges from {{user.first_name}}.
   markdown: false
 request_notification_for_leader:
-  template: User {{user.id | tag_person(user.full_name)}} has sent you a request for administrator rights.
+  template: User {{user.id | tag_person(user.full_name)}} has sent you a request for administrator rights\.
   markdown: true
 request_notification_for_user:
   template: |-
