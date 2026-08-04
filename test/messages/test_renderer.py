@@ -7,7 +7,7 @@ from game.config import game_config
 
 
 
-def test_on_start_for_player_without_game(
+def test_render_on_start_for_player_without_game(
     renderer_ru, renderer_en, user_ru, user_en, user_dto_without_game
 ):
     assert renderer_ru.render(
@@ -41,7 +41,7 @@ def test_on_start_for_player_without_game(
     'is_admin',
     (True, False)
 )
-def test_on_start_for_user_in_game(
+def test_render_on_start_for_user_in_game(
     renderer_ru, renderer_en,
     user_ru, user_en,
     user_dto, is_admin
@@ -66,7 +66,7 @@ def test_on_start_for_user_in_game(
     }
 
 
-def test_on_start_for_admin_without_game(
+def test_render_on_start_for_admin_without_game(
     renderer_ru, renderer_en, user_ru, user_en,
     user_dto_without_game
 ):
@@ -98,7 +98,7 @@ def test_on_start_for_admin_without_game(
     }
 
 
-def test_on_choose_lobby(renderer_ru, renderer_en):
+def test_render_on_choose_lobby(renderer_ru, renderer_en):
     assert renderer_ru.render('on_choose_lobby') == {
         'text': 'Выберите игру, в которую вы хотите зайти.',
         'parse_mode': None,
@@ -109,7 +109,7 @@ def test_on_choose_lobby(renderer_ru, renderer_en):
     }
 
 
-def test_choose_number_of_planets(renderer_ru, renderer_en):
+def test_render_choose_number_of_planets(renderer_ru, renderer_en):
     assert renderer_ru.render('choose_number_of_planets') == {
         'text': 'Выберите количество планет в игре.',
         'parse_mode': None,
@@ -120,7 +120,7 @@ def test_choose_number_of_planets(renderer_ru, renderer_en):
     }
 
 
-def test_no_games_available(renderer_ru, renderer_en):
+def test_render_no_games_available(renderer_ru, renderer_en):
     assert renderer_ru.render('no_games_available') == {
         'text': 'На данный момент нет ни одной доступной игры.',
         'parse_mode': None,
@@ -131,7 +131,7 @@ def test_no_games_available(renderer_ru, renderer_en):
     }
 
 
-def test_on_game_created(renderer_ru, renderer_en, game):
+def test_render_on_game_created(renderer_ru, renderer_en, game):
     assert renderer_ru.render('on_game_created', game=game) == {
         'text': 'Игра 1 на 4 человек успешно создана.',
         'parse_mode': None,
@@ -142,7 +142,7 @@ def test_on_game_created(renderer_ru, renderer_en, game):
     }
 
 
-def test_on_success_enter_player(renderer_ru, renderer_en, game, planet):
+def test_render_on_success_enter_player(renderer_ru, renderer_en, game, planet):
     assert renderer_ru.render('on_success_enter_player', game=game, planet=planet) == {
         'text': (
             'Вы вошли в игру 1!\n'
@@ -159,7 +159,7 @@ def test_on_success_enter_player(renderer_ru, renderer_en, game, planet):
     }
 
 
-def test_on_success_enter_admin(renderer_ru, renderer_en, game):
+def test_render_on_success_enter_admin(renderer_ru, renderer_en, game):
     assert renderer_ru.render('on_success_enter_admin', game=game) == {
         'text': (
             'Вы присоединились к игре 1.\n'
@@ -176,7 +176,7 @@ def test_on_success_enter_admin(renderer_ru, renderer_en, game):
     }
 
 
-def test_player_enter_notification(renderer_ru, renderer_en, planet, game):
+def test_render_player_enter_notification(renderer_ru, renderer_en, planet, game):
     assert renderer_ru.render('player_enter_notification', planet=planet, game=game, current_players=2) == {
         'text': (
             'Команда от планеты Земля присоединилась к нам!\n'
@@ -193,7 +193,7 @@ def test_player_enter_notification(renderer_ru, renderer_en, planet, game):
     }
 
 
-def test_player_leave_notification(renderer_ru, renderer_en, planet, game):
+def test_render_player_leave_notification(renderer_ru, renderer_en, planet, game):
     assert renderer_ru.render('player_leave_notification', planet=planet, game=game, current_players=2) == {
         'text': (
             'Команда от планеты Земля вышла из лобби.\n'
@@ -210,12 +210,12 @@ def test_player_leave_notification(renderer_ru, renderer_en, planet, game):
     }
 
 
-def test_on_leave_lobby(renderer_ru, renderer_en):
+def test_render_on_leave_lobby(renderer_ru, renderer_en):
     assert renderer_ru.render('on_leave_lobby') == {'text': 'Вы вышли из игры.', 'parse_mode': None}
     assert renderer_en.render('on_leave_lobby') == {'text': 'You have left the game.', 'parse_mode': None}
 
 
-def test_starting_game_not_being_in(renderer_ru, renderer_en):
+def test_render_starting_game_not_being_in(renderer_ru, renderer_en):
     assert renderer_ru.render('starting_game_not_being_in') == {
         'text': (
             'Вы не неходитесь ни в какой в игре.\n'
@@ -232,7 +232,7 @@ def test_starting_game_not_being_in(renderer_ru, renderer_en):
     }
 
 
-def test_not_enough_players(renderer_ru, renderer_en, planet, game):
+def test_render_not_enough_players(renderer_ru, renderer_en, planet, game):
     assert renderer_ru.render('not_enough_players', planet=planet, game=game, current_players=1) == {
         'text': (
             'Недостаточно игроков в игре (1/4 👤 присоединилось).\n'
@@ -249,7 +249,7 @@ def test_not_enough_players(renderer_ru, renderer_en, planet, game):
     }
 
 
-def test_half_time_passed(renderer_ru, renderer_en):
+def test_render_half_time_passed(renderer_ru, renderer_en):
     assert renderer_ru.render('half_time_passed', time=timedelta(minutes=5)) == {
         'text': 'Внимание, до конца раунда осталось 5 минут ⏳. Не забывайте заполнить свои приказы.',
         'parse_mode': None,
@@ -260,7 +260,7 @@ def test_half_time_passed(renderer_ru, renderer_en):
     }
 
 
-def test_hurry_up(renderer_ru, renderer_en):
+def test_render_hurry_up(renderer_ru, renderer_en):
     assert renderer_ru.render('hurry_up', time=timedelta(minutes=2)) == {
         'text': 'Внимание, до конца раунда осталась 2 минуты ⌛. Если ещё не заполнили свои приказы, то самое время это сделать, иначе приказы отправятся пустыми.',
         'parse_mode': None,
@@ -278,7 +278,7 @@ def test_hurry_up(renderer_ru, renderer_en):
         (2, 'Второй', 'Second'),
     ]
 )
-def test_start_round_for_players(
+def test_render_start_round_for_players(
     round, game, renderer_ru, renderer_en,
     ordinal_ru, ordinal_en
 ):
@@ -323,7 +323,7 @@ def test_start_round_for_players(
         (2, 'Второй', 'Second'),
     ]
 )
-def test_start_round_for_admins(
+def test_render_start_round_for_admins(
     game, round, renderer_ru, renderer_en,
     ordinal_ru, ordinal_en
 ):
@@ -356,16 +356,16 @@ def test_start_round_for_admins(
         }
 
 
-def test_common_planet_info(renderer_ru, renderer_en, planet, cities):
+def test_render_common_planet_info(renderer_ru, renderer_en, planet, cities):
     assert renderer_ru.render('common_planet_info', planet=planet, cities=cities) == {
         'text': (
             '__*Земля*__\n\n'
             '*Доступный бюджет:* _1000_ 💵\n'
-            '*Сред\\. ур\\. жизни на планете:* _45.5%_\n\n'
+            '*Сред\\. ур\\. жизни на планете:* _45\\.5%_\n\n'
             '*Москва* ❌:\n'
-            'Развитие 0%, Ур\\. жизни 50.0%, Доход 150.0 💵\n\n'
+            'Развитие 0%, Ур\\. жизни 50\\.0%, Доход 150\\.0 💵\n\n'
             '*Питер* 🛡️:\n'
-            'Развитие 70%, Ур\\. жизни 80.0%, Доход 240.0 💵\n\n'
+            'Развитие 70%, Ур\\. жизни 80\\.0%, Доход 240\\.0 💵\n\n'
         ),
         'parse_mode': 'MarkdownV2',
     }
@@ -373,17 +373,17 @@ def test_common_planet_info(renderer_ru, renderer_en, planet, cities):
         'text': (
             '__*Земля*__\n\n'
             '*Available budget:* _1000_ 💵\n'
-            '*Avg\\. life rate on the planet:* _45.5%_\n\n'
+            '*Avg\\. life rate on the planet:* _45\\.5%_\n\n'
             '*Москва* ❌:\n'
-            'Development 0%, Life rate 50.0%, Income 150.0 💵\n\n'
+            'Development 0%, Life rate 50\\.0%, Income 150\\.0 💵\n\n'
             '*Питер* 🛡️:\n'
-            'Development 70%, Life rate 80.0%, Income 240.0 💵\n\n'
+            'Development 70%, Life rate 80\\.0%, Income 240\\.0 💵\n\n'
         ),
         'parse_mode': 'MarkdownV2',
     }
 
 
-def test_sanctions_info_with_sanctions(renderer_ru, renderer_en):
+def test_render_sanctions_info_with_sanctions(renderer_ru, renderer_en):
     assert renderer_ru.render('sanctions_info', sanctioned_planets=['Марс', 'Юпитер']) == {
         'text': (
             '*Санкции:*\n'
@@ -400,7 +400,7 @@ def test_sanctions_info_with_sanctions(renderer_ru, renderer_en):
     }
 
 
-def test_sanctions_info_without_sanctions(renderer_ru, renderer_en):
+def test_render_sanctions_info_without_sanctions(renderer_ru, renderer_en):
     assert renderer_ru.render('sanctions_info', sanctioned_planets=[]) == {
         'text': (
             '*Санкции:*\n'
@@ -417,7 +417,7 @@ def test_sanctions_info_without_sanctions(renderer_ru, renderer_en):
     }
 
 
-def test_meteorites_info_invented(renderer_ru, renderer_en, planet):
+def test_render_meteorites_info_invented(renderer_ru, renderer_en, planet):
     assert renderer_ru.render('meteorites_info', planet=planet) == {
         'text': (
             '*Метеориты*\n'
@@ -434,7 +434,7 @@ def test_meteorites_info_invented(renderer_ru, renderer_en, planet):
     }
 
 
-def test_meteorites_info_singular_agreement_ru(renderer_ru):
+def test_render_meteorites_info_singular_agreement_ru(renderer_ru):
     planet_one = PlanetDto(
         id=5,
         game_id=1,
@@ -451,7 +451,7 @@ def test_meteorites_info_singular_agreement_ru(renderer_ru):
     }
 
 
-def test_meteorites_info_not_invented(renderer_ru, renderer_en, planet_not_invented):
+def test_render_meteorites_info_not_invented(renderer_ru, renderer_en, planet_not_invented):
     assert renderer_ru.render('meteorites_info', planet=planet_not_invented) == {
         'text': (
             '*Метеориты*\n'
@@ -468,7 +468,7 @@ def test_meteorites_info_not_invented(renderer_ru, renderer_en, planet_not_inven
     }
 
 
-def test_eco_info(renderer_ru, renderer_en, game):
+def test_render_eco_info(renderer_ru, renderer_en, game):
     assert renderer_ru.render('eco_info', game=game) == {
         'text': (
             '*Аномалия*\n'
@@ -485,7 +485,7 @@ def test_eco_info(renderer_ru, renderer_en, game):
     }
 
 
-def test_other_planet_info(renderer_ru, renderer_en, planet, cities):
+def test_render_other_planet_info(renderer_ru, renderer_en, planet, cities):
     assert renderer_ru.render('other_planet_info', planet=planet, cities=cities) == {
         'text': (
             '__*Земля*__\n\n'
@@ -504,7 +504,7 @@ def test_other_planet_info(renderer_ru, renderer_en, planet, cities):
     }
 
 
-def test_not_enough_money(renderer_ru, renderer_en):
+def test_render_not_enough_money(renderer_ru, renderer_en):
     assert renderer_ru.render('not_enough_money') == {
         'text': (
             'У вас недостаточно средств для выполнения этого действия.\n'
@@ -521,7 +521,7 @@ def test_not_enough_money(renderer_ru, renderer_en):
     }
 
 
-def test_not_enough_meteorites(renderer_ru, renderer_en):
+def test_render_not_enough_meteorites(renderer_ru, renderer_en):
     assert renderer_ru.render('not_enough_meteorites') == {
         'text': (
             'У вас недостаточно метеоритов для этого действия.\n'
@@ -538,7 +538,7 @@ def test_not_enough_meteorites(renderer_ru, renderer_en):
     }
 
 
-def test_not_enough_money_for_transaction(renderer_ru, renderer_en):
+def test_render_not_enough_money_for_transaction(renderer_ru, renderer_en):
     assert renderer_ru.render('not_enough_money_for_transaction') == {
         'text': (
             'У вас недостаточно средств для перевода.\n'
@@ -555,7 +555,7 @@ def test_not_enough_money_for_transaction(renderer_ru, renderer_en):
     }
 
 
-def test_wrong_answer(renderer_ru, renderer_en):
+def test_render_wrong_answer(renderer_ru, renderer_en):
     assert renderer_ru.render('wrong_answer') == {
         'text': (
             'Неверный ввод.\n'
@@ -572,7 +572,7 @@ def test_wrong_answer(renderer_ru, renderer_en):
     }
 
 
-def test_successful_transaction(renderer_ru, renderer_en, to_planet):
+def test_render_successful_transaction(renderer_ru, renderer_en, to_planet):
     assert renderer_ru.render('successful_transaction', to_planet=to_planet) == {
         'text': 'Перевод планете Юпитер успешно выполнен!',
         'parse_mode': None,
@@ -583,7 +583,7 @@ def test_successful_transaction(renderer_ru, renderer_en, to_planet):
     }
 
 
-def test_transaction_notification(renderer_ru, renderer_en, from_planet):
+def test_render_transaction_notification(renderer_ru, renderer_en, from_planet):
     assert renderer_ru.render('transaction_notification', from_planet=from_planet, amount=500) == {
         'text': 'Планета Сатурн перевела вам 500 💵!',
         'parse_mode': None,
@@ -594,7 +594,7 @@ def test_transaction_notification(renderer_ru, renderer_en, from_planet):
     }
 
 
-def test_already_built(renderer_ru, renderer_en):
+def test_render_already_built(renderer_ru, renderer_en):
     assert renderer_ru.render('already_built') == {
         'text': 'Вы не можете поставить щит на этот город, т.к. щит на этом городе уже поставлен.',
         'parse_mode': None,
@@ -605,7 +605,7 @@ def test_already_built(renderer_ru, renderer_en):
     }
 
 
-def test_round_end_for_admin(renderer_ru, renderer_en, game):
+def test_render_round_end_for_admin(renderer_ru, renderer_en, game):
     assert renderer_ru.render('round_end_for_admin', game=game) == {
         'text': (
             '_*второй раунд закончен\\!*_\n'
@@ -622,12 +622,12 @@ def test_round_end_for_admin(renderer_ru, renderer_en, game):
     }
 
 
-def test_game_results(renderer_ru, renderer_en):
+def test_render_game_results(renderer_ru, renderer_en):
     assert renderer_ru.render('game_results') == {'text': 'Статистика всей игры', 'parse_mode': None}
     assert renderer_en.render('game_results') == {'text': 'Full game statistics', 'parse_mode': None}
 
 
-def test_round_end_for_players(renderer_ru, renderer_en, game):
+def test_render_round_end_for_players(renderer_ru, renderer_en, game):
     assert renderer_ru.render('round_end_for_players', game=game) == {
         'text': (
             '_*второй раунд закончен\\!*_\n'
@@ -644,7 +644,7 @@ def test_round_end_for_players(renderer_ru, renderer_en, game):
     }
 
 
-def test_how_much_money(renderer_ru, renderer_en, to_planet):
+def test_render_how_much_money(renderer_ru, renderer_en, to_planet):
     assert renderer_ru.render('how_much_money', to_planet=to_planet) == {
         'text': 'Напишите сколько вы готовы перевести планете Юпитер.',
         'parse_mode': None,
@@ -655,7 +655,7 @@ def test_how_much_money(renderer_ru, renderer_en, to_planet):
     }
 
 
-def test_negotiations_offer(renderer_ru, renderer_en, from_planet):
+def test_render_negotiations_offer(renderer_ru, renderer_en, from_planet):
     assert renderer_ru.render('negotiations_offer', from_planet=from_planet) == {
         'text': 'Планета Сатурн предлагает принять их дипломата для переговоров.',
         'parse_mode': None,
@@ -666,7 +666,7 @@ def test_negotiations_offer(renderer_ru, renderer_en, from_planet):
     }
 
 
-def test_negotiations_accepted(renderer_ru, renderer_en, to_planet):
+def test_render_negotiations_accepted(renderer_ru, renderer_en, to_planet):
     assert renderer_ru.render('negotiations_accepted', to_planet=to_planet) == {
         'text': (
             'Планета Юпитер приняла ваше предложение о переговорах!\n'
@@ -683,7 +683,7 @@ def test_negotiations_accepted(renderer_ru, renderer_en, to_planet):
     }
 
 
-def test_negotiations_refused(renderer_ru, renderer_en, to_planet):
+def test_render_negotiations_refused(renderer_ru, renderer_en, to_planet):
     assert renderer_ru.render('negotiations_refused', to_planet=to_planet) == {
         'text': 'Планета Юпитер отказалась от вашего предложения о переговорах.',
         'parse_mode': None,
@@ -694,7 +694,7 @@ def test_negotiations_refused(renderer_ru, renderer_en, to_planet):
     }
 
 
-def test_waiting_for_diplomatist(renderer_ru, renderer_en, from_planet):
+def test_render_waiting_for_diplomatist(renderer_ru, renderer_en, from_planet):
     assert renderer_ru.render('waiting_for_diplomatist', from_planet=from_planet) == {
         'text': (
             'Вы приняли предложение о переговорах с Сатурн.\n'
@@ -713,7 +713,7 @@ def test_waiting_for_diplomatist(renderer_ru, renderer_en, from_planet):
     }
 
 
-def test_negotiations_for_admin(renderer_ru, renderer_en, to_planet, from_planet):
+def test_render_negotiations_for_admin(renderer_ru, renderer_en, to_planet, from_planet):
     assert renderer_ru.render('negotiations_for_admin', to_planet=to_planet, from_planet=from_planet) == {
         'text': 'Планета Юпитер хочет принять дипломата от планеты Сатурн',
         'parse_mode': None,
@@ -724,7 +724,7 @@ def test_negotiations_for_admin(renderer_ru, renderer_en, to_planet, from_planet
     }
 
 
-def test_negotiations_outside_the_round(renderer_ru, renderer_en):
+def test_render_negotiations_outside_the_round(renderer_ru, renderer_en):
     assert renderer_ru.render('negotiations_outside_the_round') == {
         'text': 'Вы не можете принять дипломата, т.к. находитесь на галактических переговорах.',
         'parse_mode': None,
@@ -735,7 +735,7 @@ def test_negotiations_outside_the_round(renderer_ru, renderer_en):
     }
 
 
-def test_negotiations_ended(renderer_ru, renderer_en):
+def test_render_negotiations_ended(renderer_ru, renderer_en):
     assert renderer_ru.render('negotiations_ended') == {
         'text': (
             'Переговоры закончены.\n'
@@ -752,7 +752,7 @@ def test_negotiations_ended(renderer_ru, renderer_en):
     }
 
 
-def test_negotiations_ended_for_admin(renderer_ru, renderer_en, to_planet):
+def test_render_negotiations_ended_for_admin(renderer_ru, renderer_en, to_planet):
     assert renderer_ru.render('negotiations_ended_for_admin', to_planet=to_planet) == {
         'text': 'Планета Юпитер закончила переговоры. Сопроводите дипломата до его планеты.',
         'parse_mode': None,
@@ -763,7 +763,7 @@ def test_negotiations_ended_for_admin(renderer_ru, renderer_en, to_planet):
     }
 
 
-def test_busy_at_the_moment(renderer_ru, renderer_en):
+def test_render_busy_at_the_moment(renderer_ru, renderer_en):
     assert renderer_ru.render('busy_at_the_moment') == {
         'text': 'Вы не можете принять к себе дипломата, т.к. на вашей планете уже ведутся переговоры.',
         'parse_mode': None,
@@ -774,7 +774,7 @@ def test_busy_at_the_moment(renderer_ru, renderer_en):
     }
 
 
-def test_bilateral_negotiations(renderer_ru, renderer_en):
+def test_render_bilateral_negotiations(renderer_ru, renderer_en):
     assert renderer_ru.render('bilateral_negotiations') == {
         'text': 'Вы не можете принять к себе эту планету, т.к. дипломат от вашей планеты уже переговаривает с ней',
         'parse_mode': None,
@@ -785,7 +785,7 @@ def test_bilateral_negotiations(renderer_ru, renderer_en):
     }
 
 
-def test_wait_for_acception(renderer_ru, renderer_en, to_planet):
+def test_render_wait_for_acception(renderer_ru, renderer_en, to_planet):
     assert renderer_ru.render('wait_for_acception', to_planet=to_planet) == {
         'text': (
             'Запрос на переговоры отправлен!\n'
@@ -802,7 +802,7 @@ def test_wait_for_acception(renderer_ru, renderer_en, to_planet):
     }
 
 
-def test_negotiatior_offline(renderer_ru, renderer_en, to_planet):
+def test_render_negotiatior_offline(renderer_ru, renderer_en, to_planet):
     assert renderer_ru.render('negotiatior_offline', to_planet=to_planet) == {
         'text': (
             'К сожалению, владелец планеты Юпитер не в игре.\n'
@@ -819,7 +819,7 @@ def test_negotiatior_offline(renderer_ru, renderer_en, to_planet):
     }
 
 
-def test_end_of_the_game(renderer_ru, renderer_en):
+def test_render_end_of_the_game(renderer_ru, renderer_en):
     assert renderer_ru.render('end_of_the_game') == {
         'text': (
             '*Игра закончена\\!*\n'
@@ -840,7 +840,7 @@ def test_end_of_the_game(renderer_ru, renderer_en):
     }
 
 
-def test_goodbye(renderer_ru, renderer_en):
+def test_render_goodbye(renderer_ru, renderer_en):
     assert renderer_ru.render('goodbye') == {
         'text': 'Вы автоматически вышли, т.к. ваша игра закончилась.',
         'parse_mode': None,
@@ -851,7 +851,7 @@ def test_goodbye(renderer_ru, renderer_en):
     }
 
 
-def test_ending_outside(renderer_ru, renderer_en):
+def test_render_ending_outside(renderer_ru, renderer_en):
     assert renderer_ru.render('ending_outside') == {
         'text': 'Вы не можете закончить никакую игру, т.к. не находитесь ни в одной из них.',
         'parse_mode': None,
@@ -862,7 +862,7 @@ def test_ending_outside(renderer_ru, renderer_en):
     }
 
 
-def test_ending_when_not_started(renderer_ru, renderer_en):
+def test_render_ending_when_not_started(renderer_ru, renderer_en):
     assert renderer_ru.render('ending_when_not_started') == {
         'text': 'Вы не можете закончить неначавшуюся игру.',
         'parse_mode': None,
@@ -873,7 +873,7 @@ def test_ending_when_not_started(renderer_ru, renderer_en):
     }
 
 
-def test_game_interrupted_report(renderer_ru, renderer_en):
+def test_render_game_interrupted_report(renderer_ru, renderer_en):
     assert renderer_ru.render('game_interrupted_report') == {
         'text': 'Игра была прервана. Вы автоматически вышли из игры.',
         'parse_mode': None,
@@ -884,7 +884,7 @@ def test_game_interrupted_report(renderer_ru, renderer_en):
     }
 
 
-def test_game_interrupted_message(renderer_ru, renderer_en):
+def test_render_game_interrupted_message(renderer_ru, renderer_en):
     assert renderer_ru.render('game_interrupted_message') == {
         'text': 'Игра была прервана администратором. О подробностях узнавайте у организаторов.',
         'parse_mode': None,
@@ -895,7 +895,7 @@ def test_game_interrupted_message(renderer_ru, renderer_en):
     }
 
 
-def test_waiting_time_expired(renderer_ru, renderer_en):
+def test_render_waiting_time_expired(renderer_ru, renderer_en):
     assert renderer_ru.render('waiting_time_expired') == {
         'text': 'Время ожидания ответа превышено. Перевод отменён.',
         'parse_mode': None,
@@ -906,7 +906,7 @@ def test_waiting_time_expired(renderer_ru, renderer_en):
     }
 
 
-def test_already_started(renderer_ru, renderer_en):
+def test_render_already_started(renderer_ru, renderer_en):
     assert renderer_ru.render('already_started') == {
         'text': 'Вы не можете начать игру, т.к. игра уже в процессе.',
         'parse_mode': None,
@@ -917,7 +917,7 @@ def test_already_started(renderer_ru, renderer_en):
     }
 
 
-def test_skipping_round(renderer_ru, renderer_en):
+def test_render_skipping_round(renderer_ru, renderer_en):
     assert renderer_ru.render('skipping_round') == {
         'text': 'Вы не можете начать новый раунд, т.к. не закончился старый.',
         'parse_mode': None,
@@ -928,7 +928,7 @@ def test_skipping_round(renderer_ru, renderer_en):
     }
 
 
-def test_start_game_before(renderer_ru, renderer_en):
+def test_render_start_game_before(renderer_ru, renderer_en):
     assert renderer_ru.render('start_game_before') == {
         'text': (
             'Вы не можете использовать эту команду, т.к. игра не запущена.\n'
@@ -945,7 +945,7 @@ def test_start_game_before(renderer_ru, renderer_en):
     }
 
 
-def test_promote_notification_for_user(renderer_ru, renderer_en):
+def test_render_promote_notification_for_user(renderer_ru, renderer_en):
     assert renderer_ru.render('promote_notification_for_user') == {
         'text': '👑 Верховный лидер назначил вас администратором!',
         'parse_mode': None,
@@ -956,7 +956,7 @@ def test_promote_notification_for_user(renderer_ru, renderer_en):
     }
 
 
-def test_refuse_request_notification_for_user(renderer_ru, renderer_en):
+def test_render_refuse_request_notification_for_user(renderer_ru, renderer_en):
     assert renderer_ru.render('refuse_request_notification_for_user') == {
         'text': '👎 Верховный лидер лишил вас статуса администратора.',
         'parse_mode': None,
@@ -967,7 +967,7 @@ def test_refuse_request_notification_for_user(renderer_ru, renderer_en):
     }
 
 
-def test_refuse_request_notification_for_leader(renderer_ru, renderer_en, user_ru, user_en):
+def test_render_refuse_request_notification_for_leader(renderer_ru, renderer_en, user_ru, user_en):
     assert renderer_ru.render('refuse_request_notification_for_leader', user=user_ru) == {
         'text': 'Вы отказали пользователю Иван.',
         'parse_mode': None,
@@ -978,7 +978,7 @@ def test_refuse_request_notification_for_leader(renderer_ru, renderer_en, user_r
     }
 
 
-def test_fire_admin_notification_for_user(renderer_ru, renderer_en):
+def test_render_fire_admin_notification_for_user(renderer_ru, renderer_en):
     assert renderer_ru.render('fire_admin_notification_for_user') == {
         'text': 'Верховный лидер посчитал вас недостойным статуса администратора.',
         'parse_mode': None,
@@ -989,7 +989,7 @@ def test_fire_admin_notification_for_user(renderer_ru, renderer_en):
     }
 
 
-def test_promote_notification_for_leader(renderer_ru, renderer_en, user_ru, user_en):
+def test_render_promote_notification_for_leader(renderer_ru, renderer_en, user_ru, user_en):
     assert renderer_ru.render('promote_notification_for_leader', user=user_ru) == {
         'text': 'Вы успешно назначили Иван администратором!',
         'parse_mode': None,
@@ -1000,7 +1000,7 @@ def test_promote_notification_for_leader(renderer_ru, renderer_en, user_ru, user
     }
 
 
-def test_fire_admin_notification_for_leader(renderer_ru, renderer_en, user_ru, user_en):
+def test_render_fire_admin_notification_for_leader(renderer_ru, renderer_en, user_ru, user_en):
     assert renderer_ru.render('fire_admin_notification_for_leader', user=user_ru) == {
         'text': 'Вы сняли полномочия администратора с Иван.',
         'parse_mode': None,
@@ -1011,7 +1011,7 @@ def test_fire_admin_notification_for_leader(renderer_ru, renderer_en, user_ru, u
     }
 
 
-def test_request_notification_for_leader(renderer_ru, renderer_en, user_ru, user_en):
+def test_render_request_notification_for_leader(renderer_ru, renderer_en, user_ru, user_en):
     assert renderer_ru.render('request_notification_for_leader', user=user_ru) == {
         'text': 'Пользователь [Иван Попов](tg://user?id=1) отправил вам запрос на право администратора\\.',
         'parse_mode': 'MarkdownV2',
@@ -1022,10 +1022,10 @@ def test_request_notification_for_leader(renderer_ru, renderer_en, user_ru, user
     }
 
 
-def test_request_notification_for_user(renderer_ru, renderer_en):
+def test_render_request_notification_for_user(renderer_ru, renderer_en):
     assert renderer_ru.render('request_notification_for_user') == {
         'text': (
-            'Запрос отправлен верховному лидителю.\n'
+            'Запрос отправлен верховному лидеру.\n'
             'Ждите его ответа.'
         ),
         'parse_mode': None,
@@ -1039,7 +1039,7 @@ def test_request_notification_for_user(renderer_ru, renderer_en):
     }
 
 
-def test_kick_due_to_admin(renderer_ru, renderer_en):
+def test_render_kick_due_to_admin(renderer_ru, renderer_en):
     assert renderer_ru.render('kick_due_to_admin') == {
         'text': 'Вы были выкинуты из игры, поскольку теперь вы являетесь администратором.',
         'parse_mode': None,
@@ -1050,7 +1050,7 @@ def test_kick_due_to_admin(renderer_ru, renderer_en):
     }
 
 
-def test_kick_due_to_not_admin(renderer_ru, renderer_en):
+def test_render_kick_due_to_not_admin(renderer_ru, renderer_en):
     assert renderer_ru.render('kick_due_to_not_admin') == {
         'text': 'Вы были выкинуты из игры, поскольку теперь вы не являетесь администратором.',
         'parse_mode': None,
@@ -1061,7 +1061,7 @@ def test_kick_due_to_not_admin(renderer_ru, renderer_en):
     }
 
 
-def test_action_out_of_game(renderer_ru, renderer_en):
+def test_render_action_out_of_game(renderer_ru, renderer_en):
     assert renderer_ru.render('action_out_of_game') == {
         'text': 'Вы не можете выполнить данное действие, т.к. находитесь вне игры.',
         'parse_mode': None,
@@ -1072,7 +1072,7 @@ def test_action_out_of_game(renderer_ru, renderer_en):
     }
 
 
-def test_unexpected_error(renderer_ru, renderer_en):
+def test_render_unexpected_error(renderer_ru, renderer_en):
     assert renderer_ru.render('unexpected_error') == {
         'text': 'Произошла непредвиденная ошибка.',
         'parse_mode': None,
@@ -1083,7 +1083,7 @@ def test_unexpected_error(renderer_ru, renderer_en):
     }
 
 
-def test_choose_pack(renderer_ru, renderer_en):
+def test_render_choose_pack(renderer_ru, renderer_en):
     assert renderer_ru.render('choose_pack') == {
         'text': 'Выберите набор планет и городов для игры.',
         'parse_mode': None,
@@ -1095,7 +1095,7 @@ def test_choose_pack(renderer_ru, renderer_en):
 
 
 
-def test_already_in_game(renderer_ru, renderer_en):
+def test_render_already_in_game(renderer_ru, renderer_en):
     assert renderer_ru.render('already_in_game') == {
         'text': (
             'Вы уже находитесь в лобби.\n'
@@ -1112,7 +1112,7 @@ def test_already_in_game(renderer_ru, renderer_en):
     }
 
 
-def test_help(renderer_ru, renderer_en):
+def test_render_help(renderer_ru, renderer_en):
     assert renderer_ru.render('help', game_config=game_config) == {
         'text': (
             'В данной игре 6 раундов по 10 минут, после каждого из которых идут общие обсуждения, которые не ограничены по времени\\. '
@@ -1195,4 +1195,180 @@ def test_help(renderer_ru, renderer_en):
             'Transfers are instant and irreversible\\.'
         ),
         'parse_mode': 'MarkdownV2',
+    }
+
+
+def test_render_untimely_negotiations(renderer_ru, renderer_en):
+    assert renderer_ru.render('untimely_negotiations') == {
+        'text': 'Сейчас нельзя находиться на переговорах',
+        'parse_mode': None,
+    }
+    assert renderer_en.render('untimely_negotiations') == {
+        'text': 'Now is not the time for negotiations!',
+        'parse_mode': None,
+    }
+
+
+def test_render_planet_is_busy(renderer_ru, renderer_en):
+    assert renderer_ru.render('planet_is_busy') == {
+        'text': 'Данная планета уже находится на переговорах',
+        'parse_mode': None,
+    }
+    assert renderer_en.render('planet_is_busy') == {
+        'text': 'This planet is already negotiating.',
+        'parse_mode': None,
+    }
+
+
+def test_render_already_negotiating(renderer_ru, renderer_en):
+    assert renderer_ru.render('already_negotiating') == {
+        'text': 'Вы уже принимаете одну планету на переговорах',
+        'parse_mode': None,
+    }
+    assert renderer_en.render('already_negotiating') == {
+        'text': 'You are already negotiating with this planet.',
+        'parse_mode': None,
+    }
+
+
+def test_render_object_not_found(renderer_ru, renderer_en):
+    assert renderer_ru.render('object_not_found') == {
+        'text': 'Запрашиваемый объект не найден.',
+        'parse_mode': None,
+    }
+    assert renderer_en.render('object_not_found') == {
+        'text': 'Requested object is not found.',
+        'parse_mode': None,
+    }
+
+
+def test_render_already_invented(renderer_ru, renderer_en):
+    assert renderer_ru.render('already_invented') == {
+        'text': 'У вас уже изобретена технология отправки метеоритов',
+        'parse_mode': None,
+    }
+    assert renderer_en.render('already_invented') == {
+        'text': 'You have already invented meteorite launch technology',
+        'parse_mode': None,
+    }
+
+
+def test_render_not_enough_players_short(renderer_ru, renderer_en):
+    assert renderer_ru.render('not_enough_players_short') == {
+        'text': 'Недостаточно игроков для того, чтобы начать игру.',
+        'parse_mode': None,
+    }
+    assert renderer_en.render('not_enough_players_short') == {
+        'text': "There's not enough players to start the game.",
+        'parse_mode': None,
+    }
+
+
+def test_render_not_in_game(renderer_ru, renderer_en):
+    assert renderer_ru.render('not_in_game') == {
+        'text': 'Вы не находитесь в лобби, чтобы из него выходить.',
+        'parse_mode': None,
+    }
+    assert renderer_en.render('not_in_game') == {
+        'text': "You are currently not in a lobby, so you can't leave any.",
+        'parse_mode': None,
+    }
+
+
+def test_render_negative_amount(renderer_ru, renderer_en):
+    assert renderer_ru.render('negative_amount') == {
+        'text': 'Нельзя переводить неположительную сумму',
+        'parse_mode': None,
+    }
+    assert renderer_en.render('negative_amount') == {
+        'text': 'You cannot transfer non-positive amount of money.',
+        'parse_mode': None,
+    }
+
+
+def test_render_is_not_invented(renderer_ru, renderer_en):
+    assert renderer_ru.render('is_not_invented') == {
+        'text': 'Вы не можете покупать метеориты поскольку у вас ещё не разработана технология их отправки.',
+        'parse_mode': None,
+    }
+    assert renderer_en.render('is_not_invented') == {
+        'text': "You cannot buy meteorites because you haven't invented the launch technology yet.",
+        'parse_mode': None,
+    }
+
+
+def test_render_self_attack(renderer_ru, renderer_en):
+    assert renderer_ru.render('self_attack') == {
+        'text': 'Отправлять метеорит на свой город невозможно.',
+        'parse_mode': None,
+    }
+    assert renderer_en.render('self_attack') == {
+        'text': "It's impossible to attack your city.",
+        'parse_mode': None,
+    }
+
+
+def test_render_round_is_not_going(renderer_ru, renderer_en):
+    assert renderer_ru.render('round_is_not_going') == {
+        'text': 'Нельзя закончить раунд, потому что сейчас никакого раунда не идёт.',
+        'parse_mode': None,
+    }
+    assert renderer_en.render('round_is_not_going') == {
+        'text': "You can't finish the round because there's no round going on right now.",
+        'parse_mode': None,
+    }
+
+
+def test_render_game_ended(renderer_ru, renderer_en):
+    assert renderer_ru.render('game_ended') == {
+        'text': 'Игра уже закончена.',
+        'parse_mode': None,
+    }
+    assert renderer_en.render('game_ended') == {
+        'text': 'Game has already ended.',
+        'parse_mode': None,
+    }
+
+
+def test_render_game_is_full(renderer_ru, renderer_en):
+    assert renderer_ru.render('game_is_full') == {
+        'text': 'В данной игре нет свободных планет. Зайдите в другую игру.',
+        'parse_mode': None,
+    }
+    assert renderer_en.render('game_is_full') == {
+        'text': 'There are no free planets in this game. Log into another game.',
+        'parse_mode': None,
+    }
+
+
+def test_render_cannot_start_round(renderer_ru, renderer_en):
+    assert renderer_ru.render('cannot_start_round') == {
+        'text': 'Нельзя начать новый раунд',
+        'parse_mode': None,
+    }
+    assert renderer_en.render('cannot_start_round') == {
+        'text': 'You cannot start a new round.',
+        'parse_mode': None,
+    }
+
+
+def test_render_different_games(renderer_ru, renderer_en):
+    assert renderer_ru.render('different_games') == {
+        'text': 'Нельзя перевести планете из другой игры',
+        'parse_mode': None,
+    }
+    assert renderer_en.render('different_games') == {
+        'text': 'You cannot transfer to a planet from other lobbies.',
+        'parse_mode': None,
+    }
+
+
+def test_render_wait_till_game_ends(renderer_ru, renderer_en):
+    assert renderer_ru.render('wait_till_game_ends') == {
+        'text': 'Нельзя выполнить эту операцию, поскольку игрок находится в игре. Подождите пока она закончится.',
+        'parse_mode': None,
+    }
+    assert renderer_en.render('wait_till_game_ends') == {
+        'text': "This operation cannot be performed because the player is in the game. Wait until it's over.",
+        'parse_mode': None,
     }

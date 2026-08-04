@@ -294,7 +294,7 @@ request_notification_for_leader:
   markdown: true
 request_notification_for_user:
   template: |-
-    Запрос отправлен верховному лидителю.
+    Запрос отправлен верховному лидеру.
     Ждите его ответа.
   markdown: false
 kick_due_to_admin:
@@ -343,3 +343,51 @@ help:
 
     💸 *Перевод денег* \- вы переводите определённую сумму другой планете\. Перевод мгновенный и безвозвратный\.
   markdown: true
+untimely_negotiations:
+  template: Сейчас нельзя находиться на переговорах
+  markdown: false
+planet_is_busy:
+  template: Данная планета уже находится на переговорах
+  markdown: false
+already_negotiating:
+  template: Вы уже принимаете одну планету на переговорах
+  markdown: false
+object_not_found:
+  template: Запрашиваемый объект не найден.
+  markdown: false
+already_invented:
+  template: У вас уже изобретена технология отправки метеоритов
+  markdown: false
+not_enough_players_short:
+  template: Недостаточно игроков для того, чтобы начать игру.
+  markdown: false
+not_in_game:
+  template: Вы не находитесь в лобби, чтобы из него выходить.
+  markdown: false
+negative_amount:
+  template: Нельзя переводить неположительную сумму
+  markdown: false
+is_not_invented:
+  template: Вы не можете покупать метеориты поскольку у вас ещё не разработана технология их отправки.
+  markdown: false
+self_attack:
+  template: Отправлять метеорит на свой город невозможно.
+  markdown: false
+round_is_not_going:
+  template: Нельзя закончить раунд, потому что сейчас никакого раунда не идёт.
+  markdown: false
+game_ended:
+  template: Игра уже закончена.
+  markdown: false
+game_is_full:
+  template: В данной игре нет свободных планет. Зайдите в другую игру.
+  markdown: false
+cannot_start_round:
+  template: Нельзя начать новый раунд
+  markdown: false
+different_games:
+  template: Нельзя перевести планете из другой игры
+  markdown: false
+wait_till_game_ends:
+  template: Нельзя выполнить эту операцию, поскольку игрок находится в игре. Подождите пока она закончится.
+  markdown: false
