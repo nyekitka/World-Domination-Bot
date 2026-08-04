@@ -5,7 +5,7 @@ import sys
 
 from aiogram import Bot, Dispatcher
 
-from app.middleware import AppMiddleware
+from app.middlewares import DBMiddleware, I18nMiddleware
 from app.handlers import (
     ingame_router, main_page_router, lobby_router
 )
@@ -51,7 +51,7 @@ async def main():
         )
 
     logger.info('Setting up dispatcher')
-    middleware = AppMiddleware(
+    db_middleware = DBMiddleware(
         psql_user_client=UserClient(),
         psql_game_client=GameClient(),
         psql_info_client=InfoClient(),
@@ -63,7 +63,9 @@ async def main():
             redis_client, redis_config.EXPIRE_KEY_SECONDS
         ),
     )
-    dp.update.outer_middleware(middleware)
+    i18n_middleware = I18nMiddleware(default_language='ru')
+    dp.update.outer_middleware(db_middleware)
+    dp.update.outer_middleware(i18n_middleware)
     dp.include_routers(
         main_page_router,
         lobby_router,

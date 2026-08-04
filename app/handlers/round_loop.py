@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from aiogram import Bot
 from aiogram.enums import ParseMode
 from aiogram.types import FSInputFile
@@ -10,7 +12,8 @@ from database.clients.info import InfoClient
 from database.schemas import GameDto, PlanetDto
 from game.config import game_config
 from keyboards import keyboards as kb
-from messager import messager
+from messages import renderer
+from messages.renderer import MessageRenderer
 from storage.clients.actions import ActionsClient
 from storage.clients.messages import MessagesClient
 
@@ -19,14 +22,14 @@ async def middle_handler(
     bot: Bot,
     game: GameDto,
     game_client: GameClient,
-    message: str,
+    message: dict[str, str | None],
     session: AsyncSession,
 ):
     active_players = await game_client.get_all_active_players(session, game.id)
     active_admins = await game_client.get_all_active_admins(session, game.id)
 
     for user in active_admins + active_players:
-        await bot.send_message(user.tg_id, message)
+        await bot.send_message(user.tg_id, **message)
 
 
 async def end_handler(
@@ -37,6 +40,7 @@ async def end_handler(
     info_client: InfoClient,
     messages_client: MessagesClient,
     session: AsyncSession,
+    renderer: MessageRenderer
 ):
     all_planets: list[PlanetDto] = await game_client.get_all_planets_in_game(session, game.id)
     orders = {
@@ -51,8 +55,10 @@ async def end_handler(
         messages_client.delete_all_messages(player.tg_id)
         await bot.send_message(
             player.tg_id,
-            messager.round_end(game.round),
-            parse_mode=ParseMode.MARKDOWN_V2,
+            **renderer.render(
+                'round_end_for_players',
+                game=game,
+            )
         )
 
     await game_client.end_current_round(session, game.id, orders)
@@ -61,7 +67,10 @@ async def end_handler(
     for admin in all_admins:
         await bot.send_message(
             admin.tg_id,
-            messager.admin_round_end(game.round),
+            **renderer.render(
+                'round_end_for_admin',
+                game=game,
+            ),
             reply_markup=kb.round_stats_keyboard(game),
         )
 
@@ -89,16 +98,15 @@ async def end_handler(
                 f'tmp/excel/game_{game.id}_results.xlsx',
                 filename='Результаты игры'
             ),
-            caption=messager.game_results(),
+            caption=renderer.render('game_results')['text'],
         )
 
     for player in all_players:
         await bot.send_message(
             player.tg_id,
-            messager.end_of_the_game(),
-            parse_mode=ParseMode.MARKDOWN_V2,
+            **renderer.render('end_of_the_game'),
         )
-        await bot.send_message(player.tg_id, messager.goodbye())
+        await bot.send_message(player.tg_id, **renderer.render('goodbye'))
 
     await game_client.end_game(session, game.id)
 
@@ -111,6 +119,7 @@ def get_round_notifier(
     info_client: InfoClient,
     messages_client: MessagesClient,
     session: AsyncSession,
+    renderer: MessageRenderer,
 ) -> Notifier:
     return Notifier(
         checkpoints={
@@ -124,8 +133,16 @@ def get_round_notifier(
             'end': end_handler,
         },
         handler_args={
-            'middle_5': (bot, game, game_client, messager.fivemin(), session),
-            'middle_9': (bot, game, game_client, messager.onemin(), session),
+            'middle_5': (
+                bot, game, game_client,
+                renderer.render('half_time_passed', time=timedelta(seconds=game_config.ROUND_LENGTH // 2)),
+                session
+            ),
+            'middle_9': (
+                bot, game, game_client,
+                renderer.render('hurry_up', time=timedelta(seconds=game_config.ROUND_LENGTH // 10)),
+                session
+            ),
             'end': (bot, game, game_client, actions_client, info_client, messages_client, session),
         },
     )

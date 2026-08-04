@@ -3,10 +3,6 @@ from datetime import timedelta
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class RoundInfo(BaseSettings):
-    length: int
-
-
 class GameConfig(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="GAME_")
 
@@ -29,7 +25,7 @@ class GameConfig(BaseSettings):
     TIME_WAITING_AMOUNT_ANSWER: int = 30
 
     @property
-    def timedelta_round_length(self) -> RoundInfo:
+    def timedelta_round_length(self) -> timedelta:
         return timedelta(seconds=self.ROUND_LENGTH)
 
 game_config = GameConfig()
