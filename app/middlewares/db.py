@@ -1,3 +1,5 @@
+import logging
+import traceback
 from typing import Any, Awaitable, Callable
 
 from aiogram import BaseMiddleware
@@ -13,6 +15,8 @@ from storage.clients import (
     ActionsClient,
     MessagesClient,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class DBMiddleware(BaseMiddleware):
@@ -46,6 +50,15 @@ class DBMiddleware(BaseMiddleware):
 
         async with self.session_factory() as session:
             data['session'] = session
-            result = await handler(event, data)
-            await session.commit()
-            return result
+            try:
+                result = await handler(event, data)
+                await session.commit()
+                return result
+            except Exception as e:
+                await session.rollback()
+                logger.info(
+                    'Error occured while handling an event: %s\nTraceback: %s',
+                    e, traceback.format_exc()
+                )
+
+            

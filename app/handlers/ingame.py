@@ -50,8 +50,6 @@ async def start_round(
     )
     if not res:
         return
-
-    await session.commit()
     
     user = await user_client.get_user(session, message.from_user.id)
     active_admins = await game_client.get_all_active_admins(session, user.game_id)
@@ -60,7 +58,7 @@ async def start_round(
     for admin in active_admins:
         await message.bot.send_message(
             admin.tg_id,
-            **renderer.render('start_round_for_admin', game=game),
+            **renderer.render('start_round_for_admins', game=game),
             reply_markup=types.ReplyKeyboardRemove(),
         )
     
@@ -70,7 +68,7 @@ async def start_round(
         await send_all_info(
             bot=message.bot,
             game=game,
-            planets_and_cities=all_planets_and_cities,
+            planets_and_cities=all_planets_and_cities.copy(),
             planet_id=pl_id,
             order_info=dict(),
             user_id=planet.owner_id,

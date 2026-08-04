@@ -279,7 +279,7 @@ async def chosen_lobby(
         await send_all_info(
             bot=call.bot,
             game=game,
-            planets_and_cities=all_planets_and_cities,
+            planets_and_cities=all_planets_and_cities.copy(),
             planet_id=planet.id,
             order_info=order_info,
             user_id=tg_id,

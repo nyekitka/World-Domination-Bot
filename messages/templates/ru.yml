@@ -229,7 +229,7 @@ wait_for_acception:
     Запрос на переговоры отправлен!
     Как только {{to_planet.name}} примет решение, вам придёт сообщение.
   markdown: false
-negotiatior_offline:
+negotiator_offline:
   template: |-
     К сожалению, владелец планеты {{to_planet.name}} не в игре.
     Попробуйте снова или обратитесь к администратору.
