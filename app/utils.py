@@ -1,7 +1,6 @@
-from typing import Any, Awaitable, Callable, ParamSpec
+from typing import Awaitable, Callable, ParamSpec
 
 from aiogram import Bot, types
-from aiogram.enums import ParseMode
 
 from database.schemas import CityDto, GameDto, PlanetDto
 from game.schemas import FailureReason, FAILURE_INTERPRETATIONS, OrderInfo, OrderType
@@ -25,11 +24,15 @@ P = ParamSpec('P')
 async def method_executor_call(
     method: Callable[P, Awaitable[FailureReason]],
     call: types.CallbackQuery,
+    renderer: MessageRenderer,
     *args: P.args,
 ) -> bool:
     result = await method(*args)
     if result != FailureReason.SUCCESS:
-        call.answer(FAILURE_INTERPRETATIONS[result], True)
+        call.answer(
+            renderer.render(FAILURE_INTERPRETATIONS[result])['text'],
+            True
+        )
         return False
     await call.answer()
     return True
@@ -37,11 +40,15 @@ async def method_executor_call(
 async def sync_method_executor_call(
     method: Callable[P, FailureReason],
     call: types.CallbackQuery,
+    renderer: MessageRenderer,
     *args: P.args,
 ) -> bool:
     result = method(*args)
     if result != FailureReason.SUCCESS:
-        call.answer(FAILURE_INTERPRETATIONS[result], True)
+        call.answer(
+            renderer.render(FAILURE_INTERPRETATIONS[result])['text'],
+            True
+        )
         return False
     await call.answer()
     return True
@@ -50,6 +57,7 @@ async def method_executor_msg(
     bot: Bot,
     method: Callable[P, Awaitable[FailureReason]],
     userid: int,
+    renderer: MessageRenderer,
     *args: P.args,
     reply_markup: Markup = None
 ) -> bool:
@@ -57,7 +65,7 @@ async def method_executor_msg(
     if result != FailureReason.SUCCESS:
         await bot.send_message(
             userid,
-            FAILURE_INTERPRETATIONS[result],
+            **renderer.render(FAILURE_INTERPRETATIONS[result]),
             reply_markup=reply_markup
         )
         return False
