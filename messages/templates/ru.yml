@@ -92,7 +92,7 @@ common_planet_info:
     __*{{planet.name | escape_md}}*__
 
     *Доступный бюджет:* _{{planet.balance}}_ 💵
-    *Сред\. ур\. жизни на планете:* _{{planet.development}}%_
+    *Сред\. ур\. жизни на планете:* _{{planet.development | string | escape_md}}%_
 
     {% for city in cities -%}
     {% if city.development == 0 -%}
@@ -102,7 +102,7 @@ common_planet_info:
     {%- else -%}
     *{{ city.name | escape_md }}*:
     {%- endif %}
-    Развитие {{ city.development }}%, Ур\. жизни {{ city.rate_of_life }}%, Доход {{ city.income }} 💵
+    Развитие {{ city.development | string | escape_md }}%, Ур\. жизни {{ city.rate_of_life | string | escape_md }}%, Доход {{ city.income | string | escape_md }} 💵
 
     {% endfor %}
   markdown: true
@@ -135,9 +135,9 @@ other_planet_info:
 
     {% for city in cities -%}
     {% if city.development == 0 -%}
-    *{{ city.name | escape_md }}*  ❌ (Развитие {{ city.development }}%)
+    *{{ city.name | escape_md }}*  ❌ \(Развитие {{ city.development | string | escape_md }}%\)
     {%- else -%}
-    *{{ city.name | escape_md }}* (Развитие {{ city.development }}%)
+    *{{ city.name | escape_md }}* \(Развитие {{ city.development | string | escape_md }}%\)
     {%- endif %}
     {% endfor -%}
   markdown: true

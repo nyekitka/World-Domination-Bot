@@ -1,128 +1,9 @@
 from datetime import timedelta
-from types import SimpleNamespace
 
 import pytest
 
-from database.schemas import AdminDto, CityDto, GameDto, PlanetDto, PlayerDto
+from database.schemas import PlanetDto
 from game.config import game_config
-from messages.renderer import MessageRenderer
-
-
-@pytest.fixture(scope='module')
-def renderer_ru() -> MessageRenderer:
-    return MessageRenderer('ru')
-
-
-@pytest.fixture(scope='module')
-def renderer_en() -> MessageRenderer:
-    return MessageRenderer('en')
-
-
-@pytest.fixture
-def user_ru():
-    return SimpleNamespace(
-        first_name='Иван',
-        full_name='Иван Попов',
-        id=1,
-    )
-
-
-@pytest.fixture
-def user_en():
-    return SimpleNamespace(
-        first_name='Alice',
-        full_name='Alice Smith',
-        id=2,
-    )
-
-
-@pytest.fixture
-def game() -> GameDto:
-    return GameDto(
-        id=1,
-        num_planets=4,
-        round=2,
-        ecorate=67,
-    )
-
-
-@pytest.fixture
-def planet() -> PlanetDto:
-    return PlanetDto(
-        id=1,
-        game_id=1,
-        name='Земля',
-        is_invented=True,
-        meteorites=3,
-        development=45.5,
-    )
-
-
-@pytest.fixture
-def planet_not_invented() -> PlanetDto:
-    return PlanetDto(
-        id=2,
-        game_id=1,
-        name='Марс',
-        is_invented=False,
-        meteorites=0,
-        development=10.0,
-    )
-
-
-@pytest.fixture
-def to_planet() -> PlanetDto:
-    return PlanetDto(
-        id=3,
-        game_id=1,
-        name='Юпитер',
-    )
-
-
-@pytest.fixture
-def from_planet() -> PlanetDto:
-    return PlanetDto(
-        id=4,
-        game_id=1,
-        name='Сатурн',
-    )
-
-
-@pytest.fixture
-def cities() -> list[CityDto]:
-    return [
-        CityDto(
-            id=1,
-            planet_id=1,
-            name='Москва',
-            development=0,
-            rate_of_life=50.0,
-        ),
-        CityDto(
-            id=2,
-            planet_id=1,
-            name='Питер',
-            development=70,
-            is_shielded=True,
-            rate_of_life=80.0,
-        ),
-    ]
-
-
-@pytest.fixture()
-def user_dto() -> PlayerDto:
-    return PlayerDto(
-        tg_id=1,
-        game_id=1,
-    )
-
-
-@pytest.fixture()
-def user_dto_without_game() -> PlayerDto:
-    return PlayerDto(
-        tg_id=1,
-        game_id=None,
-    )
 
 
 
@@ -185,7 +66,10 @@ def test_on_start_for_user_in_game(
     }
 
 
-def test_on_start_for_admin_without_game(renderer_ru, renderer_en, user_ru, user_en):
+def test_on_start_for_admin_without_game(
+    renderer_ru, renderer_en, user_ru, user_en,
+    user_dto_without_game
+):
     assert renderer_ru.render(
         'on_start',
         name=user_ru.first_name,
@@ -605,16 +489,16 @@ def test_other_planet_info(renderer_ru, renderer_en, planet, cities):
     assert renderer_ru.render('other_planet_info', planet=planet, cities=cities) == {
         'text': (
             '__*Земля*__\n\n'
-            '*Москва*  ❌ (Развитие 0%)\n'
-            '*Питер* (Развитие 70%)\n'
+            '*Москва*  ❌ \\(Развитие 0%\\)\n'
+            '*Питер* \\(Развитие 70%\\)\n'
         ),
         'parse_mode': 'MarkdownV2',
     }
     assert renderer_en.render('other_planet_info', planet=planet, cities=cities) == {
         'text': (
             '__*Земля*__\n\n'
-            '*Москва*  ❌ (Development 0%)\n'
-            '*Питер* (Development 70%)\n'
+            '*Москва*  ❌ \\(Development 0%\\)\n'
+            '*Питер* \\(Development 70%\\)\n'
         ),
         'parse_mode': 'MarkdownV2',
     }
@@ -1133,7 +1017,7 @@ def test_request_notification_for_leader(renderer_ru, renderer_en, user_ru, user
         'parse_mode': 'MarkdownV2',
     }
     assert renderer_en.render('request_notification_for_leader', user=user_en) == {
-        'text': 'User [Alice Smith](tg://user?id=2) has sent you a request for administrator rights.',
+        'text': 'User [Alice Smith](tg://user?id=2) has sent you a request for administrator rights\\.',
         'parse_mode': 'MarkdownV2',
     }
 
