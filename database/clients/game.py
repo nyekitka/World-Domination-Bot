@@ -385,8 +385,8 @@ class GameClient(DatabaseClient):
             select(Planet)
             .where(Planet.game_id == game_id)
             .options(
-                selectinload(Planet.cities),
-                joinedload(Planet.game)
+                selectinload(Planet.cities).joinedload(City.planet).joinedload(Planet.game),
+                joinedload(Planet.game),
             )
         )
         planets = planets_result.scalars().all()
