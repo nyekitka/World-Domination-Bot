@@ -178,7 +178,7 @@ async def leave_lobby(
     res = await method_executor_msg(
         message.bot,
         user_client.kick_user,
-        tg_id,
+        tg_id, renderer,
         session, tg_id,
     )
     if not res:
@@ -225,7 +225,7 @@ async def chosen_lobby_admin(
     game: GameDto = await user_client.get_game(session, gamecode)
     res = await method_executor_call(
         user_client.join_user,
-        call,
+        call, renderer,
         session, tgid, game.id
     )
     if not res:
@@ -257,7 +257,7 @@ async def chosen_lobby(
     game: GameDto = await game_client.get_game(session, gamecode)
     res = await method_executor_call(
         user_client.join_user,
-        call,
+        call, renderer,
         session, tg_id, game.id
     )
     if not res:

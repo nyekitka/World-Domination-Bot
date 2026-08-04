@@ -45,6 +45,7 @@ async def start_round(
         message.bot,
         game_client.start_new_round,
         message.from_user.id,
+        renderer,
         session, message.from_user.id
     )
     if not res:
@@ -298,9 +299,14 @@ async def handle_attack_action(
     game_client: GameClient,
     actions_client: ActionsClient,
     session: AsyncSession,
+    renderer: MessageRenderer,
     *args, **kwargs,
 ):
-    result = await sync_method_executor_call(actions_client.attack_city, call, planet.id, action.argument)
+    result = await sync_method_executor_call(
+        actions_client.attack_city,
+        call, renderer,
+        planet.id, action.argument
+    )
     if not result:
         return
 
@@ -324,12 +330,21 @@ async def handle_city_action(
     game_client: GameClient,
     actions_client: ActionsClient,
     session: AsyncSession,
+    renderer: MessageRenderer,
     *args, **kwargs,
 ):
     if action.action_type == ActionType.DEVELOP:
-        result = await sync_method_executor_call(actions_client.develop_city, call, planet.id, action.argument)
+        result = await sync_method_executor_call(
+            actions_client.develop_city,
+            call, renderer,
+            planet.id, action.argument
+        )
     else:
-        result = await sync_method_executor_call(actions_client.shield_city, call, planet.id, action.argument)
+        result = await sync_method_executor_call(
+            actions_client.shield_city,
+            call, renderer,
+            planet.id, action.argument
+        )
     
     if not result:
         return None
@@ -352,11 +367,12 @@ async def handle_create_action(
     action: Action,
     planet: PlanetDto,
     actions_client: ActionsClient,
+    renderer: MessageRenderer,
     *args, **kwargs,    
 ):
     result = await sync_method_executor_call(
         actions_client.create_meteorites,
-        call,
+        call, renderer,
         planet.id, action.argument
     )
     if not result:
@@ -375,11 +391,12 @@ async def handle_eco_action(
     call: types.CallbackQuery,
     planet: PlanetDto,
     actions_client: ActionsClient,
+    renderer: MessageRenderer,
     *args, **kwargs,    
 ):
     result = await sync_method_executor_call(
         actions_client.eco_boost,
-        call, planet.id
+        call, renderer, planet.id
     )
     if not result:
         return None
@@ -401,12 +418,13 @@ async def handle_sanctions_action(
     game_client: GameClient,
     actions_client: ActionsClient,
     session: AsyncSession,
+    renderer: MessageRenderer,
     *args, **kwargs,
 ):
     result = await sync_method_executor_call(
         actions_client.sanction_planet,
-        call, planet.id,
-        action.argument
+        call,renderer,
+        planet.id, action.argument
     )
     if not result:
         return None
@@ -425,11 +443,14 @@ async def handle_invent_action(
     call: types.CallbackQuery,
     planet: PlanetDto,
     actions_client: ActionsClient,
+    renderer: MessageRenderer,
     *args, **kwargs,    
 ):
     result = await sync_method_executor_call(
         actions_client.invent,
-        call, planet.id
+        call,
+        renderer,
+        planet.id
     )
     if not result:
         return None
@@ -499,7 +520,7 @@ async def handle_accept_negotiations_action(
     from_planet = await game_client.get_planet(session, action.argument, False)
     result = await sync_method_executor_call(
         actions_client.make_negotiations,
-        call,
+        call, renderer,
         from_planet.id, planet.id
     )
     if not result:
@@ -581,7 +602,7 @@ async def handle_end_negotiations_action(
     from_planet = await game_client.get_planet(session, action.argument)
     result = await sync_method_executor_call(
         actions_client.end_negotiations,
-        call,
+        call, renderer,
         from_planet,
     )
     if not result:
@@ -689,6 +710,7 @@ async def set_amount_of_money(
         message.bot,
         game_client.transfer,
         message.from_user.id,
+        renderer,
         session, from_planet.id, to_planet.id, amount
     )
     if not res:

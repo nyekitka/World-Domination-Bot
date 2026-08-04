@@ -98,7 +98,11 @@ async def accept_knight(
     )
     id = int(call.data.split()[1])
     user = await call.bot.get_chat(id)
-    res = await method_executor_call(user_client.promote_to_admin, call, session, id)
+    res = await method_executor_call(
+        user_client.promote_to_admin,
+        call, renderer,
+        session, id
+    )
     if res:
         await call.message.answer(**renderer.render('promote_notification_for_leader', user=user))
         await call.bot.send_message(id, **renderer.render('promote_notification_for_user'))
@@ -146,7 +150,8 @@ async def fire_admin(
     was_in_game = db_user.game_id is not None
     res = await method_executor_msg(
         message.bot, user_client.fire_admin,
-        message.from_user.id, session, user.id
+        message.from_user.id, renderer,
+        session, user.id
     )
     if not res:
         return
