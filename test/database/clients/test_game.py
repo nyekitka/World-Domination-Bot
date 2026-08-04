@@ -467,6 +467,9 @@ async def test_get_all_planets_and_cities(
                 city.name == pack_city.name
                 for pack_city in pack_planet.cities
             ])
+            assert city.rate_of_life is not None
+
+
 @pytest.mark.parametrize(
     ('sanction_round', 'expected_result'),
     [
