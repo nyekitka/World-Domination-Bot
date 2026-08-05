@@ -2,7 +2,7 @@ import pytest
 from redis import Redis
 
 from game.config import game_config
-from game.schemas import FailureReason
+from game.schemas import FailureReason, OrderType
 from storage.clients.actions import ActionsClient
 
 
@@ -382,3 +382,13 @@ def test_get_invented(
     actual_result = mock_actions_storage.get_invented(planet_id)
     assert actual_result == expected_result
     mock_actions_storage.client.get.assert_called_once_with(f'invent:{planet_id}')
+
+
+def test_clear_order_info(
+    mock_actions_storage, planet_id,
+):
+    mock_actions_storage.clear_order_info(planet_id)
+
+    for order_type in OrderType:
+        if order_type != OrderType.NEGOTIATE:
+            mock_actions_storage.client.delete.assert_any_call(f'{order_type}:{planet_id}')
