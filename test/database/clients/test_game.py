@@ -498,3 +498,32 @@ async def test_get_sanctioned_planets(
         planet.id for planet in result
     ]
     assert sanctioned_ids == expected_result
+
+@pytest.mark.parametrize(
+    ('money', 'meteorites', 'result'),
+    [
+        (10, 10, FailureReason.SUCCESS),
+        (10, 0, FailureReason.SUCCESS),
+        (-1, 10, FailureReason.NOT_ENOUGH_MONEY),
+        (10, -1, FailureReason.NOT_ENOUGH_METEORITES)
+    ]
+)
+@pytest.mark.asyncio
+async def test_update_planet_balance(
+    game_client, planet_id, session,
+    money, meteorites, result,
+):
+    planet = await session.get(Planet, planet_id)
+    planet.balance = 121
+    planet.meteorites = 3
+    await session.commit()
+
+    real_result = await game_client.update_planet_balance(
+        session, planet_id, money, meteorites
+    )
+    assert result == real_result
+
+    planet = await session.get(Planet, planet_id)
+    if result == FailureReason.SUCCESS:
+        assert planet.balance == money
+        assert planet.meteorites == meteorites
