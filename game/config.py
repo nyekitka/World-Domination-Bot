@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class GameConfig(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="GAME_")
+    model_config = SettingsConfigDict(env_prefix='GAME_')
 
     ROUND_LENGTH: int = 600
     ROUND_NUM: int = 6
@@ -30,5 +30,6 @@ class GameConfig(BaseSettings):
     @property
     def timedelta_round_length(self) -> timedelta:
         return timedelta(seconds=self.ROUND_LENGTH)
+
 
 game_config = GameConfig()

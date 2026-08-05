@@ -1,9 +1,8 @@
 from datetime import timedelta
 
 from inflect import engine
-from pymorphy3 import MorphAnalyzer
 from num2words import num2words
-
+from pymorphy3 import MorphAnalyzer
 
 morph = MorphAnalyzer()
 inflect_engine = engine()
@@ -26,11 +25,11 @@ def time_filter(value: timedelta, locale: str = 'en') -> str:
 
     parts = []
     if hours > 0:
-        parts.append(f"{hours} {hours_word}")
+        parts.append(f'{hours} {hours_word}')
     if mins > 0:
-        parts.append(f"{mins} {mins_word}")
+        parts.append(f'{mins} {mins_word}')
     if secs > 0 or not parts:
-        parts.append(f"{secs} {secs_word}")
+        parts.append(f'{secs} {secs_word}')
     return ' '.join(parts)
 
 
@@ -40,8 +39,10 @@ def escape_md(text: str) -> str:
         text = text.replace(char, f'\\{char}')
     return text
 
+
 def ordinal(n: int, locale: str = 'en') -> str:
     return num2words(n, to='ordinal', lang=locale)
+
 
 def make_agree_with(word: str, number: int, locale: str = 'en') -> str:
     if locale == 'ru':
@@ -50,6 +51,7 @@ def make_agree_with(word: str, number: int, locale: str = 'en') -> str:
         return agreed_word.word
     else:
         return inflect_engine.plural_noun(word, number)
+
 
 def tag_person(id: int, name: str) -> str:
     return f'[{name}](tg://user?id={id})'

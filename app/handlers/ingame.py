@@ -2,7 +2,6 @@ import asyncio
 import logging
 
 from aiogram import Router, types
-from aiogram.enums import ParseMode
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,6 +26,7 @@ from storage.schemas import MessageType
 ingame_router = Router()
 logger = logging.getLogger(__name__)
 
+
 async def start_round(
     message: types.Message,
     user_client: UserClient,
@@ -39,18 +39,19 @@ async def start_round(
 ):
     logger.info(
         'ingame_router.start_round: Admin id=%s is starting a new round',
-        message.from_user.id
+        message.from_user.id,
     )
     res = await method_executor_msg(
         message.bot,
         game_client.start_new_round,
         message.from_user.id,
         renderer,
-        session, message.from_user.id
+        session,
+        message.from_user.id,
     )
     if not res:
         return
-    
+
     user = await user_client.get_user(session, message.from_user.id)
     active_admins = await game_client.get_all_active_admins(session, user.game_id)
     game: GameDto = await game_client.get_game(session, user.game_id)
@@ -61,19 +62,23 @@ async def start_round(
             **renderer.render('start_round_for_admins', game=game),
             reply_markup=types.ReplyKeyboardRemove(),
         )
-    
-    all_planets_and_cities = await game_client.get_all_planets_and_cities(session, game.id)
+
+    all_planets_and_cities = await game_client.get_all_planets_and_cities(
+        session, game.id
+    )
     for pl_id in all_planets_and_cities:
         planet, _ = all_planets_and_cities[pl_id]
         actions_client.set_balance(planet.id, planet.balance, actions_client.MONEY_KEY)
-        actions_client.set_balance(planet.id, planet.meteorites, actions_client.METEORITES_KEY)
+        actions_client.set_balance(
+            planet.id, planet.meteorites, actions_client.METEORITES_KEY
+        )
         sanctioned_planets = await game_client.get_sanctioned_planets(session, pl_id)
         await send_all_info(
             bot=message.bot,
             game=game,
             planets_and_cities=all_planets_and_cities.copy(),
             planet_id=pl_id,
-            order_info=dict(),
+            order_info={},
             user_id=planet.owner_id,
             messages_client=messages_client,
             sanctioned_planets=sanctioned_planets,
@@ -93,10 +98,7 @@ async def start_round(
     await round_notifier.run_loop()
 
 
-@ingame_router.message(
-    ReplyButtonFilter('Начать игру'),
-    AdminFilter()
-)
+@ingame_router.message(ReplyButtonFilter('Начать игру'), AdminFilter())
 async def start_game(
     message: types.Message,
     user_client: UserClient,
@@ -119,10 +121,7 @@ async def start_game(
     )
 
 
-@ingame_router.message(
-    Command('snround'),
-    AdminFilter()
-)
+@ingame_router.message(Command('snround'), AdminFilter())
 async def start_new_round(
     message: types.Message,
     user_client: UserClient,
@@ -158,7 +157,7 @@ async def end_the_game(
 ):
     logger.info(
         'ingame_router.end_the_game: Admin id=%s is ending the game',
-        message.from_user.id
+        message.from_user.id,
     )
     user: UserDto = await user_client.get_user(session, message.from_user.id)
     if user.game_id is None:
@@ -171,13 +170,11 @@ async def end_the_game(
 
     for admin in admins_list:
         await message.bot.send_message(
-            admin.tg_id,
-            **renderer.render('game_interrupted_report')
+            admin.tg_id, **renderer.render('game_interrupted_report')
         )
     for player in players_list:
         await message.bot.send_message(
-            player.tg_id,
-            **renderer.render('game_interrupted_message')
+            player.tg_id, **renderer.render('game_interrupted_message')
         )
     await game_client.end_game(session, game.id)
 
@@ -196,7 +193,8 @@ async def handle_action(
     action = Action.model_validate_json(call.data)
     logger.info(
         'ingame_router.handle_action: User id=%s is performing action %s',
-        call.from_user.id, action.action_type
+        call.from_user.id,
+        action.action_type,
     )
     user = await user_client.get_user(session, call.from_user.id)
     if user.game_id is None:
@@ -204,14 +202,18 @@ async def handle_action(
         await call.bot.delete_message(call.from_user.id, call.message.message_id)
         return
     game: GameDto = await game_client.get_game(session, user.game_id)
-    planet = await game_client.get_player_planet(session, call.from_user.id, user.game_id)
+    planet = await game_client.get_player_planet(
+        session, call.from_user.id, user.game_id
+    )
     if planet is None:
         call.answer(**renderer.render('unexpected_error'))
         await call.bot.delete_message(call.from_user.id, call.message.message_id)
         return
-    
+
     old_balance = actions_client.get_balance(planet.id, actions_client.MONEY_KEY)
-    old_meteorites = actions_client.get_balance(planet.id, actions_client.METEORITES_KEY)
+    old_meteorites = actions_client.get_balance(
+        planet.id, actions_client.METEORITES_KEY
+    )
 
     data = {
         'call': call,
@@ -249,7 +251,7 @@ async def handle_action(
             await handle_refuse_negotiations_action(**data)
         case ActionType.END_NEGOTIATIONS:
             await handle_end_negotiations_action(**data)
-    
+
     new_balance = actions_client.get_balance(planet.id, actions_client.MONEY_KEY)
     meteorites = actions_client.get_balance(planet.id, actions_client.METEORITES_KEY)
 
@@ -271,7 +273,8 @@ async def handle_action(
             message_id=info_message_id,
             reply_markup=kb.city_keyboard(
                 game.round,
-                planet, cities,
+                planet,
+                cities,
                 actions_client.get_shielded_cities(planet.id),
                 actions_client.get_developed_cities(planet.id),
             ),
@@ -284,10 +287,7 @@ async def handle_action(
         )
         chosen_meteorites = actions_client.get_created_meteorites(planet.id)
         await call.bot.edit_message_text(
-            **renderer.render(
-                'meteorites_info',
-                planet=planet
-            ),
+            **renderer.render('meteorites_info', planet=planet),
             chat_id=planet.owner_id,
             message_id=info_message_id,
             reply_markup=kb.meteorites_keyboard(planet, chosen_meteorites),
@@ -303,24 +303,24 @@ async def handle_attack_action(
     actions_client: ActionsClient,
     session: AsyncSession,
     renderer: MessageRenderer,
-    *args, **kwargs,
+    *args,
+    **kwargs,
 ):
     result = await sync_method_executor_call(
-        actions_client.attack_city,
-        call, renderer,
-        planet.id, action.argument
+        actions_client.attack_city, call, renderer, planet.id, action.argument
     )
     if not result:
         return
 
     attacked_cities = actions_client.get_attacked_cities(planet.id)
     other_planet = await game_client.get_planet_by_city_id(session, action.argument)
-    all_cities = await game_client.get_cities_of_planet(session, other_planet.id, with_rates=False)
+    all_cities = await game_client.get_cities_of_planet(
+        session, other_planet.id, with_rates=False
+    )
 
     await call.message.edit_reply_markup(
         reply_markup=kb.other_planets_keyboard(
-            game.round, planet, other_planet,
-            all_cities, attacked_cities
+            game.round, planet, other_planet, all_cities, attacked_cities
         )
     )
 
@@ -334,33 +334,31 @@ async def handle_city_action(
     actions_client: ActionsClient,
     session: AsyncSession,
     renderer: MessageRenderer,
-    *args, **kwargs,
+    *args,
+    **kwargs,
 ):
     if action.action_type == ActionType.DEVELOP:
         result = await sync_method_executor_call(
-            actions_client.develop_city,
-            call, renderer,
-            planet.id, action.argument
+            actions_client.develop_city, call, renderer, planet.id, action.argument
         )
     else:
         result = await sync_method_executor_call(
-            actions_client.shield_city,
-            call, renderer,
-            planet.id, action.argument
+            actions_client.shield_city, call, renderer, planet.id, action.argument
         )
-    
+
     if not result:
-        return None
-    
+        return
+
     shielded_cities = actions_client.get_shielded_cities(planet.id)
     developed_cities = actions_client.get_developed_cities(planet.id)
 
-    all_cities = await game_client.get_cities_of_planet(session, planet.id, with_rates=False)
+    all_cities = await game_client.get_cities_of_planet(
+        session, planet.id, with_rates=False
+    )
 
     await call.message.edit_reply_markup(
         reply_markup=kb.city_keyboard(
-            game.round, planet, all_cities,
-            shielded_cities, developed_cities
+            game.round, planet, all_cities, shielded_cities, developed_cities
         )
     )
 
@@ -371,22 +369,19 @@ async def handle_create_action(
     planet: PlanetDto,
     actions_client: ActionsClient,
     renderer: MessageRenderer,
-    *args, **kwargs,    
+    *args,
+    **kwargs,
 ):
     result = await sync_method_executor_call(
-        actions_client.create_meteorites,
-        call, renderer,
-        planet.id, action.argument
+        actions_client.create_meteorites, call, renderer, planet.id, action.argument
     )
     if not result:
-        return None
+        return
 
     chosen = actions_client.get_created_meteorites(planet.id)
 
     await call.message.edit_reply_markup(
-        reply_markup=kb.meteorites_keyboard(
-            planet, chosen
-        )
+        reply_markup=kb.meteorites_keyboard(planet, chosen)
     )
 
 
@@ -395,21 +390,19 @@ async def handle_eco_action(
     planet: PlanetDto,
     actions_client: ActionsClient,
     renderer: MessageRenderer,
-    *args, **kwargs,    
+    *args,
+    **kwargs,
 ):
     result = await sync_method_executor_call(
-        actions_client.eco_boost,
-        call, renderer, planet.id
+        actions_client.eco_boost, call, renderer, planet.id
     )
     if not result:
-        return None
+        return
 
     is_eco_boosted = actions_client.get_eco_boost(planet.id)
 
     await call.message.edit_reply_markup(
-        reply_markup=kb.eco_keyboard(
-            planet, is_eco_boosted
-        )
+        reply_markup=kb.eco_keyboard(planet, is_eco_boosted)
     )
 
 
@@ -422,23 +415,20 @@ async def handle_sanctions_action(
     actions_client: ActionsClient,
     session: AsyncSession,
     renderer: MessageRenderer,
-    *args, **kwargs,
+    *args,
+    **kwargs,
 ):
     result = await sync_method_executor_call(
-        actions_client.sanction_planet,
-        call,renderer,
-        planet.id, action.argument
+        actions_client.sanction_planet, call, renderer, planet.id, action.argument
     )
     if not result:
-        return None
+        return
 
     sanctioned_planets = actions_client.get_sanctioned_planets(planet.id)
     other_planets = await game_client.get_planets_of_game(session, game.id, False)
 
     await call.message.edit_reply_markup(
-        reply_markup=kb.sanctions_keyboard(
-            planet, other_planets, sanctioned_planets
-        )
+        reply_markup=kb.sanctions_keyboard(planet, other_planets, sanctioned_planets)
     )
 
 
@@ -447,23 +437,19 @@ async def handle_invent_action(
     planet: PlanetDto,
     actions_client: ActionsClient,
     renderer: MessageRenderer,
-    *args, **kwargs,    
+    *args,
+    **kwargs,
 ):
     result = await sync_method_executor_call(
-        actions_client.invent,
-        call,
-        renderer,
-        planet.id
+        actions_client.invent, call, renderer, planet.id
     )
     if not result:
-        return None
+        return
 
     is_invented = actions_client.get_invented(planet.id)
 
     await call.message.edit_reply_markup(
-        reply_markup=kb.invent_meteorites_keyboard(
-            planet, is_invented
-        )
+        reply_markup=kb.invent_meteorites_keyboard(planet, is_invented)
     )
 
 
@@ -475,7 +461,8 @@ async def handle_negotiate_action(
     messages_client: MessagesClient,
     session: AsyncSession,
     renderer: MessageRenderer,
-    *args, **kwargs,
+    *args,
+    **kwargs,
 ):
     await call.answer()
     to_planet = await user_client.get_planet(session, action.argument, False)
@@ -500,11 +487,13 @@ async def handle_negotiate_action(
             'negotiations_offer',
             from_planet=planet,
         ),
-        reply_markup=kb.negotiations_offer_keyboard(to_planet, planet)
+        reply_markup=kb.negotiations_offer_keyboard(to_planet, planet),
     )
     messages_client.set_planet_message_id(
-        to_planet.owner_id, planet.id,
-        MessageType.NEGOTIATIONS_NOTIFICATION, message.message_id
+        to_planet.owner_id,
+        planet.id,
+        MessageType.NEGOTIATIONS_NOTIFICATION,
+        message.message_id,
     )
 
 
@@ -518,34 +507,34 @@ async def handle_accept_negotiations_action(
     messages_client: MessagesClient,
     session: AsyncSession,
     renderer: MessageRenderer,
-    *args, **kwargs,    
+    *args,
+    **kwargs,
 ):
     from_planet = await game_client.get_planet(session, action.argument, False)
     result = await sync_method_executor_call(
-        actions_client.make_negotiations,
-        call, renderer,
-        from_planet.id, planet.id
+        actions_client.make_negotiations, call, renderer, from_planet.id, planet.id
     )
     if not result:
         return
-    
+
     message = await call.message.answer(
         **renderer.render(
             'waiting_for_diplomatist',
             from_planet=from_planet,
         ),
-        reply_markup=kb.end_negotiations_keyboard(planet, from_planet)
+        reply_markup=kb.end_negotiations_keyboard(planet, from_planet),
     )
     messages_client.set_planet_message_id(
-        planet.owner_id, from_planet.id,
-        MessageType.NEGOTIATIONS_END, message.message_id
+        planet.owner_id,
+        from_planet.id,
+        MessageType.NEGOTIATIONS_END,
+        message.message_id,
     )
     await call.message.delete()
     messages_client.delete_planet_message_ids(
-        planet.owner_id, MessageType.NEGOTIATIONS_NOTIFICATION,
-        from_planet.id
+        planet.owner_id, MessageType.NEGOTIATIONS_NOTIFICATION, from_planet.id
     )
-    
+
     active_admins = await game_client.get_all_active_admins(session, game.id)
     for admin in active_admins:
         await call.bot.send_message(
@@ -554,7 +543,7 @@ async def handle_accept_negotiations_action(
                 'negotiations_for_admin',
                 from_planet=from_planet,
                 to_planet=planet,
-            )
+            ),
         )
 
     await call.bot.send_message(
@@ -562,7 +551,7 @@ async def handle_accept_negotiations_action(
         **renderer.render(
             'negotiations_accepted',
             to_planet=planet,
-        )
+        ),
     )
 
 
@@ -574,13 +563,13 @@ async def handle_refuse_negotiations_action(
     messages_client: MessagesClient,
     session: AsyncSession,
     renderer: MessageRenderer,
-    *args, **kwargs,   
+    *args,
+    **kwargs,
 ):
     await call.answer()
     await call.message.delete()
     messages_client.delete_planet_message_ids(
-        planet.owner_id, MessageType.NEGOTIATIONS_NOTIFICATION,
-        action.argument
+        planet.owner_id, MessageType.NEGOTIATIONS_NOTIFICATION, action.argument
     )
 
     from_planet = await game_client.get_planet(session, action.argument, False)
@@ -589,9 +578,8 @@ async def handle_refuse_negotiations_action(
         **renderer.render(
             'negotiations_refused',
             to_planet=planet,
-        )
+        ),
     )
-
 
 
 async def handle_end_negotiations_action(
@@ -604,17 +592,19 @@ async def handle_end_negotiations_action(
     messages_client: MessagesClient,
     session: AsyncSession,
     renderer: MessageRenderer,
-    *args, **kwargs,  
+    *args,
+    **kwargs,
 ):
     from_planet = await game_client.get_planet(session, action.argument)
     result = await sync_method_executor_call(
         actions_client.end_negotiations,
-        call, renderer,
+        call,
+        renderer,
         from_planet,
     )
     if not result:
         return
-    
+
     active_admins = await game_client.get_all_active_admins(session, game.id)
     for admin in active_admins:
         await call.bot.send_message(
@@ -622,9 +612,9 @@ async def handle_end_negotiations_action(
             **renderer.render(
                 'negotiations_ended_for_admin',
                 to_planet=planet,
-            )
+            ),
         )
-    
+
     await call.message.answer(**renderer.render('negotiations_ended'))
     messages_client.delete_planet_message_ids(
         planet.owner_id, MessageType.NEGOTIATIONS_END, from_planet.id
@@ -641,18 +631,15 @@ async def handle_transaction_action(
     game_client: GameClient,
     session: AsyncSession,
     renderer: MessageRenderer,
-    *args, **kwargs,
+    *args,
+    **kwargs,
 ):
     await call.answer()
 
     to_planet = await game_client.get_planet(session, action.argument, False)
 
     await state.set_state(BotStates.transaction_state)
-    transaction_data = {
-        'from_planet': planet,
-        'to_planet': to_planet,
-        'game': game
-    }
+    transaction_data = {'from_planet': planet, 'to_planet': to_planet, 'game': game}
     await state.set_data(transaction_data)
     await call.message.answer(
         **renderer.render(
@@ -666,7 +653,7 @@ async def handle_transaction_action(
     current_data = await state.get_data()
     if current_data != transaction_data:
         return
-    
+
     await state.clear()
     game = await game_client.get_game(session, game.id)
     if game.status == GameStatus.ROUND:
@@ -685,7 +672,7 @@ async def set_amount_of_money(
 ):
     logger.info(
         'ingame_router.set_amount_of_money: User id=%s is setting amount of money for transaction',
-        message.from_user.id
+        message.from_user.id,
     )
     amount = None
     try:
@@ -710,26 +697,41 @@ async def set_amount_of_money(
     if amount > current_balance:
         await message.answer(**renderer.render('not_enough_money_for_transaction'))
         return
-    
-    from_planet_cities = await game_client.get_cities_of_planet(session, from_planet.id, False, False)
-    to_planet_cities = await game_client.get_cities_of_planet(session, to_planet.id, False, False)
+
+    from_planet_cities = await game_client.get_cities_of_planet(
+        session, from_planet.id, False, False
+    )
+    to_planet_cities = await game_client.get_cities_of_planet(
+        session, to_planet.id, False, False
+    )
     res = await method_executor_msg(
         message.bot,
         game_client.transfer,
         message.from_user.id,
         renderer,
-        session, from_planet.id, to_planet.id, amount
+        session,
+        from_planet.id,
+        to_planet.id,
+        amount,
     )
     if not res:
         return
 
-    actions_client.set_balance(from_planet.id, actions_client.MONEY_KEY, current_balance - amount)
-    actions_client.set_balance(to_planet.id, actions_client.MONEY_KEY, current_balance + amount)
+    actions_client.set_balance(
+        from_planet.id, actions_client.MONEY_KEY, current_balance - amount
+    )
+    actions_client.set_balance(
+        to_planet.id, actions_client.MONEY_KEY, current_balance + amount
+    )
     from_planet.balance -= amount
     to_planet.balance += amount
 
-    from_city_id = messages_client.get_info_message_id(from_planet.owner_id, MessageType.CITY)
-    to_city_id = messages_client.get_info_message_id(to_planet.owner_id, MessageType.CITY)
+    from_city_id = messages_client.get_info_message_id(
+        from_planet.owner_id, MessageType.CITY
+    )
+    to_city_id = messages_client.get_info_message_id(
+        to_planet.owner_id, MessageType.CITY
+    )
     await message.bot.edit_message_text(
         **renderer.render(
             'common_planet_info',
@@ -762,13 +764,15 @@ async def set_amount_of_money(
             actions_client.get_developed_cities(to_planet.id),
         ),
     )
-    await message.answer(**renderer.render('successful_transaction', to_planet=to_planet))
+    await message.answer(
+        **renderer.render('successful_transaction', to_planet=to_planet)
+    )
     await message.bot.send_message(
         to_planet.owner_id,
         **renderer.render(
             'transaction_notification',
             from_planet=from_planet,
             amount=amount,
-        )
+        ),
     )
     await state.clear()

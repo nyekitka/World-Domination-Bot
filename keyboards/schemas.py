@@ -22,7 +22,7 @@ class Action(BaseModel):
     action_type: ActionType
     planet_id: int
     argument: int | None = None
-    
+
 
 def validate_action_json(json: str) -> bool:
     try:

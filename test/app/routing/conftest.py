@@ -1,14 +1,15 @@
 import datetime
+from collections.abc import Callable
 from unittest.mock import AsyncMock
+from zoneinfo import ZoneInfo
 
-from aiogram import Bot, Dispatcher, Router
-from aiogram.types import CallbackQuery, Chat, Message, Update
 import pytest
+from aiogram import Dispatcher, Router
+from aiogram.types import CallbackQuery, Message, Update
 
-from app.handlers.main_page import main_page_router
 from app.handlers.ingame import ingame_router
 from app.handlers.lobby import lobby_router
-
+from app.handlers.main_page import main_page_router
 
 
 @pytest.fixture(scope='session')
@@ -27,8 +28,8 @@ def call_update(message, user, request):
             from_user=user,
             chat_instance='chat',
             message=message,
-            data=request.param
-        )
+            data=request.param,
+        ),
     )
 
 
@@ -38,10 +39,12 @@ def message_update(chat, user, request):
         update_id=1,
         message=Message(
             message_id=1,
-            date=datetime.datetime.now(),
+            date=datetime.datetime.now(
+                tz=ZoneInfo('Europe/Moscow')
+            ),
             chat=chat,
             from_user=user,
-            text=request.param
+            text=request.param,
         ),
     )
 
@@ -49,9 +52,7 @@ def message_update(chat, user, request):
 @pytest.fixture()
 def patch_handler(monkeypatch):
     def _patch(
-        router: Router,
-        original_callback: function,
-        event_type: str = 'message'
+        router: Router, original_callback: Callable, event_type: str = 'message'
     ) -> AsyncMock:
         handler_mock = AsyncMock()
         observer = getattr(router, event_type)

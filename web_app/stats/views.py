@@ -4,6 +4,7 @@ from django.template import loader
 
 from database.clients import GameClient
 
+
 async def render_stats(request: HttpRequest, game_id: int, round: int) -> HttpResponse:
     session = request.db_session
     game_client = GameClient()
@@ -21,6 +22,8 @@ async def render_stats(request: HttpRequest, game_id: int, round: int) -> HttpRe
     for planet in info['planets_data']:
         max_development = max(max_development, planet['development'])
     for planet in info['planets_data']:
-        planet['bar_height'] = planet['development'] / max_development * 100 if max_development != 0 else 5
-    
+        planet['bar_height'] = (
+            planet['development'] / max_development * 100 if max_development != 0 else 5
+        )
+
     return HttpResponse(template.render(info, request))

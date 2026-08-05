@@ -1,5 +1,5 @@
+from collections.abc import Awaitable, Callable
 from inspect import iscoroutinefunction
-from typing import Awaitable, Callable
 
 from asgiref.sync import markcoroutinefunction
 from django.http import HttpRequest, HttpResponse

@@ -1,6 +1,7 @@
 import logging
 import traceback
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
@@ -35,12 +36,12 @@ class DBMiddleware(BaseMiddleware):
         self.session_factory = session_factory
         self.actions_client = redis_actions_client
         self.messages_client = redis_messages_client
-    
+
     async def __call__(
         self,
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
         event: TelegramObject,
-        data: dict[str, Any]
+        data: dict[str, Any],
     ) -> Any:
         data['user_client'] = self.user_client
         data['game_client'] = self.game_client
@@ -54,11 +55,10 @@ class DBMiddleware(BaseMiddleware):
                 result = await handler(event, data)
                 await session.commit()
                 return result
-            except Exception as e:
+            except Exception as e: # noqa: BLE001
                 await session.rollback()
                 logger.info(
                     'Error occured while handling an event: %s\nTraceback: %s',
-                    e, traceback.format_exc()
+                    e,
+                    traceback.format_exc(),
                 )
-
-            

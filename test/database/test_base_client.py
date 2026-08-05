@@ -43,7 +43,10 @@ async def test_get_planet(database_client, session, planet_id):
     assert planet.balance == game_config.DEFAULT_BALANCE
     assert not planet.meteorites
     assert not planet.is_invented
-    assert planet.development == game_config.DEFAULT_DEVELOPMENT * game_config.DEFAULT_GAME_ECO_RATE / 100
+    assert (
+        planet.development
+        == game_config.DEFAULT_DEVELOPMENT * game_config.DEFAULT_GAME_ECO_RATE / 100
+    )
 
     same_planet = await database_client.get_planet(session, planet_id, False)
     assert same_planet.development is None
@@ -59,15 +62,16 @@ async def test_get_city(database_client, session, city_id):
 
 
 @pytest.mark.asyncio
-async def test_get_cities_of_planet(
-    database_client, session, planet_id, pack
-):
+async def test_get_cities_of_planet(database_client, session, planet_id, pack):
     cities = await database_client.get_cities_of_planet(session, planet_id)
 
     assert cities
 
     for city in cities:
-        assert city.rate_of_life == game_config.DEFAULT_GAME_ECO_RATE / 100 * game_config.DEFAULT_DEVELOPMENT
+        assert (
+            city.rate_of_life
+            == game_config.DEFAULT_GAME_ECO_RATE / 100 * game_config.DEFAULT_DEVELOPMENT
+        )
 
     city_names = [city.name for city in cities]
     planet = pack.planets[0]

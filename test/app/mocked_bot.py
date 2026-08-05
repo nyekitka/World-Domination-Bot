@@ -50,8 +50,8 @@ class MockedSession(BaseSession):
         timeout: int = 30,
         chunk_size: int = 65536,
         raise_for_status: bool = True,
-    ) -> AsyncGenerator[bytes, None]:  # pragma: no cover
-        yield b""
+    ) -> AsyncGenerator[bytes]:  # pragma: no cover
+        yield b''
 
 
 class MockedBot(Bot):
@@ -59,14 +59,16 @@ class MockedBot(Bot):
         session: MockedSession
 
     def __init__(self, **kwargs):
-        super().__init__(kwargs.pop("token", "42:TEST"), session=MockedSession(), **kwargs)
+        super().__init__(
+            kwargs.pop('token', '42:TEST'), session=MockedSession(), **kwargs
+        )
         self._me = User(
             id=self.id,
             is_bot=True,
-            first_name="FirstName",
-            last_name="LastName",
-            username="tbot",
-            language_code="uk-UA",
+            first_name='FirstName',
+            last_name='LastName',
+            username='tbot',
+            language_code='uk-UA',
         )
 
     def add_result_for(

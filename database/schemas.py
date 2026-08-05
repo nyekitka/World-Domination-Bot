@@ -1,5 +1,4 @@
 from enum import StrEnum, auto
-from typing import Any, Union
 
 from pydantic import BaseModel, ConfigDict
 
@@ -11,7 +10,6 @@ class GameStatus(StrEnum):
     MEETING = auto()
     ROUND = auto()
     ENDED = auto()
-
 
 
 class BaseDto(BaseModel):
@@ -54,7 +52,7 @@ class CityDto(BaseDto):
     is_shielded: bool = False
     development: int = 60
     rate_of_life: float | None = None
-    
+
     @property
     def income(self) -> float | None:
         if self.rate_of_life is None:
@@ -80,7 +78,7 @@ class NegotiationDto(BaseDto):
     planet_to: int
 
 
-UserDto = Union[PlayerDto, AdminDto]
+UserDto = PlayerDto | AdminDto
 
 
 class RoundInfoDto(BaseDto):
