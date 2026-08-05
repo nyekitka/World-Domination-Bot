@@ -100,7 +100,6 @@ class UserClient(DatabaseClient):
         )
         if planet.all():
             player.game_id = game_id
-            await s.commit()
             return FailureReason.SUCCESS
 
         free_planets = await s.execute(
