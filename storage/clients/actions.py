@@ -1,3 +1,5 @@
+import logging
+
 from redis import Redis
 
 from game.schemas import FailureReason, OrderInfo, OrderType
@@ -149,7 +151,7 @@ class ActionsClient(BaseClient):
         )
     
     def get_invented(self, planet_id: int) -> bool:
-        return self.get(OrderType.INVENT, planet_id) == '1'
+        return self.get(OrderType.INVENT, planet_id) == b'1'
     
     def eco_boost(self, planet_id: int) -> FailureReason:
         return self._edit_planet_unary_relation(
@@ -160,7 +162,7 @@ class ActionsClient(BaseClient):
         )
     
     def get_eco_boost(self, planet_id: int) -> bool:
-        return self.get(OrderType.ECO, planet_id) == '1'
+        return self.get(OrderType.ECO, planet_id) == b'1'
 
     def make_negotiations(self, planet_from: int, planet_to: int) -> FailureReason:
         if self.exists(OrderType.NEGOTIATE, planet_from):
@@ -173,8 +175,9 @@ class ActionsClient(BaseClient):
         self.set(planet_to, OrderType.NEGOTIATE, planet_from)
         return FailureReason.SUCCESS
     
-    def end_negotiations(self, planet_from: int) -> None:
+    def end_negotiations(self, planet_from: int) -> FailureReason:
         self.delete(OrderType.NEGOTIATE, planet_from)
+        return FailureReason.SUCCESS
     
     def get_balance(self, planet_id: int, balance_key: str) -> int:
         balance = self.get(balance_key, planet_id)
