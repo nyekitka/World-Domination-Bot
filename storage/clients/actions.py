@@ -205,3 +205,8 @@ class ActionsClient(BaseClient):
             OrderType.ECO: self.get_eco_boost(planet_id),
             OrderType.ATTACK: self.get_attacked_cities(planet_id)
         }
+
+    def clear_order_info(self, planet_id: int) -> None:
+        for order_type in OrderType:
+            if order_type != OrderType.NEGOTIATE:
+                self.delete(order_type, planet_id)
