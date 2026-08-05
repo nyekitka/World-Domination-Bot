@@ -2,7 +2,7 @@ from collections import Counter
 import logging
 
 from async_lru import alru_cache
-from sqlalchemy import insert, not_, select, update
+from sqlalchemy import func, insert, not_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -202,17 +202,34 @@ class GameClient(DatabaseClient):
             await s.execute(stmt_for_once_shielded)
 
 
-    async def eco_boost(
+    async def eco_update(
         self, s: AsyncSession,
         game_id: int,
-        times: int = 1
+        orders: dict[int, OrderInfo],
     ) -> None:
-        if times == 0:
+        invent_count = 0
+        buy_count = 0
+        attack_count = 0
+        eco_boost_count = 0
+        for planet_id in orders:
+            invent_count += int(orders[planet_id].get(OrderType.INVENT, 0))
+            eco_boost_count += int(orders[planet_id].get(OrderType.ECO, 0))
+            buy_count += orders[planet_id].get(OrderType.CREATE, 0)
+            attack_count += len(orders[planet_id].get(OrderType.ATTACK, []))
+        delta = (
+            game_config.INVENTION_ECO_IMPACT * invent_count
+            + game_config.CREATION_ECO_IMPACT * buy_count
+            + game_config.ATTACK_ECO_IMPACT * attack_count
+            + game_config.ECO_BOOST_RATE * eco_boost_count
+        )
+        if delta == 0:
             return
         stmt = (
             update(Game)
             .where(Game.id == game_id)
-            .values({Game.ecorate: Game.ecorate + game_config.ECO_BOOST_RATE * times})
+            .values({
+                Game.ecorate: func.greatest(func.least(100, Game.ecorate + delta), 0)
+            })
         )
         await s.execute(stmt)
 
@@ -293,11 +310,9 @@ class GameClient(DatabaseClient):
             for action in OrderType
             if action not in [OrderType.ECO, OrderType.CREATE]
         }
-        num_eco_boosts = 0
 
         for planet_id in orders:
             await self.create_meteorites(s, planet_id, orders[planet_id].get(OrderType.CREATE, 0))
-            num_eco_boosts += int(orders[planet_id].get(OrderType.ECO, 0))
             orders_by_action[OrderType.SANCTIONS].extend([
                 SanctionDto(
                     planet_from=planet_id,
@@ -327,7 +342,7 @@ class GameClient(DatabaseClient):
                 case OrderType.SANCTIONS:
                     await self.send_sanctions(s, objs)
 
-        await self.eco_boost(s, game_id, num_eco_boosts)
+        await self.eco_update(s, game.id, orders)
 
         await s.execute(
             (
