@@ -358,7 +358,7 @@ def test_get_created_meteorites(
 
 @pytest.mark.parametrize(
     ('inmemory_eco', 'expected_result'),
-    [(None, False), ('0', False), ('1', True)]
+    [(None, False), (b'0', False), (b'1', True)]
 )
 def test_get_eco_boost(
     mock_actions_storage, planet_id, inmemory_eco, expected_result
@@ -372,7 +372,7 @@ def test_get_eco_boost(
 
 @pytest.mark.parametrize(
     ('inmemory_invent', 'expected_result'),
-    [(None, False), ('0', False), ('1', True)]
+    [(None, False), (b'0', False), (b'1', True)]
 )
 def test_get_invented(
     mock_actions_storage, planet_id, inmemory_invent, expected_result
