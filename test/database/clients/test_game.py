@@ -200,18 +200,55 @@ async def test_attack_cities(
 
 
 @pytest.mark.parametrize(
-    ["times", "result"],
+    ['orders_info', "initial_eco_rate", "expected_eco_rate"],
     [
-        (1, game_config.DEFAULT_GAME_ECO_RATE + game_config.ECO_BOOST_RATE),
-        (2, game_config.DEFAULT_GAME_ECO_RATE + 2 * game_config.ECO_BOOST_RATE),
+        ({
+            1: {
+                OrderType.DEVELOP: [1],
+                OrderType.INVENT: True,
+            },
+            2: {
+                OrderType.ECO: True,
+                OrderType.ATTACK: [1, 2, 3],
+                OrderType.CREATE: 2,
+            }
+        }, 80, 88),
+        ({
+            1: {
+                OrderType.ECO: True
+            }
+        }, 90, 100),
+        ({
+            1: {
+                OrderType.ATTACK: [1, 2]
+            },
+            2: {
+                OrderType.CREATE: 3
+            }
+        }, 8, 0),
+        ({
+            1: {
+                OrderType.ATTACK: [1, 2]
+            },
+            2: {
+                OrderType.CREATE: 3
+            }
+        }, 11, 1)
     ],
 )
 @pytest.mark.asyncio
-async def test_eco_boost(game_client, session, game_id, times, result):
-    await game_client.eco_boost(session, game_id, times)
+async def test_eco_update(
+    game_client, session, game_id,
+    orders_info, initial_eco_rate, expected_eco_rate,
+):
+    game = await session.get(Game, game_id)
+    game.ecorate = initial_eco_rate
+    await session.commit()
+
+    await game_client.eco_update(session, game_id, orders_info)
 
     game = await session.get(Game, game_id)
-    assert game.ecorate == result
+    assert game.ecorate == expected_eco_rate
 
 
 @pytest.mark.asyncio
@@ -266,7 +303,6 @@ async def test_end_current_round(
         planet_id: {
             OrderType.SHIELD: [city_id],
             OrderType.DEVELOP: [city_id],
-            OrderType.CREATE: 1,
             OrderType.SANCTIONS: [planet_id_2],
             OrderType.INVENT: True,
             OrderType.ECO: True,
@@ -274,7 +310,6 @@ async def test_end_current_round(
         planet_id_2: {
             OrderType.ATTACK: [city_id],
             OrderType.CREATE: 2,
-            OrderType.INVENT: True,
             OrderType.ECO: True
         }
     }
@@ -305,24 +340,24 @@ async def test_end_current_round(
     mock_send_sanctions = mocker.patch.object(
         game_client, "send_sanctions", return_value=mock_future
     )
-    mock_eco_boost = mocker.patch.object(
-        game_client, "eco_boost", return_value=mock_future
+    mock_eco_update = mocker.patch.object(
+        game_client, "eco_update", return_value=mock_future
     )
 
     await game_client.end_current_round(session, game_id, orders_info)
     await session.commit()
 
-    mock_create_meteorites.assert_any_call(session, planet_id, 1)
+
     mock_create_meteorites.assert_any_call(session, planet_id_2, 2)
     mock_develop_cities.assert_any_call(session, city_id)
     mock_attack_cities.assert_any_call(session, city_id)
     mock_build_shield_for_cities.assert_any_call(session, city_id)
-    mock_invent_for_planets.assert_any_call(session, planet_id, planet_id_2)
+    mock_invent_for_planets.assert_any_call(session, planet_id)
     mock_send_sanctions.assert_any_call(
         session,
         [SanctionDto(planet_from=planet_id, planet_to=planet_id_2, num_round=2)]
     )
-    mock_eco_boost.assert_any_call(session, game_id, 2)
+    mock_eco_update.assert_called_once_with(session, game_id, orders_info)
 
     game = await session.get(Game, game_id)
     assert game.status == GameStatus.MEETING

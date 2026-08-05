@@ -9,11 +9,14 @@ class GameConfig(BaseSettings):
     ROUND_LENGTH: int = 600
     ROUND_NUM: int = 6
     INVENTION_COST: int = 500
+    INVENTION_ECO_IMPACT: int = -2
     CREATE_COST: int = 150
+    CREATION_ECO_IMPACT: int = -2
     DEVELOPMENT_BOOST: int = 20
     DEVELOPMENT_COST: int = 150
     SHIELD_COST: int = 300
     ATTACK_COST: int = 1
+    ATTACK_ECO_IMPACT: int = -2
     ECO_COST: int = 1
     SANCTIONS_COST: int = 0
     DEFAULT_GAME_ECO_RATE: int = 95
