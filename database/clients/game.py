@@ -7,8 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from database.base_client import DatabaseClient
-from database.models import Admin, City, Game, Order, Planet, Player, RoundInfo, Sanction
-from database.schemas import AdminDto, CityData, CityDto, GameData, GameDto, GameStatus, OrderDto, PlanetData, PlanetDto, PlayerDto, RoundInfoDto, SanctionDto
+from database.models import Admin, City, Game, Planet, Player, RoundInfo, Sanction
+from database.schemas import (
+    AdminDto, CityData, CityDto,
+    GameData, GameDto, GameStatus,
+    PlanetData, PlanetDto, PlayerDto,
+    RoundInfoDto, SanctionDto,
+)
 from game.config import game_config
 from game.schemas import FailureReason, OrderInfo, OrderType
 from presets.pack import Pack
@@ -247,28 +252,25 @@ class GameClient(DatabaseClient):
         return FailureReason.SUCCESS
 
 
-    async def spend(
+    async def update_planet_balance(
         self, s: AsyncSession,
         planet_id: int,
         money: int,
         meteorites: int,
     ) -> FailureReason:
-        if money == 0 and meteorites == 0:
-            return
+        if money < 0:
+            return FailureReason.NOT_ENOUGH_MONEY
+
+        if meteorites < 0:
+            return FailureReason.NOT_ENOUGH_METEORITES
         
         planet = await s.get(Planet, planet_id)
         if planet is None:
             return FailureReason.OBJECT_NOT_FOUND
         
-        if planet.balance < money:
-            return FailureReason.NOT_ENOUGH_MONEY
-        
-        if planet.meteorites < meteorites:
-            return FailureReason.NOT_ENOUGH_METEORITES
-        
-        planet.meteorites -= meteorites
-        planet.balance -= money
-        await s.commit()
+        planet.meteorites = meteorites
+        planet.balance = money
+        return FailureReason.SUCCESS
     
 
     async def end_current_round(
