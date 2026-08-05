@@ -276,6 +276,7 @@ async def chosen_lobby(
     elif game.status == GameStatus.ROUND:
         all_planets_and_cities = await game_client.get_all_planets_and_cities(session, game.id)
         order_info = actions_client.get_order_info(planet.id)
+        sanctioned_planets = await game_client.get_sanctioned_planets(session, planet.id)
         await send_all_info(
             bot=call.bot,
             game=game,
@@ -284,6 +285,7 @@ async def chosen_lobby(
             order_info=order_info,
             user_id=tg_id,
             messages_client=messages_client,
+            sanctioned_planets=sanctioned_planets,
         )
     await state.clear()
 
