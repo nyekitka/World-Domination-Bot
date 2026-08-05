@@ -22,7 +22,7 @@ from storage.clients import (
 from storage.config import redis_config
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     stream=sys.stdout
 )
