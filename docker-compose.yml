@@ -48,7 +48,7 @@ services:
       redis:
         condition: service_healthy
       web_app:
-        condition: service_started
+        condition: service_healthy
     env_file:
       - .env
     environment:
@@ -77,6 +77,9 @@ services:
     build:
       dockerfile: web_app/Dockerfile
       context: .
+    volumes:
+      - ./web_app:/web_app/web_app
+      - ./database:/web_app/database
     depends_on:
       db:
         condition: service_healthy
@@ -89,7 +92,13 @@ services:
       - DJANGO_PORT=${DJANGO_PORT}
     ports:
       - "${DJANGO_PORT}:${DJANGO_PORT}"
-    command: ["uvicorn", "app.asgi:application", "--host", "${DJANGO_HOST}", "--port", "${DJANGO_PORT}"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:${DJANGO_PORT}/health/')"]
+      interval: 2m
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    command: ["uvicorn", "app.asgi:application", "--host", "${DJANGO_HOST}", "--port", "${DJANGO_PORT}", "--reload"]
   
   redis:
     image: redis:latest
