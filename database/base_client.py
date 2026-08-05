@@ -1,12 +1,10 @@
-import functools
 import logging
-from typing import Awaitable, Callable, Concatenate, ParamSpec, TypeVar, Self
+from typing import ParamSpec, TypeVar, Self
 
 from async_lru import alru_cache
 from pydantic import TypeAdapter
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
-from sqlalchemy.ext.asyncio.engine import AsyncEngine
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from database.config import database_config
@@ -14,7 +12,6 @@ from database.models import (
     City,
     Game,
     Planet,
-    ModelBase,
     Sanction,
 )
 from database.schemas import (

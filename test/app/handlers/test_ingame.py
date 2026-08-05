@@ -4,25 +4,13 @@ from unittest.mock import AsyncMock
 from aiogram.methods import EditMessageText, SendMessage
 from aiogram.types import ReplyKeyboardRemove
 import pytest
-from pytest_mock import MockFixture
 
 from app.filters.state import BotStates
 from app.handlers.ingame import (
     end_the_game,
-    handle_accept_negotiations_action,
     handle_action,
-    handle_eco_action,
-    handle_end_negotiations_action,
-    handle_invent_action,
-    handle_negotiate_action,
-    handle_refuse_negotiations_action,
-    handle_sanctions_action,
-    handle_transaction_action,
     set_amount_of_money,
     start_round,
-    handle_attack_action,
-    handle_city_action,
-    handle_create_action,
 )
 from database.schemas import AdminDto, GameDto, GameStatus, PlanetDto, PlayerDto
 from game.schemas import FailureReason
@@ -301,7 +289,7 @@ async def test_handle_action_messages(
     )
     mocker.patch.object(game_client, 'get_cities_of_planet', return_value=[])
     mocker.patch.object(game_client, 'spend')
-    mocker.patch(f'app.handlers.ingame.handle_eco_action')
+    mocker.patch('app.handlers.ingame.handle_eco_action')
     mocker.patch.object(actions_client, 'get_balance', side_effect=side_effect)
     mocker.patch.object(actions_client, 'get_shielded_cities', return_value=[])
     mocker.patch.object(actions_client, 'get_developed_cities', return_value=[])

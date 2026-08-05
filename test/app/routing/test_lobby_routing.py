@@ -1,5 +1,4 @@
 import pytest
-from pytest_lazy_fixtures import lf
 
 from app.filters.state import BotStates
 from app.handlers.lobby import (

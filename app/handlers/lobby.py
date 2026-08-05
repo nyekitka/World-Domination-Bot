@@ -13,7 +13,7 @@ from app.filters.state import BotStates
 from app.utils import method_executor_call, method_executor_msg, send_all_info
 from database.clients.game import GameClient
 from database.clients.user import UserClient
-from database.schemas import AdminDto, GameDto, GameStatus, PlanetDto, PlayerDto
+from database.schemas import AdminDto, GameDto, GameStatus, PlanetDto
 from keyboards import keyboards as kb
 from messages.renderer import MessageRenderer
 from presets.pack import packs

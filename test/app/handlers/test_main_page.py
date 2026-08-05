@@ -1,6 +1,3 @@
-import asyncio
-from unittest.mock import AsyncMock, ANY
-
 from aiogram import types
 from aiogram.filters import CommandStart, CommandObject
 from aiogram.methods import SendMessage, GetChat

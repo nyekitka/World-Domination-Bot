@@ -1,11 +1,8 @@
-import json
-
 from aiogram.types import (
     ReplyKeyboardMarkup,
     KeyboardButton,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
-    WebAppInfo,
 )
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
@@ -13,7 +10,6 @@ from database.schemas import CityDto, GameDto, PlanetDto
 from game.config import game_config
 from keyboards.schemas import Action, ActionType
 from presets.pack import packs
-from web_app.app.settings import django_settings
 
 
 # Клавиатура админа в начале

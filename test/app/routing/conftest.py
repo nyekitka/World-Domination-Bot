@@ -1,8 +1,8 @@
 import datetime
 from unittest.mock import AsyncMock
 
-from aiogram import Bot, Dispatcher, Router
-from aiogram.types import CallbackQuery, Chat, Message, Update
+from aiogram import Dispatcher, Router
+from aiogram.types import CallbackQuery, Message, Update
 import pytest
 
 from app.handlers.main_page import main_page_router

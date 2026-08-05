@@ -1,14 +1,10 @@
 import logging
 
-from async_lru import alru_cache
-from pydantic import TypeAdapter
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.base_client import DatabaseClient
-from database.config import database_config
-from database.models import City, Game, Order, Planet
-from database.schemas import CityDto, PlanetDto
+from database.models import Game, Order, Planet
 from game.config import game_config
 from game.schemas import OrderInfo, OrderType
 

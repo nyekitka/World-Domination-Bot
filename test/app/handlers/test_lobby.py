@@ -9,8 +9,6 @@ from aiogram.types import (
     ReplyKeyboardMarkup,
 )
 import pytest
-from pytest_lazy_fixtures import lf
-from pytest_mock import mocker
 
 from app.handlers.lobby import (
     chosen_lobby,

@@ -4,7 +4,6 @@ from typing import Any, Awaitable, Callable, ParamSpec
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.date import DateTrigger
 
-from game.config import game_config
 
 P = ParamSpec('P')
 

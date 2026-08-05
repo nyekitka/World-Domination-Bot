@@ -1,7 +1,6 @@
 import logging
 
 from aiogram import Router, types
-from aiogram.enums import ParseMode
 from aiogram.filters import Command, CommandStart, CommandObject
 from sqlalchemy.ext.asyncio import AsyncSession
 

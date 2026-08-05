@@ -1,5 +1,4 @@
 import json
-import psycopg
 import pymorphy3
 from num2words import num2words
 from database.schemas import CityDto, PlanetDto

@@ -1,7 +1,6 @@
 from datetime import timedelta
 
 from aiogram import Bot
-from aiogram.enums import ParseMode
 from aiogram.types import FSInputFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,7 +11,6 @@ from database.clients.info import InfoClient
 from database.schemas import GameDto, PlanetDto
 from game.config import game_config
 from keyboards import keyboards as kb
-from messages import renderer
 from messages.renderer import MessageRenderer
 from storage.clients.actions import ActionsClient
 from storage.clients.messages import MessagesClient

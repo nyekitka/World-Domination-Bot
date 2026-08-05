@@ -8,8 +8,6 @@ from database.models import (
     Admin,
     City,
     Game,
-    Negotiation,
-    Order,
     Planet,
     Player,
     RoundInfo,
@@ -19,14 +17,12 @@ from database.schemas import (
     CityData,
     GameData,
     GameStatus,
-    OrderDto,
     PlanetData,
     RoundInfoDto,
     SanctionDto,
 )
 from game.config import game_config
 from game.schemas import FailureReason, OrderType
-from game.schemas import OrderInfo
 
 
 @pytest.mark.asyncio
