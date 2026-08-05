@@ -127,7 +127,7 @@ meteorites_info:
 eco_info:
   template: |-
     *Anomaly*
-    Anomaly level 💥: _{{game.ecorate}} %_
+    Anomaly level 💥: _{{100 - game.ecorate}} %_
   markdown: true
 other_planet_info:
   template: |-
