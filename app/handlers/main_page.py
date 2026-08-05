@@ -159,4 +159,4 @@ async def fire_admin(
     await message.bot.send_message(user.id, **renderer.render('fire_admin_notification_for_user'))
     if was_in_game:
         await message.bot.send_message(user.id, **renderer.render('kick_due_to_not_admin'))
-    await message.answer(**renderer.render('fire_admin_notification_for_admin', user=user))
+    await message.answer(**renderer.render('fire_admin_notification_for_leader', user=user))

@@ -12,7 +12,8 @@ class MessageType(StrEnum):
     METEORITES = auto()
     SANCTIONS = auto()
     ECO = auto()
-    NEGOTIATIONS = auto()
+    NEGOTIATIONS_NOTIFICATION = auto()
+    NEGOTIATIONS_END = auto()
     ATTACK = auto()
 
 
@@ -24,6 +25,7 @@ INFO_MESSAGE_TYPES = (
 )
 
 PLANET_MESSAGE_TYPES = (
-    MessageType.NEGOTIATIONS,
-    MessageType.ATTACK
+    MessageType.NEGOTIATIONS_END,
+    MessageType.NEGOTIATIONS_NOTIFICATION,
+    MessageType.ATTACK,
 )

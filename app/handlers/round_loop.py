@@ -48,6 +48,18 @@ async def end_handler(
         for planet in all_planets
     }
 
+    for planet in all_planets:
+        current_money = actions_client.get_balance(
+            planet.id, actions_client.MONEY_KEY
+        )
+        current_meteorites = actions_client.get_balance(
+            planet.id, actions_client.METEORITES_KEY
+        )
+        await game_client.update_planet_balance(
+            session, planet.id,
+            current_money, current_meteorites
+        )
+
     all_players = await game_client.get_all_active_players(session, game.id)
     for player in all_players:
         messages = messages_client.find_all_messages(player.tg_id)
@@ -62,6 +74,7 @@ async def end_handler(
         )
 
     await game_client.end_current_round(session, game.id, orders)
+    await game_client.save_round_info(session, game.id)
 
     all_admins = await game_client.get_all_active_admins(session, game.id)
     for admin in all_admins:
@@ -74,7 +87,9 @@ async def end_handler(
             reply_markup=kb.round_stats_keyboard(game),
         )
 
+    await session.commit()
     if game.round != game_config.ROUND_NUM:
+        await session.close()
         return
 
     all_cities = []
@@ -143,6 +158,10 @@ def get_round_notifier(
                 renderer.render('hurry_up', time=timedelta(seconds=game_config.ROUND_LENGTH // 10)),
                 session
             ),
-            'end': (bot, game, game_client, actions_client, info_client, messages_client, session),
+            'end': (
+                bot, game, game_client,
+                actions_client, info_client, messages_client,
+                session, renderer
+            ),
         },
     )

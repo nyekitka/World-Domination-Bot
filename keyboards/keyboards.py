@@ -49,6 +49,7 @@ def city_keyboard(
     developed_ids: list[int],
 ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
+    cities.sort(key=lambda x: x.name)
     if nround == 1:
         for city in cities:
             str1 = '✅' if city.id in developed_ids else ''
@@ -100,8 +101,10 @@ def sanctions_keyboard(
     under_sanctions_ids: list[int]
 ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-
+    other_planets.sort(key=lambda x: x.name)
     for other_planet in other_planets:
+        if planet.id == other_planet.id:
+            continue
         addition = '✅ ' if other_planet.id in under_sanctions_ids else ''
         sanctions_action = Action(
             action_type=ActionType.SANCTIONS, planet_id=planet.id,
@@ -182,6 +185,7 @@ def other_planets_keyboard(
     attacked_cities_ids: list[int]
 ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
+    other_cities.sort(key=lambda x: x.name)
     if nround > 1:
         for city in other_cities:
             add = '✅ ' if city.id in attacked_cities_ids else ''
@@ -316,7 +320,8 @@ def round_stats_keyboard(game: GameDto) -> InlineKeyboardMarkup:
         inline_keyboard=[[
             InlineKeyboardButton(
                 text='📊 Открыть статистику после раунда',
-                web_app=WebAppInfo(url=f'https://{django_settings.HOST}:{django_settings.PORT}/{game.id}/{game.round}')
+                url='https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+                # web_app=WebAppInfo(url=f'https://{django_settings.HOST}:{django_settings.PORT}/{game.id}/{game.round}')
             )
         ]]
     )

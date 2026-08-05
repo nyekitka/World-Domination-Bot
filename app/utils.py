@@ -29,7 +29,7 @@ async def method_executor_call(
 ) -> bool:
     result = await method(*args)
     if result != FailureReason.SUCCESS:
-        call.answer(
+        await call.answer(
             renderer.render(FAILURE_INTERPRETATIONS[result])['text'],
             True
         )
@@ -45,7 +45,7 @@ async def sync_method_executor_call(
 ) -> bool:
     result = method(*args)
     if result != FailureReason.SUCCESS:
-        call.answer(
+        await call.answer(
             renderer.render(FAILURE_INTERPRETATIONS[result])['text'],
             True
         )
@@ -83,6 +83,7 @@ async def send_all_info(
     renderer: MessageRenderer,
 ):
     planet, planet_cities = planets_and_cities.pop(planet_id)
+    planet_cities.sort(key=lambda city: city.name)
     other_planets = [val[0] for val in planets_and_cities.values()]
     await bot.send_message(
         user_id,

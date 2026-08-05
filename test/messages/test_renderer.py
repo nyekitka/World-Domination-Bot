@@ -802,15 +802,15 @@ def test_render_wait_for_acception(renderer_ru, renderer_en, to_planet):
     }
 
 
-def test_render_negotiatior_offline(renderer_ru, renderer_en, to_planet):
-    assert renderer_ru.render('negotiatior_offline', to_planet=to_planet) == {
+def test_render_negotiator_offline(renderer_ru, renderer_en, to_planet):
+    assert renderer_ru.render('negotiator_offline', to_planet=to_planet) == {
         'text': (
             'К сожалению, владелец планеты Юпитер не в игре.\n'
             'Попробуйте снова или обратитесь к администратору.'
         ),
         'parse_mode': None,
     }
-    assert renderer_en.render('negotiatior_offline', to_planet=to_planet) == {
+    assert renderer_en.render('negotiator_offline', to_planet=to_planet) == {
         'text': (
             'Unfortunately, the owner of planet Юпитер is not in the game.\n'
             'Try again or contact an administrator.'

@@ -229,7 +229,7 @@ wait_for_acception:
     Negotiation request sent!
     You'll receive a message as soon as {{to_planet.name}} makes a decision.
   markdown: false
-negotiatior_offline:
+negotiator_offline:
   template: |-
     Unfortunately, the owner of planet {{to_planet.name}} is not in the game.
     Try again or contact an administrator.

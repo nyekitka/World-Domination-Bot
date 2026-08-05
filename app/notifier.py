@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime
 from typing import (
     Any, Awaitable, Callable, ParamSpec
 )
@@ -30,12 +30,12 @@ class Notifier:
     async def run_loop(self):
         scheduler = AsyncIOScheduler()
         scheduler.start()
-        now = datetime.now()
+        now = datetime.datetime.now()
 
         async def executor(key: str):
             await self.handlers[key](
-                *self.args[key],
-                **self.kwargs[key],
+                *self.args.get(key, tuple()),
+                **self.kwargs.get(key, dict()),
             )
 
         for secs, key in self.checkpoints.items():
