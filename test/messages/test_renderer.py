@@ -472,14 +472,14 @@ def test_render_eco_info(renderer_ru, renderer_en, game):
     assert renderer_ru.render('eco_info', game=game) == {
         'text': (
             '*Аномалия*\n'
-            'Уровень аномалии 💥: _67 %_'
+            'Уровень аномалии 💥: _33 %_'
         ),
         'parse_mode': 'MarkdownV2',
     }
     assert renderer_en.render('eco_info', game=game) == {
         'text': (
             '*Anomaly*\n'
-            'Anomaly level 💥: _67 %_'
+            'Anomaly level 💥: _33 %_'
         ),
         'parse_mode': 'MarkdownV2',
     }
