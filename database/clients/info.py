@@ -43,7 +43,7 @@ class InfoClient(DatabaseClient):
         )
         max_round = game_config.ROUND_NUM
         all_orders: list[dict[int, OrderInfo]] = [
-            {planet.id: dict() for planet in all_planets} for _ in range(max_round)
+            {planet.id: {} for planet in all_planets} for _ in range(max_round)
         ]
 
         for order in orders:

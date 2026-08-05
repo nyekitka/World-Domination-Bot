@@ -1,5 +1,6 @@
 from unittest.mock import ANY
 
+import pytest
 from aiogram.methods import DeleteMessages, SendMessage
 from aiogram.types import (
     CallbackQuery,
@@ -8,8 +9,8 @@ from aiogram.types import (
     KeyboardButton,
     ReplyKeyboardMarkup,
 )
-import pytest
 
+from app.filters.state import BotStates
 from app.handlers.lobby import (
     chosen_lobby,
     chosen_lobby_admin,
@@ -20,7 +21,6 @@ from app.handlers.lobby import (
     set_number_of_planets,
     set_pack,
 )
-from app.filters.state import BotStates
 from database.schemas import AdminDto, GameDto, GameStatus, PlanetDto, PlayerDto
 from game.schemas import FailureReason
 from test.app.mock_utils import mock_answer_message
@@ -313,7 +313,7 @@ async def test_chosen_lobby(
         'get_player_planet',
         return_value=PlanetDto(id=1, name='planet', game_id=game_id),
     )
-    mocker.patch.object(game_client, 'get_all_planets_and_cities', return_value=dict())
+    mocker.patch.object(game_client, 'get_all_planets_and_cities', return_value={})
     mocker.patch.object(actions_client, 'get_order_info')
     notify_mock = mocker.patch('app.handlers.lobby.notify_lobby_on_join_leave')
     send_all_info_mock = mocker.patch('app.handlers.lobby.send_all_info')

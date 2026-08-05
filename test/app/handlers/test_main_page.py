@@ -1,17 +1,17 @@
-from aiogram import types
-from aiogram.filters import CommandStart, CommandObject
-from aiogram.methods import SendMessage, GetChat
 import pytest
+from aiogram import types
+from aiogram.filters import CommandObject
+from aiogram.methods import GetChat, SendMessage
 from pytest_lazy_fixtures import lf
 
-from database.schemas import AdminDto, PlayerDto
 from app.handlers.main_page import (
     accept_knight,
     fire_admin,
     refuse_knight,
-    start,
     request,
+    start,
 )
+from database.schemas import AdminDto, PlayerDto
 from game.schemas import FailureReason
 from test.app.mock_utils import mock_answer_message
 

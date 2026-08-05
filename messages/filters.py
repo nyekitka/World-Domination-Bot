@@ -1,9 +1,8 @@
 from datetime import timedelta
 
 from inflect import engine
-from pymorphy3 import MorphAnalyzer
 from num2words import num2words
-
+from pymorphy3 import MorphAnalyzer
 
 morph = MorphAnalyzer()
 inflect_engine = engine()

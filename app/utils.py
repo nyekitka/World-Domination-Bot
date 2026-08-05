@@ -1,14 +1,14 @@
-from typing import Awaitable, Callable, ParamSpec
+from collections.abc import Awaitable, Callable
+from typing import ParamSpec
 
 from aiogram import Bot, types
 
 from database.schemas import CityDto, GameDto, PlanetDto
-from game.schemas import FailureReason, FAILURE_INTERPRETATIONS, OrderInfo, OrderType
+from game.schemas import FAILURE_INTERPRETATIONS, FailureReason, OrderInfo, OrderType
 from keyboards import keyboards as kb
 from messages.renderer import MessageRenderer
 from storage.clients.messages import MessagesClient
 from storage.schemas import MessageType
-
 
 Markup = (
     types.InlineKeyboardMarkup
@@ -21,7 +21,7 @@ Markup = (
 P = ParamSpec('P')
 
 
-async def method_executor_call(
+async def method_executor_call[**P](
     method: Callable[P, Awaitable[FailureReason]],
     call: types.CallbackQuery,
     renderer: MessageRenderer,
@@ -37,7 +37,7 @@ async def method_executor_call(
     return True
 
 
-async def sync_method_executor_call(
+async def sync_method_executor_call[**P](
     method: Callable[P, FailureReason],
     call: types.CallbackQuery,
     renderer: MessageRenderer,
@@ -53,7 +53,7 @@ async def sync_method_executor_call(
     return True
 
 
-async def method_executor_msg(
+async def method_executor_msg[**P](
     bot: Bot,
     method: Callable[P, Awaitable[FailureReason]],
     userid: int,

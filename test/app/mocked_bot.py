@@ -50,7 +50,7 @@ class MockedSession(BaseSession):
         timeout: int = 30,
         chunk_size: int = 65536,
         raise_for_status: bool = True,
-    ) -> AsyncGenerator[bytes, None]:  # pragma: no cover
+    ) -> AsyncGenerator[bytes]:  # pragma: no cover
         yield b''
 
 

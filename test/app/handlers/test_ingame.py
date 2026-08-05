@@ -1,9 +1,8 @@
-from random import randint
 from unittest.mock import AsyncMock
 
+import pytest
 from aiogram.methods import EditMessageText, SendMessage
 from aiogram.types import ReplyKeyboardRemove
-import pytest
 
 from app.filters.state import BotStates
 from app.handlers.ingame import (

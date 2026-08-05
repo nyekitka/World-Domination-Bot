@@ -13,25 +13,25 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import (
-    declared_attr,
     DeclarativeBase,
     Mapped,
+    declared_attr,
     mapped_column,
     relationship,
 )
 
 from database.schemas import GameStatus
-from game.schemas import OrderType
 from game.config import game_config
+from game.schemas import OrderType
 
 
 class ModelBase(DeclarativeBase):
     @declared_attr.directive
     def __tablename__(cls) -> str:
         match = re.findall(r'[A-Z][a-z]*', cls.__name__)
-        return '_'.join(list(map(lambda x: x.lower(), match)))
+        return '_'.join([x.lower() for x in match])
 
-    type_annotation_map = {dict[str, Any]: JSON}
+    type_annotation_map = {dict[str, Any]: JSON} # noqa: RUF012
 
 
 class Game(ModelBase):
@@ -45,7 +45,7 @@ class Game(ModelBase):
     round: Mapped[int] = mapped_column(nullable=True)
     num_planets: Mapped[int] = mapped_column(nullable=True)
 
-    planets: Mapped[list['Planet']] = relationship(back_populates='game')
+    planets: Mapped[list[Planet]] = relationship(back_populates='game')
 
 
 class Player(ModelBase):
@@ -74,7 +74,7 @@ class Planet(ModelBase):
     is_invented: Mapped[bool] = mapped_column(nullable=False, default=False)
 
     game: Mapped[Game] = relationship(back_populates='planets')
-    cities: Mapped[list['City']] = relationship(back_populates='planet')
+    cities: Mapped[list[City]] = relationship(back_populates='planet')
 
     @hybrid_property
     def development(self) -> float:

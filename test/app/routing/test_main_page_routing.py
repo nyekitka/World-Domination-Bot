@@ -4,10 +4,10 @@ from pytest_lazy_fixtures import lf
 from app.handlers.main_page import (
     accept_knight,
     fire_admin,
+    main_page_router,
     refuse_knight,
     request,
     start,
-    main_page_router,
 )
 
 

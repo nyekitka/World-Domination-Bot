@@ -78,7 +78,7 @@ async def start_round(
             game=game,
             planets_and_cities=all_planets_and_cities.copy(),
             planet_id=pl_id,
-            order_info=dict(),
+            order_info={},
             user_id=planet.owner_id,
             messages_client=messages_client,
             sanctioned_planets=sanctioned_planets,
@@ -347,7 +347,7 @@ async def handle_city_action(
         )
 
     if not result:
-        return None
+        return
 
     shielded_cities = actions_client.get_shielded_cities(planet.id)
     developed_cities = actions_client.get_developed_cities(planet.id)
@@ -376,7 +376,7 @@ async def handle_create_action(
         actions_client.create_meteorites, call, renderer, planet.id, action.argument
     )
     if not result:
-        return None
+        return
 
     chosen = actions_client.get_created_meteorites(planet.id)
 
@@ -397,7 +397,7 @@ async def handle_eco_action(
         actions_client.eco_boost, call, renderer, planet.id
     )
     if not result:
-        return None
+        return
 
     is_eco_boosted = actions_client.get_eco_boost(planet.id)
 
@@ -422,7 +422,7 @@ async def handle_sanctions_action(
         actions_client.sanction_planet, call, renderer, planet.id, action.argument
     )
     if not result:
-        return None
+        return
 
     sanctioned_planets = actions_client.get_sanctioned_planets(planet.id)
     other_planets = await game_client.get_planets_of_game(session, game.id, False)
@@ -444,7 +444,7 @@ async def handle_invent_action(
         actions_client.invent, call, renderer, planet.id
     )
     if not result:
-        return None
+        return
 
     is_invented = actions_client.get_invented(planet.id)
 

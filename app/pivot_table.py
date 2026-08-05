@@ -1,9 +1,8 @@
-from pathlib import Path
 
 import pandas as pd
 
 from database.schemas import CityDto, PlanetDto
-from game.schemas import OrderInfo, ORDER_TYPE_TRANSLATIONS, OrderType
+from game.schemas import ORDER_TYPE_TRANSLATIONS, OrderInfo, OrderType
 
 
 def make_pivot_table(

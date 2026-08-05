@@ -356,7 +356,7 @@ def test_get_developed_cities(mock_actions_storage, planet_id, city_id, city_id2
     mock_actions_storage.client.smembers.assert_called_once_with(f'develop:{planet_id}')
 
 
-def test_get_shielded_cities(mock_actions_storage, planet_id, city_id, city_id2):
+def test_get_attacked_cities(mock_actions_storage, planet_id, city_id, city_id2):
     mock_actions_storage.client.smembers.return_value = [str(city_id), str(city_id2)]
 
     result = mock_actions_storage.get_attacked_cities(planet_id)

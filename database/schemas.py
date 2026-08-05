@@ -1,5 +1,4 @@
 from enum import StrEnum, auto
-from typing import Union
 
 from pydantic import BaseModel, ConfigDict
 
@@ -79,7 +78,7 @@ class NegotiationDto(BaseDto):
     planet_to: int
 
 
-UserDto = Union[PlayerDto, AdminDto]
+UserDto = PlayerDto | AdminDto
 
 
 class RoundInfoDto(BaseDto):

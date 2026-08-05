@@ -1,5 +1,5 @@
 import logging
-from typing import ParamSpec, TypeVar, Self
+from typing import ParamSpec, TypeVar
 
 from async_lru import alru_cache
 from pydantic import TypeAdapter
@@ -191,11 +191,11 @@ class DatabaseClient:
             return
 
         res_planets = await session.execute(
-            (select(Planet).where(Planet.game_id == Game.id))
+            select(Planet).where(Planet.game_id == Game.id)
         )
         all_planets = [planet.id for planet in res_planets.scalars().all()]
         res_cities = await session.execute(
-            (select(City).where(City.planet_id.in_(all_planets)))
+            select(City).where(City.planet_id.in_(all_planets))
         )
         all_cities = [city.id for city in res_cities.scalars().all()]
 
@@ -235,7 +235,7 @@ class DatabaseClient:
         self, s: AsyncSession, planet_id: int
     ) -> list[SanctionDto]:
         sanctions_res = await s.execute(
-            (select(Sanction).where(Sanction.planet_to == planet_id))
+            select(Sanction).where(Sanction.planet_to == planet_id)
         )
         sanctions = sanctions_res.scalars().all()
         return TypeAdapter(list[SanctionDto]).validate_python(sanctions)

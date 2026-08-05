@@ -5,8 +5,8 @@ import sys
 
 from aiogram import Bot, Dispatcher
 
+from app.handlers import ingame_router, lobby_router, main_page_router
 from app.middlewares import DBMiddleware, I18nMiddleware
-from app.handlers import ingame_router, main_page_router, lobby_router
 from database import engine, session_factory
 from database.clients import GameClient, InfoClient, UserClient
 from database.models import ModelBase

@@ -1,4 +1,5 @@
-from typing import Any, Set
+import builtins
+from typing import Any
 
 from redis import Redis
 
@@ -50,7 +51,7 @@ class BaseClient:
         name = self._create_name(*name_args)
         return self.client.srem(name, *items)
 
-    def smembers(self, *name_args: Any) -> Set[Any]:
+    def smembers(self, *name_args: Any) -> builtins.set[Any]:
         name = self._create_name(*name_args)
         return self.client.smembers(name)
 

@@ -3,11 +3,11 @@ from datetime import timedelta
 import pytest
 
 from messages.filters import (
+    escape_md,
+    make_agree_with,
+    ordinal,
     tag_person,
     time_filter,
-    escape_md,
-    ordinal,
-    make_agree_with,
 )
 
 

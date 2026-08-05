@@ -1,13 +1,13 @@
-import asyncio
 import datetime
 from unittest.mock import AsyncMock, Mock
+from zoneinfo import ZoneInfo
 
-from aiogram import Dispatcher, types, Bot
+import pytest
+from aiogram import types
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.base import StorageKey
 from aiogram.fsm.storage.memory import MemoryStorage
 from sqlalchemy.ext.asyncio import AsyncSession
-import pytest
 
 from database.clients import (
     GameClient,
@@ -118,7 +118,9 @@ def message(mock_bot, chat, user, request):
     message_text = request.param if hasattr(request, 'param') else None
     message = types.Message(
         message_id=52,
-        date=datetime.datetime.now(),
+        date=datetime.datetime.now(
+            tz=ZoneInfo('Europe/Moscow'),
+        ),
         chat=chat,
         from_user=user,
         text=message_text,
@@ -131,7 +133,9 @@ def message(mock_bot, chat, user, request):
 def other_message(mock_bot, other_chat, other_user):
     message = types.Message(
         message_id=11,
-        date=datetime.datetime.now(),
+        date=datetime.datetime.now(
+            tz=ZoneInfo('Europe/Moscow'),
+        ),
         chat=other_chat,
         from_user=other_user,
     )

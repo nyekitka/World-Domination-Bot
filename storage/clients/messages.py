@@ -1,7 +1,7 @@
 from redis import Redis
 
 from storage.clients.base import BaseClient
-from storage.schemas import MessageType, INFO_MESSAGE_TYPES, PLANET_MESSAGE_TYPES
+from storage.schemas import INFO_MESSAGE_TYPES, PLANET_MESSAGE_TYPES, MessageType
 
 
 class MessagesClient(BaseClient):

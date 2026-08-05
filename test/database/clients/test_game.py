@@ -481,7 +481,7 @@ async def test_get_all_planets_and_cities(game_client, session, game_id, pack):
         assert planet.development is not None
         for city in cities:
             assert any(
-                [city.name == pack_city.name for pack_city in pack_planet.cities]
+                city.name == pack_city.name for pack_city in pack_planet.cities
             )
             assert city.rate_of_life is not None
 

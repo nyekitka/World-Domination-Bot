@@ -1,7 +1,6 @@
-from functools import partial
 import logging
-from typing import Callable
-
+from collections.abc import Callable
+from functools import partial
 
 from aiogram import Bot, Router, types
 from aiogram.fsm.context import FSMContext
@@ -19,7 +18,6 @@ from messages.renderer import MessageRenderer
 from presets.pack import packs
 from storage.clients.actions import ActionsClient
 from storage.clients.messages import MessagesClient
-
 
 lobby_router = Router()
 logger = logging.getLogger(__name__)

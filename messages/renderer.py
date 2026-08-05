@@ -1,12 +1,11 @@
 import os
 
+import yaml
 from jinja2 import Environment
 from pydantic import TypeAdapter
-import yaml
 
 from messages.filters import ALL_FILTERS
 from messages.schemas import Message
-
 
 TEMPLATES_DIR = 'messages/templates'
 TEMPLATES: dict[str, dict[str, Message]] = {}

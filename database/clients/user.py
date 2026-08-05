@@ -8,7 +8,6 @@ from database.models import Admin, Game, Planet, Player
 from database.schemas import AdminDto, GameStatus, PlayerDto, UserDto
 from game.schemas import FailureReason
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -93,7 +92,7 @@ class UserClient(DatabaseClient):
             return FailureReason.GAME_ENDED
 
         planet = await s.execute(
-            (select(Planet).where(Planet.owner_id == player.tg_id))
+            select(Planet).where(Planet.owner_id == player.tg_id)
         )
         if planet.all():
             player.game_id = game_id
@@ -142,11 +141,11 @@ class UserClient(DatabaseClient):
         game = await s.get(Game, player.game_id)
         if game.status == GameStatus.WAITING:
             await s.execute(
-                (
+                
                     update(Planet)
                     .where(Planet.owner_id == player.tg_id)
                     .values(owner_id=None)
-                )
+                
             )
         player.game_id = None
 

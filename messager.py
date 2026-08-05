@@ -1,10 +1,12 @@
 import json
+
 import pymorphy3
 from num2words import num2words
+
 from database.schemas import CityDto, PlanetDto
 
-_messages_file = open('./presets/messages.json', encoding='utf-8')
-Messages = json.load(_messages_file)
+with open('./presets/messages.json', encoding='utf-8') as f:
+    Messages = json.load(f)
 morph = pymorphy3.MorphAnalyzer()
 
 

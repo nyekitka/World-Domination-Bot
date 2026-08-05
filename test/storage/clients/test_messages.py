@@ -2,7 +2,7 @@ import pytest
 from redis import Redis
 
 from storage.clients.messages import MessagesClient
-from storage.schemas import MessageType, INFO_MESSAGE_TYPES, PLANET_MESSAGE_TYPES
+from storage.schemas import INFO_MESSAGE_TYPES, PLANET_MESSAGE_TYPES, MessageType
 
 
 @pytest.fixture()
@@ -110,15 +110,13 @@ def test_find_all_messages(mock_messages_storage, mocker, mock_kvs, true_result,
     patched_mock_kvs = {f'{k}:{tg_id}': v for k, v in mock_kvs.items()}
 
     def get_side_effect(key: str) -> str | None:
-        if key in patched_mock_kvs:
-            if isinstance(patched_mock_kvs[key], str):
-                return patched_mock_kvs[key]
+        if key in patched_mock_kvs and isinstance(patched_mock_kvs[key], str):
+            return patched_mock_kvs[key]
         return None
 
     def hget_side_effect(key: str) -> dict[str, str] | None:
-        if key in patched_mock_kvs:
-            if isinstance(patched_mock_kvs[key], dict):
-                return patched_mock_kvs[key]
+        if key in patched_mock_kvs and isinstance(patched_mock_kvs[key], dict):
+            return patched_mock_kvs[key]
         return None
 
     mocker.patch.object(

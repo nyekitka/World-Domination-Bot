@@ -1,1 +1,3 @@
-import keyboards.keyboards as keyboards
+from keyboards import keyboards
+
+__all__ = ('keyboards',)

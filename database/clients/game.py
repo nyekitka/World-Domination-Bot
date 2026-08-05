@@ -1,12 +1,14 @@
-from collections import Counter
 import logging
+from collections import Counter
 
 from async_lru import alru_cache
+from pydantic import TypeAdapter
 from sqlalchemy import func, insert, not_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from database.base_client import DatabaseClient
+from database.config import database_config
 from database.models import Admin, City, Game, Planet, Player, RoundInfo, Sanction
 from database.schemas import (
     AdminDto,
@@ -24,10 +26,6 @@ from database.schemas import (
 from game.config import game_config
 from game.schemas import FailureReason, OrderInfo, OrderType
 from presets.pack import Pack
-from pydantic import TypeAdapter
-
-from database.config import database_config
-
 
 logger = logging.getLogger(__name__)
 
@@ -49,8 +47,7 @@ class GameClient(DatabaseClient):
     ) -> GameDto:
         if number_of_planets == -1:
             number_of_planets = len(pack.planets)
-        if number_of_planets > len(pack.planets):
-            number_of_planets = len(pack.planets)
+        number_of_planets = min(number_of_planets, len(pack.planets))
         game = Game(num_planets=number_of_planets)
         s.add(game)
         await s.flush()
@@ -72,13 +69,13 @@ class GameClient(DatabaseClient):
 
     async def end_game(self, s: AsyncSession, game_id: int) -> None:
         await s.execute(
-            (update(Player).where(Player.game_id == game_id).values(game_id=None))
+            update(Player).where(Player.game_id == game_id).values(game_id=None)
         )
         await s.execute(
-            (update(Admin).where(Admin.game_id == game_id).values(game_id=None))
+            update(Admin).where(Admin.game_id == game_id).values(game_id=None)
         )
         await s.execute(
-            (update(Game).where(Game.id == game_id).values(status=GameStatus.ENDED))
+            update(Game).where(Game.id == game_id).values(status=GameStatus.ENDED)
         )
 
         await self._clear_game_cache(s, game_id, True)
@@ -190,7 +187,7 @@ class GameClient(DatabaseClient):
         buy_count = 0
         attack_count = 0
         eco_boost_count = 0
-        for planet_id in orders:
+        for planet_id in orders: # noqa: PLC0206
             invent_count += int(orders[planet_id].get(OrderType.INVENT, 0))
             eco_boost_count += int(orders[planet_id].get(OrderType.ECO, 0))
             buy_count += orders[planet_id].get(OrderType.CREATE, 0)
@@ -284,7 +281,7 @@ class GameClient(DatabaseClient):
             if action not in [OrderType.ECO, OrderType.CREATE]
         }
 
-        for planet_id in orders:
+        for planet_id in orders: # noqa: PLC0206
             await self.create_meteorites(
                 s, planet_id, orders[planet_id].get(OrderType.CREATE, 0)
             )
@@ -321,7 +318,7 @@ class GameClient(DatabaseClient):
         await self.eco_update(s, game.id, orders)
 
         await s.execute(
-            (
+            
                 update(Game)
                 .where(Game.id == game_id)
                 .values(
@@ -329,7 +326,7 @@ class GameClient(DatabaseClient):
                         Game.status: GameStatus.MEETING,
                     }
                 )
-            )
+            
         )
 
     async def save_round_info(self, s: AsyncSession, game_id: int) -> FailureReason:
@@ -386,7 +383,7 @@ class GameClient(DatabaseClient):
             )
         )
         planets = planets_result.scalars().all()
-        result = dict()
+        result = {}
         for planet in planets:
             planet_dto = PlanetDto.model_validate(planet)
             cities_dto = TypeAdapter(list[CityDto]).validate_python(planet.cities)
@@ -410,7 +407,7 @@ class GameClient(DatabaseClient):
 
         planets = await self.get_planets_of_game(s, game.id)
 
-        if not all(map(lambda pl: pl.owner_id is not None, planets)):
+        if not all(pl.owner_id is not None for pl in planets):
             return FailureReason.NOT_ENOUGH_PLAYERS
 
         if game.status == GameStatus.MEETING:
@@ -419,11 +416,11 @@ class GameClient(DatabaseClient):
                     s, planet.id, game.ecorate, len(planets)
                 )
                 await s.execute(
-                    (
+                    
                         update(Planet)
                         .where(Planet.id == planet.id)
                         .values({Planet.balance: Planet.balance + income})
-                    )
+                    
                 )
         game.round = 1 if game.round is None else game.round + 1
         game.status = GameStatus.ROUND

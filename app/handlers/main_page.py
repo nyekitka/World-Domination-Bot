@@ -1,7 +1,7 @@
 import logging
 
 from aiogram import Router, types
-from aiogram.filters import Command, CommandStart, CommandObject
+from aiogram.filters import Command, CommandObject, CommandStart
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.filters.admin import AdminFilter, OwnerFilter
@@ -12,7 +12,6 @@ from database.schemas import AdminDto, UserDto
 from game.config import game_config
 from keyboards import keyboards as kb
 from messages.renderer import MessageRenderer
-
 
 main_page_router = Router()
 logger = logging.getLogger(__name__)

@@ -1,9 +1,8 @@
-import logging
 
 from redis import Redis
 
-from game.schemas import FailureReason, OrderInfo, OrderType
 from game.config import GameConfig
+from game.schemas import FailureReason, OrderInfo, OrderType
 from storage.clients.base import BaseClient
 
 
