@@ -47,7 +47,9 @@ async def end_handler(
         planet.id: actions_client.get_order_info(planet.id)
         for planet in all_planets
     }
-
+    for planet in all_planets:
+        actions_client.clear_order_info(planet.id)
+    
     for planet in all_planets:
         current_money = actions_client.get_balance(
             planet.id, actions_client.MONEY_KEY
