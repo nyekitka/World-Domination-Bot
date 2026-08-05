@@ -5,17 +5,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Результаты раунда</title>
-    <link rel="stylesheet" href="{% static 'statsview/style.css' %}">
+    <link rel="stylesheet" href="{% static 'stats/style.css' %}">
 </head>
 <body>
     <h3 class="title"><strong>Космическое господcтво 🚀</strong></h3>
     <div class="wrapper">
         <div class="panels">
-            {% for planet in planets %}
+            {% for planet in planets_data %}
                 <p class="name"><strong>{{planet.name}}</strong></p>
                 <div class="panel">
                     <div class="upper-half-{% cycle 1 2 3 4 5 6 %}">
-                        {% for city in planet.cities %}
+                        {% for city in planet.cities_data %}
                             {% if city.development == 0 %}
                                 <div class="dead-city">{{city.name}}</div>
                             {% else %}
@@ -24,7 +24,7 @@
                         {% endfor %}
                     </div>
                     <div class="lower-half">
-                        {% for city in planet.cities %}
+                        {% for city in planet.cities_data %}
                             {% if city.development == 0 %}
                                 <div class="dead-percentage">{{city.development}}%</div>
                             {% else %}
@@ -38,7 +38,7 @@
         <div class="chart-wrapper">
             <div class="hist-name"> Уровень жизни на планетах</div>
             <div class="chart">
-                {% for planet in planets %}
+                {% for planet in planets_data %}
                     <div class="bar" style="height: {{planet.bar_height}}%;">
                         <span class="value">{{planet.development}}%</span>
                         <span class="label">{{planet.name}}</span>

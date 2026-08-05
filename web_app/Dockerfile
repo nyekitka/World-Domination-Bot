@@ -16,4 +16,11 @@ RUN apt-get update \
     && apt-get install postgresql-client -y
 
 COPY database ./database
-COPY web_app ./web_app
+COPY game ./game
+COPY web_app/ ./
+COPY presets ./presets
+
+COPY web_app/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
