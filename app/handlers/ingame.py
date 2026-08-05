@@ -67,6 +67,7 @@ async def start_round(
         planet, _ = all_planets_and_cities[pl_id]
         actions_client.set_balance(planet.id, planet.balance, actions_client.MONEY_KEY)
         actions_client.set_balance(planet.id, planet.meteorites, actions_client.METEORITES_KEY)
+        sanctioned_planets = await game_client.get_sanctioned_planets(session, pl_id)
         await send_all_info(
             bot=message.bot,
             game=game,
@@ -75,6 +76,7 @@ async def start_round(
             order_info=dict(),
             user_id=planet.owner_id,
             messages_client=messages_client,
+            sanctioned_planets=sanctioned_planets,
             renderer=renderer,
         )
     round_notifier = get_round_notifier(

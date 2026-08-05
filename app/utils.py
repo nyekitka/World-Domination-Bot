@@ -80,6 +80,7 @@ async def send_all_info(
     order_info: OrderInfo,
     user_id: int,
     messages_client: MessagesClient,
+    sanctioned_planets: list[PlanetDto],
     renderer: MessageRenderer,
 ):
     planet, planet_cities = planets_and_cities.pop(planet_id)
@@ -124,16 +125,15 @@ async def send_all_info(
     )
     messages_client.set_info_message_id(user_id, MessageType.METEORITES, meteorites_msg.message_id)
 
-    sanctioned_planets = [
+    sanctioned_planets_names = [
         planet.name
-        for planet in other_planets
-        if planet.id in order_info.get(OrderType.SANCTIONS, [])
+        for planet in sanctioned_planets
     ]
     sanctions_msg = await bot.send_message(
         user_id,
         **renderer.render(
             'sanctions_info',
-            sanctioned_planets=sanctioned_planets,
+            sanctioned_planets=sanctioned_planets_names,
         ),
         reply_markup=kb.sanctions_keyboard(
             planet, other_planets, order_info.get(OrderType.SANCTIONS, [])
