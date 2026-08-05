@@ -6,7 +6,6 @@ from database.schemas import PlanetDto
 from game.config import game_config
 
 
-
 def test_render_on_start_for_player_without_game(
     renderer_ru, renderer_en, user_ru, user_en, user_dto_without_game
 ):
@@ -37,14 +36,10 @@ def test_render_on_start_for_player_without_game(
         'parse_mode': None,
     }
 
-@pytest.mark.parametrize(
-    'is_admin',
-    (True, False)
-)
+
+@pytest.mark.parametrize('is_admin', (True, False))
 def test_render_on_start_for_user_in_game(
-    renderer_ru, renderer_en,
-    user_ru, user_en,
-    user_dto, is_admin
+    renderer_ru, renderer_en, user_ru, user_en, user_dto, is_admin
 ):
     assert renderer_ru.render(
         'on_start',
@@ -67,8 +62,7 @@ def test_render_on_start_for_user_in_game(
 
 
 def test_render_on_start_for_admin_without_game(
-    renderer_ru, renderer_en, user_ru, user_en,
-    user_dto_without_game
+    renderer_ru, renderer_en, user_ru, user_en, user_dto_without_game
 ):
     assert renderer_ru.render(
         'on_start',
@@ -84,11 +78,11 @@ def test_render_on_start_for_admin_without_game(
         'parse_mode': None,
     }
     assert renderer_en.render(
-            'on_start',
-            name=user_en.first_name,
-            user=user_dto_without_game,
-            is_admin=True,
-        ) == {
+        'on_start',
+        name=user_en.first_name,
+        user=user_dto_without_game,
+        is_admin=True,
+    ) == {
         'text': (
             'Greetings, Alice 👋.\n'
             'You are not administering any games.\n'
@@ -144,17 +138,11 @@ def test_render_on_game_created(renderer_ru, renderer_en, game):
 
 def test_render_on_success_enter_player(renderer_ru, renderer_en, game, planet):
     assert renderer_ru.render('on_success_enter_player', game=game, planet=planet) == {
-        'text': (
-            'Вы вошли в игру 1!\n'
-            'Ваша планета - Земля.'
-        ),
+        'text': ('Вы вошли в игру 1!\nВаша планета - Земля.'),
         'parse_mode': None,
     }
     assert renderer_en.render('on_success_enter_player', game=game, planet=planet) == {
-        'text': (
-            'You have joined game 1!\n'
-            'Your planet is Земля.'
-        ),
+        'text': ('You have joined game 1!\nYour planet is Земля.'),
         'parse_mode': None,
     }
 
@@ -177,70 +165,72 @@ def test_render_on_success_enter_admin(renderer_ru, renderer_en, game):
 
 
 def test_render_player_enter_notification(renderer_ru, renderer_en, planet, game):
-    assert renderer_ru.render('player_enter_notification', planet=planet, game=game, current_players=2) == {
-        'text': (
-            'Команда от планеты Земля присоединилась к нам!\n'
-            'В игре: 2/4 👤'
-        ),
+    assert renderer_ru.render(
+        'player_enter_notification', planet=planet, game=game, current_players=2
+    ) == {
+        'text': ('Команда от планеты Земля присоединилась к нам!\nВ игре: 2/4 👤'),
         'parse_mode': None,
     }
-    assert renderer_en.render('player_enter_notification', planet=planet, game=game, current_players=2) == {
-        'text': (
-            'The team from planet Земля has joined us!\n'
-            'Players in game: 2/4 👤'
-        ),
+    assert renderer_en.render(
+        'player_enter_notification', planet=planet, game=game, current_players=2
+    ) == {
+        'text': ('The team from planet Земля has joined us!\nPlayers in game: 2/4 👤'),
         'parse_mode': None,
     }
 
 
 def test_render_player_leave_notification(renderer_ru, renderer_en, planet, game):
-    assert renderer_ru.render('player_leave_notification', planet=planet, game=game, current_players=2) == {
-        'text': (
-            'Команда от планеты Земля вышла из лобби.\n'
-            'В игре: 2/4 👤'
-        ),
+    assert renderer_ru.render(
+        'player_leave_notification', planet=planet, game=game, current_players=2
+    ) == {
+        'text': ('Команда от планеты Земля вышла из лобби.\nВ игре: 2/4 👤'),
         'parse_mode': None,
     }
-    assert renderer_en.render('player_leave_notification', planet=planet, game=game, current_players=2) == {
+    assert renderer_en.render(
+        'player_leave_notification', planet=planet, game=game, current_players=2
+    ) == {
         'text': (
-            'The team from planet Земля has left the lobby.\n'
-            'Players in game: 2/4 👤'
+            'The team from planet Земля has left the lobby.\nPlayers in game: 2/4 👤'
         ),
         'parse_mode': None,
     }
 
 
 def test_render_on_leave_lobby(renderer_ru, renderer_en):
-    assert renderer_ru.render('on_leave_lobby') == {'text': 'Вы вышли из игры.', 'parse_mode': None}
-    assert renderer_en.render('on_leave_lobby') == {'text': 'You have left the game.', 'parse_mode': None}
+    assert renderer_ru.render('on_leave_lobby') == {
+        'text': 'Вы вышли из игры.',
+        'parse_mode': None,
+    }
+    assert renderer_en.render('on_leave_lobby') == {
+        'text': 'You have left the game.',
+        'parse_mode': None,
+    }
 
 
 def test_render_starting_game_not_being_in(renderer_ru, renderer_en):
     assert renderer_ru.render('starting_game_not_being_in') == {
-        'text': (
-            'Вы не неходитесь ни в какой в игре.\n'
-            'Сначала войдите в игру!'
-        ),
+        'text': ('Вы не неходитесь ни в какой в игре.\nСначала войдите в игру!'),
         'parse_mode': None,
     }
     assert renderer_en.render('starting_game_not_being_in') == {
-        'text': (
-            'You are not in any game.\n'
-            'Enter a game first!'
-        ),
+        'text': ('You are not in any game.\nEnter a game first!'),
         'parse_mode': None,
     }
 
 
 def test_render_not_enough_players(renderer_ru, renderer_en, planet, game):
-    assert renderer_ru.render('not_enough_players', planet=planet, game=game, current_players=1) == {
+    assert renderer_ru.render(
+        'not_enough_players', planet=planet, game=game, current_players=1
+    ) == {
         'text': (
             'Недостаточно игроков в игре (1/4 👤 присоединилось).\n'
             'Подождите пока войдут все, а затем начинайте игру'
         ),
         'parse_mode': None,
     }
-    assert renderer_en.render('not_enough_players', planet=planet, game=game, current_players=1) == {
+    assert renderer_en.render(
+        'not_enough_players', planet=planet, game=game, current_players=1
+    ) == {
         'text': (
             'Not enough players in the game (1/4 👤 joined).\n'
             'Wait until everyone joins, then start the game'
@@ -276,11 +266,10 @@ def test_render_hurry_up(renderer_ru, renderer_en):
     [
         (1, 'Первый', 'First'),
         (2, 'Второй', 'Second'),
-    ]
+    ],
 )
 def test_render_start_round_for_players(
-    round, game, renderer_ru, renderer_en,
-    ordinal_ru, ordinal_en
+    round, game, renderer_ru, renderer_en, ordinal_ru, ordinal_en
 ):
     game.round = round
     if round == 1:
@@ -301,7 +290,10 @@ def test_render_start_round_for_players(
             'parse_mode': 'MarkdownV2',
         }
     else:
-        assert renderer_ru.render('start_round_for_players', game=game,) == {
+        assert renderer_ru.render(
+            'start_round_for_players',
+            game=game,
+        ) == {
             'text': (
                 f'*{ordinal_ru} раунд начался*\n'
                 'У вас есть 10 минут, чтобы обсудить действия в этом раунде как внутри своей команды, так и с другими командами на переговорах\\. Не забывайте заполнять приказ\\!'
@@ -316,16 +308,16 @@ def test_render_start_round_for_players(
             'parse_mode': 'MarkdownV2',
         }
 
+
 @pytest.mark.parametrize(
     ('round', 'ordinal_ru', 'ordinal_en'),
     [
         (1, 'Первый', 'First'),
         (2, 'Второй', 'Second'),
-    ]
+    ],
 )
 def test_render_start_round_for_admins(
-    game, round, renderer_ru, renderer_en,
-    ordinal_ru, ordinal_en
+    game, round, renderer_ru, renderer_en, ordinal_ru, ordinal_en
 ):
     game.round = round
     if round == 1:
@@ -384,17 +376,17 @@ def test_render_common_planet_info(renderer_ru, renderer_en, planet, cities):
 
 
 def test_render_sanctions_info_with_sanctions(renderer_ru, renderer_en):
-    assert renderer_ru.render('sanctions_info', sanctioned_planets=['Марс', 'Юпитер']) == {
-        'text': (
-            '*Санкции:*\n'
-            '_На вас наложили санкции: Марс, Юпитер_'
-        ),
+    assert renderer_ru.render(
+        'sanctions_info', sanctioned_planets=['Марс', 'Юпитер']
+    ) == {
+        'text': ('*Санкции:*\n_На вас наложили санкции: Марс, Юпитер_'),
         'parse_mode': 'MarkdownV2',
     }
-    assert renderer_en.render('sanctions_info', sanctioned_planets=['Mars', 'Jupiter']) == {
+    assert renderer_en.render(
+        'sanctions_info', sanctioned_planets=['Mars', 'Jupiter']
+    ) == {
         'text': (
-            '*Sanctions:*\n'
-            '_Sanctions have been imposed on you by: Mars, Jupiter_'
+            '*Sanctions:*\n_Sanctions have been imposed on you by: Mars, Jupiter_'
         ),
         'parse_mode': 'MarkdownV2',
     }
@@ -402,34 +394,22 @@ def test_render_sanctions_info_with_sanctions(renderer_ru, renderer_en):
 
 def test_render_sanctions_info_without_sanctions(renderer_ru, renderer_en):
     assert renderer_ru.render('sanctions_info', sanctioned_planets=[]) == {
-        'text': (
-            '*Санкции:*\n'
-            '_Ни одна из планет не наложила на вас санкции_'
-        ),
+        'text': ('*Санкции:*\n_Ни одна из планет не наложила на вас санкции_'),
         'parse_mode': 'MarkdownV2',
     }
     assert renderer_en.render('sanctions_info', sanctioned_planets=[]) == {
-        'text': (
-            '*Sanctions:*\n'
-            '_No planet has imposed sanctions on you_'
-        ),
+        'text': ('*Sanctions:*\n_No planet has imposed sanctions on you_'),
         'parse_mode': 'MarkdownV2',
     }
 
 
 def test_render_meteorites_info_invented(renderer_ru, renderer_en, planet):
     assert renderer_ru.render('meteorites_info', planet=planet) == {
-        'text': (
-            '*Метеориты*\n'
-            'У вас есть 3 метеорита  ☄️\\.'
-        ),
+        'text': ('*Метеориты*\nУ вас есть 3 метеорита  ☄️\\.'),
         'parse_mode': 'MarkdownV2',
     }
     assert renderer_en.render('meteorites_info', planet=planet) == {
-        'text': (
-            '*Meteorites*\n'
-            'You have 3 meteorites ☄️\\.'
-        ),
+        'text': ('*Meteorites*\nYou have 3 meteorites ☄️\\.'),
         'parse_mode': 'MarkdownV2',
     }
 
@@ -443,26 +423,21 @@ def test_render_meteorites_info_singular_agreement_ru(renderer_ru):
         meteorites=1,
     )
     assert renderer_ru.render('meteorites_info', planet=planet_one) == {
-        'text': (
-            '*Метеориты*\n'
-            'У вас есть 1 метеорит  ☄️\\.'
-        ),
+        'text': ('*Метеориты*\nУ вас есть 1 метеорит  ☄️\\.'),
         'parse_mode': 'MarkdownV2',
     }
 
 
-def test_render_meteorites_info_not_invented(renderer_ru, renderer_en, planet_not_invented):
+def test_render_meteorites_info_not_invented(
+    renderer_ru, renderer_en, planet_not_invented
+):
     assert renderer_ru.render('meteorites_info', planet=planet_not_invented) == {
-        'text': (
-            '*Метеориты*\n'
-            '_У вас не разработана технология отправки метеоритов_'
-        ),
+        'text': ('*Метеориты*\n_У вас не разработана технология отправки метеоритов_'),
         'parse_mode': 'MarkdownV2',
     }
     assert renderer_en.render('meteorites_info', planet=planet_not_invented) == {
         'text': (
-            '*Meteorites*\n'
-            "_You haven't developed meteorite launching technology_"
+            "*Meteorites*\n_You haven't developed meteorite launching technology_"
         ),
         'parse_mode': 'MarkdownV2',
     }
@@ -470,17 +445,11 @@ def test_render_meteorites_info_not_invented(renderer_ru, renderer_en, planet_no
 
 def test_render_eco_info(renderer_ru, renderer_en, game):
     assert renderer_ru.render('eco_info', game=game) == {
-        'text': (
-            '*Аномалия*\n'
-            'Уровень аномалии 💥: _33 %_'
-        ),
+        'text': ('*Аномалия*\nУровень аномалии 💥: _33 %_'),
         'parse_mode': 'MarkdownV2',
     }
     assert renderer_en.render('eco_info', game=game) == {
-        'text': (
-            '*Anomaly*\n'
-            'Anomaly level 💥: _33 %_'
-        ),
+        'text': ('*Anomaly*\nAnomaly level 💥: _33 %_'),
         'parse_mode': 'MarkdownV2',
     }
 
@@ -584,11 +553,15 @@ def test_render_successful_transaction(renderer_ru, renderer_en, to_planet):
 
 
 def test_render_transaction_notification(renderer_ru, renderer_en, from_planet):
-    assert renderer_ru.render('transaction_notification', from_planet=from_planet, amount=500) == {
+    assert renderer_ru.render(
+        'transaction_notification', from_planet=from_planet, amount=500
+    ) == {
         'text': 'Планета Сатурн перевела вам 500 💵!',
         'parse_mode': None,
     }
-    assert renderer_en.render('transaction_notification', from_planet=from_planet, amount=500) == {
+    assert renderer_en.render(
+        'transaction_notification', from_planet=from_planet, amount=500
+    ) == {
         'text': 'Planet Сатурн has transferred 500 💵 to you!',
         'parse_mode': None,
     }
@@ -623,8 +596,14 @@ def test_render_round_end_for_admin(renderer_ru, renderer_en, game):
 
 
 def test_render_game_results(renderer_ru, renderer_en):
-    assert renderer_ru.render('game_results') == {'text': 'Статистика всей игры', 'parse_mode': None}
-    assert renderer_en.render('game_results') == {'text': 'Full game statistics', 'parse_mode': None}
+    assert renderer_ru.render('game_results') == {
+        'text': 'Статистика всей игры',
+        'parse_mode': None,
+    }
+    assert renderer_en.render('game_results') == {
+        'text': 'Full game statistics',
+        'parse_mode': None,
+    }
 
 
 def test_render_round_end_for_players(renderer_ru, renderer_en, game):
@@ -713,12 +692,18 @@ def test_render_waiting_for_diplomatist(renderer_ru, renderer_en, from_planet):
     }
 
 
-def test_render_negotiations_for_admin(renderer_ru, renderer_en, to_planet, from_planet):
-    assert renderer_ru.render('negotiations_for_admin', to_planet=to_planet, from_planet=from_planet) == {
+def test_render_negotiations_for_admin(
+    renderer_ru, renderer_en, to_planet, from_planet
+):
+    assert renderer_ru.render(
+        'negotiations_for_admin', to_planet=to_planet, from_planet=from_planet
+    ) == {
         'text': 'Планета Юпитер хочет принять дипломата от планеты Сатурн',
         'parse_mode': None,
     }
-    assert renderer_en.render('negotiations_for_admin', to_planet=to_planet, from_planet=from_planet) == {
+    assert renderer_en.render(
+        'negotiations_for_admin', to_planet=to_planet, from_planet=from_planet
+    ) == {
         'text': 'Planet Юпитер wants to receive a diplomat from planet Сатурн',
         'parse_mode': None,
     }
@@ -967,12 +952,18 @@ def test_render_refuse_request_notification_for_user(renderer_ru, renderer_en):
     }
 
 
-def test_render_refuse_request_notification_for_leader(renderer_ru, renderer_en, user_ru, user_en):
-    assert renderer_ru.render('refuse_request_notification_for_leader', user=user_ru) == {
+def test_render_refuse_request_notification_for_leader(
+    renderer_ru, renderer_en, user_ru, user_en
+):
+    assert renderer_ru.render(
+        'refuse_request_notification_for_leader', user=user_ru
+    ) == {
         'text': 'Вы отказали пользователю Иван.',
         'parse_mode': None,
     }
-    assert renderer_en.render('refuse_request_notification_for_leader', user=user_en) == {
+    assert renderer_en.render(
+        'refuse_request_notification_for_leader', user=user_en
+    ) == {
         'text': 'You have declined user Alice.',
         'parse_mode': None,
     }
@@ -989,7 +980,9 @@ def test_render_fire_admin_notification_for_user(renderer_ru, renderer_en):
     }
 
 
-def test_render_promote_notification_for_leader(renderer_ru, renderer_en, user_ru, user_en):
+def test_render_promote_notification_for_leader(
+    renderer_ru, renderer_en, user_ru, user_en
+):
     assert renderer_ru.render('promote_notification_for_leader', user=user_ru) == {
         'text': 'Вы успешно назначили Иван администратором!',
         'parse_mode': None,
@@ -1000,7 +993,9 @@ def test_render_promote_notification_for_leader(renderer_ru, renderer_en, user_r
     }
 
 
-def test_render_fire_admin_notification_for_leader(renderer_ru, renderer_en, user_ru, user_en):
+def test_render_fire_admin_notification_for_leader(
+    renderer_ru, renderer_en, user_ru, user_en
+):
     assert renderer_ru.render('fire_admin_notification_for_leader', user=user_ru) == {
         'text': 'Вы сняли полномочия администратора с Иван.',
         'parse_mode': None,
@@ -1011,7 +1006,9 @@ def test_render_fire_admin_notification_for_leader(renderer_ru, renderer_en, use
     }
 
 
-def test_render_request_notification_for_leader(renderer_ru, renderer_en, user_ru, user_en):
+def test_render_request_notification_for_leader(
+    renderer_ru, renderer_en, user_ru, user_en
+):
     assert renderer_ru.render('request_notification_for_leader', user=user_ru) == {
         'text': 'Пользователь [Иван Попов](tg://user?id=1) отправил вам запрос на право администратора\\.',
         'parse_mode': 'MarkdownV2',
@@ -1024,17 +1021,11 @@ def test_render_request_notification_for_leader(renderer_ru, renderer_en, user_r
 
 def test_render_request_notification_for_user(renderer_ru, renderer_en):
     assert renderer_ru.render('request_notification_for_user') == {
-        'text': (
-            'Запрос отправлен верховному лидеру.\n'
-            'Ждите его ответа.'
-        ),
+        'text': ('Запрос отправлен верховному лидеру.\nЖдите его ответа.'),
         'parse_mode': None,
     }
     assert renderer_en.render('request_notification_for_user') == {
-        'text': (
-            'Request sent to the Supreme Leader.\n'
-            'Wait for their response.'
-        ),
+        'text': ('Request sent to the Supreme Leader.\nWait for their response.'),
         'parse_mode': None,
     }
 
@@ -1092,7 +1083,6 @@ def test_render_choose_pack(renderer_ru, renderer_en):
         'text': 'Choose a set of planets and cities for the game.',
         'parse_mode': None,
     }
-
 
 
 def test_render_already_in_game(renderer_ru, renderer_en):
@@ -1160,12 +1150,12 @@ def test_render_help(renderer_ru, renderer_en):
             'After all 6 rounds have ended, the planet with the highest average development level wins, provided the anomaly activity has not reached 100%\\. '
             'If the anomaly activity reaches this threshold, all planets lose\\.\n\n'
             'Each planet has 4 cities, all of which start with the same development level and quality of life\\. '
-            'A city\'s quality of life depends on its development level and the anomaly activity\\. '
-            'A city\'s income each round depends on its quality of life\\. '
+            "A city's quality of life depends on its development level and the anomaly activity\\. "
+            "A city's income each round depends on its quality of life\\. "
             'If a city is destroyed, both its development level and quality of life become zero\\. '
             'If all cities on your planet are destroyed, you lose, but you may still perform actions\\.\n\n'
             'During each round, you create an order \\- a list of actions you want to perform after the round ends\\. '
-            'All selected actions are applied only after the end of the current round, and the results of every planet\'s actions are announced during the general discussion\\. '
+            "All selected actions are applied only after the end of the current round, and the results of every planet's actions are announced during the general discussion\\. "
             'The following actions are available in your order:\n\n'
             '📈 *Develop city* \\- invest money into developing one of your cities, increasing its development level and, consequently, its quality of life\\. '
             'Destroyed cities cannot be developed\\. _Cost: 150 💵_\n\n'

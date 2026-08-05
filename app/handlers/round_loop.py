@@ -40,26 +40,24 @@ async def end_handler(
     info_client: InfoClient,
     messages_client: MessagesClient,
     session: AsyncSession,
-    renderer: MessageRenderer
+    renderer: MessageRenderer,
 ):
-    all_planets: list[PlanetDto] = await game_client.get_all_planets_in_game(session, game.id)
+    all_planets: list[PlanetDto] = await game_client.get_all_planets_in_game(
+        session, game.id
+    )
     orders = {
-        planet.id: actions_client.get_order_info(planet.id)
-        for planet in all_planets
+        planet.id: actions_client.get_order_info(planet.id) for planet in all_planets
     }
     for planet in all_planets:
         actions_client.clear_order_info(planet.id)
-    
+
     for planet in all_planets:
-        current_money = actions_client.get_balance(
-            planet.id, actions_client.MONEY_KEY
-        )
+        current_money = actions_client.get_balance(planet.id, actions_client.MONEY_KEY)
         current_meteorites = actions_client.get_balance(
             planet.id, actions_client.METEORITES_KEY
         )
         await game_client.update_planet_balance(
-            session, planet.id,
-            current_money, current_meteorites
+            session, planet.id, current_money, current_meteorites
         )
 
     all_players = await game_client.get_all_active_players(session, game.id)
@@ -72,7 +70,7 @@ async def end_handler(
             **renderer.render(
                 'round_end_for_players',
                 game=game,
-            )
+            ),
         )
 
     await game_client.end_current_round(session, game.id, orders)
@@ -96,7 +94,9 @@ async def end_handler(
 
     all_cities = []
     for planet in all_planets:
-        cities = await game_client.get_cities_of_planet(session, planet.id, False, False)
+        cities = await game_client.get_cities_of_planet(
+            session, planet.id, False, False
+        )
         all_cities.extend(cities)
 
     game_orders_info = await info_client.get_all_orders_in_game(session, game.id)
@@ -112,8 +112,7 @@ async def end_handler(
         await bot.send_document(
             admin.tg_id,
             FSInputFile(
-                f'tmp/excel/game_{game.id}_results.xlsx',
-                filename='Результаты игры'
+                f'tmp/excel/game_{game.id}_results.xlsx', filename='Результаты игры'
             ),
             caption=renderer.render('game_results')['text'],
         )
@@ -151,19 +150,33 @@ def get_round_notifier(
         },
         handler_args={
             'middle_5': (
-                bot, game, game_client,
-                renderer.render('half_time_passed', time=timedelta(seconds=game_config.ROUND_LENGTH // 2)),
-                session
+                bot,
+                game,
+                game_client,
+                renderer.render(
+                    'half_time_passed',
+                    time=timedelta(seconds=game_config.ROUND_LENGTH // 2),
+                ),
+                session,
             ),
             'middle_9': (
-                bot, game, game_client,
-                renderer.render('hurry_up', time=timedelta(seconds=game_config.ROUND_LENGTH // 10)),
-                session
+                bot,
+                game,
+                game_client,
+                renderer.render(
+                    'hurry_up', time=timedelta(seconds=game_config.ROUND_LENGTH // 10)
+                ),
+                session,
             ),
             'end': (
-                bot, game, game_client,
-                actions_client, info_client, messages_client,
-                session, renderer
+                bot,
+                game,
+                game_client,
+                actions_client,
+                info_client,
+                messages_client,
+                session,
+                renderer,
             ),
         },
     )

@@ -21,7 +21,7 @@ INFO_MESSAGE_TYPES = (
     MessageType.CITY,
     MessageType.METEORITES,
     MessageType.SANCTIONS,
-    MessageType.ECO
+    MessageType.ECO,
 )
 
 PLANET_MESSAGE_TYPES = (

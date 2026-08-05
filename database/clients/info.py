@@ -17,7 +17,8 @@ logger = logging.getLogger(__name__)
 
 class InfoClient(DatabaseClient):
     async def get_all_orders_in_game(
-        self, s: AsyncSession,
+        self,
+        s: AsyncSession,
         game_id: int,
     ) -> list[dict[int, OrderInfo]]:
         """
@@ -27,30 +28,38 @@ class InfoClient(DatabaseClient):
         is OrderInfo
         """
 
-        orders = (await s.execute(
-            select(Order)
-            .join(Planet, Planet.id == Order.planet_id)
-            .join(Game, Game.id == Planet.game_id)
-            .where(Game.id == game_id)
-        )).scalars().all()
-        all_planets = (await s.execute(
-            select(Planet)
-            .where(Planet.game_id == game_id)
-        )).scalars().all()
+        orders = (
+            (
+                await s.execute(
+                    select(Order)
+                    .join(Planet, Planet.id == Order.planet_id)
+                    .join(Game, Game.id == Planet.game_id)
+                    .where(Game.id == game_id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        all_planets = (
+            (await s.execute(select(Planet).where(Planet.game_id == game_id)))
+            .scalars()
+            .all()
+        )
         max_round = game_config.ROUND_NUM
         all_orders: list[dict[int, OrderInfo]] = [
-            {
-                planet.id : dict()
-                for planet in all_planets
-            } for _ in range(max_round)
+            {planet.id: dict() for planet in all_planets} for _ in range(max_round)
         ]
 
         for order in orders:
             if order.action in (OrderType.INVENT, OrderType.ECO):
                 all_orders[order.round - 1][order.planet_id][order.action] = True
             elif order.action == OrderType.CREATE:
-                all_orders[order.round - 1][order.planet_id][OrderType.CREATE] = order.argument
+                all_orders[order.round - 1][order.planet_id][OrderType.CREATE] = (
+                    order.argument
+                )
             else:
-                all_orders[order.round - 1][order.planet_id].setdefault(order.action, []).append(order.argument)
+                all_orders[order.round - 1][order.planet_id].setdefault(
+                    order.action, []
+                ).append(order.argument)
 
         return all_orders

@@ -2,9 +2,14 @@ import re
 from typing import Any
 
 from sqlalchemy import (
-    JSON, BigInteger, Enum,
-    ForeignKey, PrimaryKeyConstraint,
-    func, inspect, select
+    JSON,
+    BigInteger,
+    Enum,
+    ForeignKey,
+    PrimaryKeyConstraint,
+    func,
+    inspect,
+    select,
 )
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import (
@@ -12,28 +17,27 @@ from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
     mapped_column,
-    relationship
+    relationship,
 )
 
 from database.schemas import GameStatus
 from game.schemas import OrderType
 from game.config import game_config
 
+
 class ModelBase(DeclarativeBase):
     @declared_attr.directive
     def __tablename__(cls) -> str:
-        match = re.findall(r"[A-Z][a-z]*", cls.__name__)
-        return "_".join(list(map(lambda x: x.lower(), match)))
+        match = re.findall(r'[A-Z][a-z]*', cls.__name__)
+        return '_'.join(list(map(lambda x: x.lower(), match)))
 
-    type_annotation_map = {
-        dict[str, Any]: JSON
-    }
+    type_annotation_map = {dict[str, Any]: JSON}
 
 
 class Game(ModelBase):
     id: Mapped[int] = mapped_column(primary_key=True)
     status: Mapped[GameStatus] = mapped_column(
-        Enum(GameStatus, name="GameStatus"), nullable=False, default=GameStatus.WAITING
+        Enum(GameStatus, name='GameStatus'), nullable=False, default=GameStatus.WAITING
     )
     ecorate: Mapped[int] = mapped_column(
         nullable=False, default=game_config.DEFAULT_GAME_ECO_RATE
@@ -46,22 +50,22 @@ class Game(ModelBase):
 
 class Player(ModelBase):
     tg_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    game_id: Mapped[int] = mapped_column(ForeignKey("game.id"), nullable=True)
+    game_id: Mapped[int] = mapped_column(ForeignKey('game.id'), nullable=True)
 
 
 class Admin(ModelBase):
     tg_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    game_id: Mapped[int] = mapped_column(ForeignKey("game.id"), nullable=True)
+    game_id: Mapped[int] = mapped_column(ForeignKey('game.id'), nullable=True)
 
 
 class Planet(ModelBase):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(nullable=False)
     game_id: Mapped[int] = mapped_column(
-        ForeignKey("game.id", ondelete="CASCADE"), nullable=False
+        ForeignKey('game.id', ondelete='CASCADE'), nullable=False
     )
     owner_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("player.tg_id"), nullable=True
+        BigInteger, ForeignKey('player.tg_id'), nullable=True
     )
     balance: Mapped[int] = mapped_column(
         nullable=False, default=game_config.DEFAULT_BALANCE
@@ -80,12 +84,11 @@ class Planet(ModelBase):
             return None
         if len(self.cities) == 0:
             return 0
-        avg_development = sum(
-            city.development
-            for city in self.cities
-        ) / len(self.cities)
+        avg_development = sum(city.development for city in self.cities) / len(
+            self.cities
+        )
         return avg_development * self.game.ecorate / 100
-    
+
     @development.expression
     def development(cls):
         avg_development = (
@@ -95,9 +98,7 @@ class Planet(ModelBase):
         )
 
         eco_rate = (
-            select(Game.ecorate / 100)
-            .where(Game.id == cls.game_id)
-            .scalar_subquery()
+            select(Game.ecorate / 100).where(Game.id == cls.game_id).scalar_subquery()
         )
 
         return func.coalesce(avg_development, 0.0) * eco_rate
@@ -107,7 +108,7 @@ class City(ModelBase):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(nullable=False)
     planet_id: Mapped[int] = mapped_column(
-        ForeignKey("planet.id", ondelete="CASCADE"), nullable=False
+        ForeignKey('planet.id', ondelete='CASCADE'), nullable=False
     )
     is_shielded: Mapped[bool] = mapped_column(nullable=False, default=False)
     development: Mapped[int] = mapped_column(
@@ -123,7 +124,7 @@ class City(ModelBase):
         if 'planet' in state.unloaded:
             return None
         return self.development * self.planet.game.ecorate / 100
-    
+
     @rate_of_life.expression
     def rate_of_life(cls):
         eco_rate = (
@@ -137,43 +138,43 @@ class City(ModelBase):
 
 class Order(ModelBase):
     action: Mapped[OrderType] = mapped_column(
-        Enum(OrderType, name="OrderType"), nullable=False
+        Enum(OrderType, name='OrderType'), nullable=False
     )
     planet_id: Mapped[int] = mapped_column(
-        ForeignKey("planet.id", ondelete="CASCADE"), nullable=False
+        ForeignKey('planet.id', ondelete='CASCADE'), nullable=False
     )
     argument: Mapped[int] = mapped_column(default=0, nullable=False)
     round: Mapped[int] = mapped_column(nullable=False, default=0)
 
     __table_args__ = (
-        PrimaryKeyConstraint(action, planet_id, round, argument, name="order_pkey"),
+        PrimaryKeyConstraint(action, planet_id, round, argument, name='order_pkey'),
     )
 
 
 class Sanction(ModelBase):
     planet_from: Mapped[int] = mapped_column(
-        ForeignKey("planet.id", ondelete="CASCADE"), nullable=False
+        ForeignKey('planet.id', ondelete='CASCADE'), nullable=False
     )
     planet_to: Mapped[int] = mapped_column(
-        ForeignKey("planet.id", ondelete="CASCADE"), nullable=False
+        ForeignKey('planet.id', ondelete='CASCADE'), nullable=False
     )
     num_round: Mapped[int] = mapped_column(nullable=False)
 
     __table_args__ = (
-        PrimaryKeyConstraint(planet_from, planet_to, num_round, name="sanction_pkey"),
+        PrimaryKeyConstraint(planet_from, planet_to, num_round, name='sanction_pkey'),
     )
 
 
 class Negotiation(ModelBase):
     planet_from: Mapped[int] = mapped_column(
-        ForeignKey("planet.id", ondelete="CASCADE"), nullable=False
+        ForeignKey('planet.id', ondelete='CASCADE'), nullable=False
     )
     planet_to: Mapped[int] = mapped_column(
-        ForeignKey("planet.id", ondelete="CASCADE"), nullable=False
+        ForeignKey('planet.id', ondelete='CASCADE'), nullable=False
     )
 
     __table_args__ = (
-        PrimaryKeyConstraint(planet_from, planet_to, name="negotiation_pkey"),
+        PrimaryKeyConstraint(planet_from, planet_to, name='negotiation_pkey'),
     )
 
 
@@ -185,6 +186,4 @@ class RoundInfo(ModelBase):
     round: Mapped[int] = mapped_column(nullable=False)
     info: Mapped[dict[str, Any]] = mapped_column(nullable=False)
 
-    __table_args__ = (
-        PrimaryKeyConstraint(game_id, round, name='round_info_pkey'),
-    )
+    __table_args__ = (PrimaryKeyConstraint(game_id, round, name='round_info_pkey'),)

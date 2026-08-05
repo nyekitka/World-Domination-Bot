@@ -1,5 +1,6 @@
 from aiogram.fsm.state import State, StatesGroup
 
+
 class BotStates(StatesGroup):
     """
     All possible state of the bot:

@@ -10,53 +10,51 @@ from app.handlers.main_page import (
     refuse_knight,
     request,
     start,
-    main_page_router
+    main_page_router,
 )
 
 
-
-@pytest.mark.parametrize(
-    'message_update',
-    ['/start'],
-    indirect=['message_update']
-)
+@pytest.mark.parametrize('message_update', ['/start'], indirect=['message_update'])
 @pytest.mark.asyncio
 async def test_start_routing(
-    message_update, dispatcher,
-    mock_bot, user_client, mock_session,
-    patch_handler
+    message_update, dispatcher, mock_bot, user_client, mock_session, patch_handler
 ):
     handler_mock = patch_handler(main_page_router, start)
-    
+
     await dispatcher.feed_update(
-        mock_bot, message_update,
+        mock_bot,
+        message_update,
         user_client=user_client,
         session=mock_session,
     )
-    
+
     handler_mock.assert_awaited_once()
-    
+
 
 @pytest.mark.parametrize(
     ('message_update', 'is_admin'),
-    [
-        ('/request', True),
-        ('/request', False)
-    ],
-    indirect=['message_update']
+    [('/request', True), ('/request', False)],
+    indirect=['message_update'],
 )
 @pytest.mark.asyncio
 async def test_request_routing(
-    message_update, dispatcher, mocker,
-    mock_bot, user_client, mock_session,
-    is_admin, user_id, patch_handler
+    message_update,
+    dispatcher,
+    mocker,
+    mock_bot,
+    user_client,
+    mock_session,
+    is_admin,
+    user_id,
+    patch_handler,
 ):
     mocker.patch.object(user_client, 'is_user_admin', return_value=is_admin)
 
     handler_mock = patch_handler(main_page_router, request)
-    
+
     await dispatcher.feed_update(
-        mock_bot, message_update,
+        mock_bot,
+        message_update,
         user_client=user_client,
         session=mock_session,
         owner_id=user_id,
@@ -73,21 +71,26 @@ async def test_request_routing(
     [
         ('accept_knight 1', lf('user_id')),
         ('accept_knight 1', lf('other_user_id')),
-        ('acc 1', lf('user_id'))
+        ('acc 1', lf('user_id')),
     ],
-    indirect=['call_update']
+    indirect=['call_update'],
 )
 @pytest.mark.asyncio
 async def test_accept_knight_routing(
-    call_update, dispatcher,
-    mock_bot, user_client, mock_session,
-    owner_id, patch_handler
+    call_update,
+    dispatcher,
+    mock_bot,
+    user_client,
+    mock_session,
+    owner_id,
+    patch_handler,
 ):
 
     handler_mock = patch_handler(main_page_router, accept_knight, 'callback_query')
-    
+
     await dispatcher.feed_update(
-        mock_bot, call_update,
+        mock_bot,
+        call_update,
         user_client=user_client,
         session=mock_session,
         owner_id=owner_id,
@@ -109,19 +112,24 @@ async def test_accept_knight_routing(
         ('refuse_knight 1', lf('other_user_id')),
         ('ref 1', lf('user_id')),
     ],
-    indirect=['call_update']
+    indirect=['call_update'],
 )
 @pytest.mark.asyncio
 async def test_refuse_knight_routing(
-    call_update, dispatcher,
-    mock_bot, user_client, mock_session,
-    owner_id, patch_handler
+    call_update,
+    dispatcher,
+    mock_bot,
+    user_client,
+    mock_session,
+    owner_id,
+    patch_handler,
 ):
 
     handler_mock = patch_handler(main_page_router, refuse_knight, 'callback_query')
-    
+
     await dispatcher.feed_update(
-        mock_bot, call_update,
+        mock_bot,
+        call_update,
         user_client=user_client,
         session=mock_session,
         owner_id=owner_id,
@@ -141,21 +149,26 @@ async def test_refuse_knight_routing(
     [
         ('/fire @nyekitka', lf('user_id')),
         ('/fire @nyekitka', lf('other_user_id')),
-        ('/fir', lf('user_id'))
+        ('/fir', lf('user_id')),
     ],
-    indirect=['message_update']
+    indirect=['message_update'],
 )
 @pytest.mark.asyncio
 async def test_fire_admin_routing(
-    message_update, dispatcher,
-    mock_bot, user_client, mock_session,
-    owner_id, patch_handler
+    message_update,
+    dispatcher,
+    mock_bot,
+    user_client,
+    mock_session,
+    owner_id,
+    patch_handler,
 ):
 
     handler_mock = patch_handler(main_page_router, fire_admin)
-    
+
     await dispatcher.feed_update(
-        mock_bot, message_update,
+        mock_bot,
+        message_update,
         user_client=user_client,
         session=mock_session,
         owner_id=owner_id,

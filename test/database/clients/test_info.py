@@ -10,9 +10,15 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.asyncio
 async def test_get_all_orders_in_game(
-    info_client, session, game_id,
-    city_id, city_id_2, city_id_3,
-    planet_id, planet_id_2, planet_id_3
+    info_client,
+    session,
+    game_id,
+    city_id,
+    city_id_2,
+    city_id_3,
+    planet_id,
+    planet_id_2,
+    planet_id_3,
 ):
     all_orders = [
         {
@@ -20,7 +26,7 @@ async def test_get_all_orders_in_game(
                 OrderType.ATTACK: [city_id_2],
                 OrderType.CREATE: 3,
                 OrderType.DEVELOP: [city_id],
-                OrderType.SANCTIONS: [planet_id]
+                OrderType.SANCTIONS: [planet_id],
             },
             planet_id_3: {
                 OrderType.ATTACK: [city_id_3],
@@ -37,22 +43,37 @@ async def test_get_all_orders_in_game(
         },
     ]
     orders = [
-        Order(action=OrderType.ATTACK, planet_id=planet_id_2, round=1, argument=city_id_2),
+        Order(
+            action=OrderType.ATTACK, planet_id=planet_id_2, round=1, argument=city_id_2
+        ),
         Order(action=OrderType.CREATE, planet_id=planet_id_2, round=1, argument=3),
-        Order(action=OrderType.DEVELOP, planet_id=planet_id_2, round=1, argument=city_id),
-        Order(action=OrderType.SANCTIONS, planet_id=planet_id_2, round=1, argument=planet_id),
-        Order(action=OrderType.ATTACK, planet_id=planet_id_3, round=1, argument=city_id_3),
+        Order(
+            action=OrderType.DEVELOP, planet_id=planet_id_2, round=1, argument=city_id
+        ),
+        Order(
+            action=OrderType.SANCTIONS,
+            planet_id=planet_id_2,
+            round=1,
+            argument=planet_id,
+        ),
+        Order(
+            action=OrderType.ATTACK, planet_id=planet_id_3, round=1, argument=city_id_3
+        ),
         Order(action=OrderType.INVENT, planet_id=planet_id_3, round=1, argument=True),
         Order(action=OrderType.ECO, planet_id=planet_id_3, round=1, argument=True),
-        Order(action=OrderType.ATTACK, planet_id=planet_id, round=2, argument=city_id_2),
-        Order(action=OrderType.ATTACK, planet_id=planet_id, round=2, argument=city_id_3),
+        Order(
+            action=OrderType.ATTACK, planet_id=planet_id, round=2, argument=city_id_2
+        ),
+        Order(
+            action=OrderType.ATTACK, planet_id=planet_id, round=2, argument=city_id_3
+        ),
         Order(action=OrderType.CREATE, planet_id=planet_id, round=2, argument=1),
         Order(action=OrderType.SHIELD, planet_id=planet_id, round=2, argument=city_id),
     ]
 
     session.add_all(orders)
     await session.commit()
-    
+
     result = await info_client.get_all_orders_in_game(session, game_id)
 
     for round in range(len(all_orders)):

@@ -1,7 +1,5 @@
 import datetime
-from typing import (
-    Any, Awaitable, Callable, ParamSpec
-)
+from typing import Any, Awaitable, Callable, ParamSpec
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.date import DateTrigger
@@ -42,5 +40,5 @@ class Notifier:
             scheduler.add_job(
                 func=executor,
                 trigger=DateTrigger(now + datetime.timedelta(seconds=secs)),
-                args=(key,)
+                args=(key,),
             )

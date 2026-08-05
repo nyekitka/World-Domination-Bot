@@ -10,7 +10,6 @@ from app.handlers.ingame import ingame_router
 from app.handlers.lobby import lobby_router
 
 
-
 @pytest.fixture(scope='session')
 def dispatcher():
     dp = Dispatcher()
@@ -27,8 +26,8 @@ def call_update(message, user, request):
             from_user=user,
             chat_instance='chat',
             message=message,
-            data=request.param
-        )
+            data=request.param,
+        ),
     )
 
 
@@ -41,7 +40,7 @@ def message_update(chat, user, request):
             date=datetime.datetime.now(),
             chat=chat,
             from_user=user,
-            text=request.param
+            text=request.param,
         ),
     )
 
@@ -49,9 +48,7 @@ def message_update(chat, user, request):
 @pytest.fixture()
 def patch_handler(monkeypatch):
     def _patch(
-        router: Router,
-        original_callback: function,
-        event_type: str = 'message'
+        router: Router, original_callback: function, event_type: str = 'message'
     ) -> AsyncMock:
         handler_mock = AsyncMock()
         observer = getattr(router, event_type)

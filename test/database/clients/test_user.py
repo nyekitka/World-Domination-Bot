@@ -7,12 +7,12 @@ from game.schemas import FailureReason
 
 
 @pytest.mark.parametrize(
-    ["tg_id", "is_admin"],
+    ['tg_id', 'is_admin'],
     [
-        (lf("admin_id"), True),
-        (lf("non_existing_user_id"), True),
-        (lf("player_id"), False),
-        (lf("non_existing_user_id"), False),
+        (lf('admin_id'), True),
+        (lf('non_existing_user_id'), True),
+        (lf('player_id'), False),
+        (lf('non_existing_user_id'), False),
     ],
 )
 @pytest.mark.asyncio
@@ -27,7 +27,7 @@ async def test_make_new_user_if_not_exists(session, tg_id, is_admin, user_client
         assert player
 
 
-@pytest.mark.parametrize("is_admin", (True, False))
+@pytest.mark.parametrize('is_admin', (True, False))
 @pytest.mark.asyncio
 async def test_make_new_user(session, is_admin, non_existing_user_id, user_client):
     await user_client.make_new_user(session, non_existing_user_id, is_admin)
@@ -41,11 +41,11 @@ async def test_make_new_user(session, is_admin, non_existing_user_id, user_clien
 
 
 @pytest.mark.parametrize(
-    ["tg_id", "result"],
+    ['tg_id', 'result'],
     [
-        (lf("admin_id"), lf("admin_id")),
-        (lf("player_id"), lf("player_id")),
-        (lf("non_existing_user_id"), None),
+        (lf('admin_id'), lf('admin_id')),
+        (lf('player_id'), lf('player_id')),
+        (lf('non_existing_user_id'), None),
     ],
 )
 @pytest.mark.asyncio
@@ -59,21 +59,21 @@ async def test_get_user(user_client, session, tg_id, result):
 
 
 @pytest.mark.parametrize(
-    ["user_id", "user_game_id", "game_status", "result"],
+    ['user_id', 'user_game_id', 'game_status', 'result'],
     [
-        (lf("admin_id"), None, GameStatus.WAITING, FailureReason.SUCCESS),
-        (lf("admin_id"), None, GameStatus.ENDED, FailureReason.SUCCESS),
-        (lf("player_id"), None, GameStatus.WAITING, FailureReason.SUCCESS),
-        (lf("player_id"), None, GameStatus.ENDED, FailureReason.GAME_ENDED),
+        (lf('admin_id'), None, GameStatus.WAITING, FailureReason.SUCCESS),
+        (lf('admin_id'), None, GameStatus.ENDED, FailureReason.SUCCESS),
+        (lf('player_id'), None, GameStatus.WAITING, FailureReason.SUCCESS),
+        (lf('player_id'), None, GameStatus.ENDED, FailureReason.GAME_ENDED),
         (
-            lf("player_id"),
-            lf("game_id"),
+            lf('player_id'),
+            lf('game_id'),
             GameStatus.ROUND,
             FailureReason.ALREADY_IN_GAME,
         ),
         (
-            lf("admin_id"),
-            lf("game_id"),
+            lf('admin_id'),
+            lf('game_id'),
             GameStatus.ROUND,
             FailureReason.ALREADY_IN_GAME,
         ),
@@ -81,8 +81,7 @@ async def test_get_user(user_client, session, tg_id, result):
 )
 @pytest.mark.asyncio
 async def test_join_user(
-    session, user_id, user_game_id,
-    game_status, result, game_id, user_client
+    session, user_id, user_game_id, game_status, result, game_id, user_client
 ):
     user = await session.get(Player, user_id)
     if user:
@@ -114,8 +113,7 @@ def new_player_id():
 
 @pytest.mark.asyncio
 async def test_join_player_when_lobby_is_full(
-    user_client, session, new_player_id,
-    game_id, player_ids, planet_ids
+    user_client, session, new_player_id, game_id, player_ids, planet_ids
 ):
     for player_id, planet_id in zip(player_ids, planet_ids):
         planet = await session.get(Planet, planet_id)
@@ -153,9 +151,7 @@ async def test_kick_user(user_client, session, player_id, game_id, admin_id):
 
 
 @pytest.mark.asyncio
-async def test_kick_user_when_not_in_lobby(
-    user_client, session, player_id, admin_id
-):
+async def test_kick_user_when_not_in_lobby(user_client, session, player_id, admin_id):
     res = await user_client.kick_user(session, player_id)
     assert res == FailureReason.NOT_IN_GAME
 
@@ -164,9 +160,7 @@ async def test_kick_user_when_not_in_lobby(
 
 
 @pytest.mark.asyncio
-async def test_promote_to_admin_not_in_game(
-    user_client, session, player_id
-):
+async def test_promote_to_admin_not_in_game(user_client, session, player_id):
     res = await user_client.promote_to_admin(session, player_id)
     assert res == FailureReason.SUCCESS
 
@@ -180,19 +174,18 @@ async def test_promote_to_admin_not_in_game(
         (GameStatus.WAITING, FailureReason.SUCCESS),
         (GameStatus.ROUND, FailureReason.WAIT_TILL_GAME_ENDS),
         (GameStatus.MEETING, FailureReason.WAIT_TILL_GAME_ENDS),
-    ]
+    ],
 )
 @pytest.mark.asyncio
 async def test_promote_to_admin_in_game(
-    user_client, session, player_id, game_status,
-    expected_result, game_id
+    user_client, session, player_id, game_status, expected_result, game_id
 ):
     game = await session.get(Game, game_id)
     game.status = game_status
     player = await session.get(Player, player_id)
     player.game_id = game_id
     await session.commit()
-    
+
     result = await user_client.promote_to_admin(session, player_id)
     assert result == expected_result
     await session.commit()

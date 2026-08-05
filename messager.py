@@ -4,7 +4,7 @@ import pymorphy3
 from num2words import num2words
 from database.schemas import CityDto, PlanetDto
 
-_messages_file = open("./presets/messages.json", encoding="utf-8")
+_messages_file = open('./presets/messages.json', encoding='utf-8')
 Messages = json.load(_messages_file)
 morph = pymorphy3.MorphAnalyzer()
 
@@ -16,80 +16,75 @@ class Messager:
 
     def start_msg(self, isadmin: bool, ingame: bool, name: str):
         if isadmin and ingame:
-            return Messages["start_admin_wgame"].format(name)
+            return Messages['start_admin_wgame'].format(name)
         elif isadmin and not ingame:
-            return Messages["start_admin_wogame"].format(name)
+            return Messages['start_admin_wogame'].format(name)
         elif not isadmin and ingame:
-            return Messages["start_user_wgame"].format(name)
+            return Messages['start_user_wgame'].format(name)
         else:
-            return Messages["start_user_wogame"].format(name)
+            return Messages['start_user_wogame'].format(name)
 
     def admin_enters(self):
-        return Messages["admin_enters_game"]
+        return Messages['admin_enters_game']
 
     def na_command(self):
-        return Messages["not_accessible_command"]
+        return Messages['not_accessible_command']
 
     def invalid_code(self):
-        return Messages["invalid_code"]
+        return Messages['invalid_code']
 
     def incorrect_code(self):
-        return Messages["incorrect_code"]
+        return Messages['incorrect_code']
 
     def welcome(self, name: str):
-        return Messages["login"].format(name)
+        return Messages['login'].format(name)
 
     def already_logged(self):
-        return Messages["already_logged"]
+        return Messages['already_logged']
 
     def success_enter(self, id: int, planet_name: str):
-        return Messages["success_enter"].format(id, planet_name)
+        return Messages['success_enter'].format(id, planet_name)
 
     def success_admin_enter(self, id: int):
-        return Messages["success_admin_enter"].format(id)
+        return Messages['success_admin_enter'].format(id)
 
-    def success_enter_for_others(
-        self, planet_name: str, active_num: int, all_num: int
-    ):
-        return Messages["success_enter_for_others"].format(
+    def success_enter_for_others(self, planet_name: str, active_num: int, all_num: int):
+        return Messages['success_enter_for_others'].format(
             planet_name, active_num, all_num
         )
 
-    def leave_for_others(
-        self, planet_name: str,
-        active_num: int, all_num: int
-    ):
-        return Messages["leave_for_others"].format(planet_name, active_num, all_num)
+    def leave_for_others(self, planet_name: str, active_num: int, all_num: int):
+        return Messages['leave_for_others'].format(planet_name, active_num, all_num)
 
     def leaving_msg(self):
-        return Messages["leaving_msg"]
+        return Messages['leaving_msg']
 
     def starting_game_not_being_in(self):
-        return Messages["starting_game_not_being_in"]
+        return Messages['starting_game_not_being_in']
 
     def game_created(self, gameid, n):
-        return Messages["game_created"].format(gameid, n)
+        return Messages['game_created'].format(gameid, n)
 
     def round_message(self, n: int):
         if n == 1:
-            return Messages["first_round"]
+            return Messages['first_round']
         else:
-            return Messages["common_round"].format(
-                num2words(n, lang="ru", to="ordinal").capitalize()
+            return Messages['common_round'].format(
+                num2words(n, lang='ru', to='ordinal').capitalize()
             )
 
     def round_admins(self, n: int):
         if n == 1:
-            return Messages["first_round_for_admins"]
+            return Messages['first_round_for_admins']
         else:
-            return Messages["round_for_admins"].format(
-                num2words(n, lang="ru", to="ordinal").capitalize()
+            return Messages['round_for_admins'].format(
+                num2words(n, lang='ru', to='ordinal').capitalize()
             )
 
-    def city_stats_message(
-        self, planet: PlanetDto, cities: list[CityDto]
-    ) -> str:
-        planet_info = Messages['planet_info'].format(planet.name, planet.balance, planet.development)
+    def city_stats_message(self, planet: PlanetDto, cities: list[CityDto]) -> str:
+        planet_info = Messages['planet_info'].format(
+            planet.name, planet.balance, planet.development
+        )
         cities_info = []
         for city in cities:
             addition = ''
@@ -102,164 +97,165 @@ class Messager:
                     city.name + addition,
                     city.development,
                     city.rate_of_life,
-                    city.income
+                    city.income,
                 )
             )
         return planet_info + ''.join(cities_info)
 
     def sanctions_message(self, sanctioned_planets: list[PlanetDto]) -> str:
         if len(sanctioned_planets) == 0:
-            return Messages["sanctions_info"].format(
-                "Ни одна из планет не наложила на вас санкции"
+            return Messages['sanctions_info'].format(
+                'Ни одна из планет не наложила на вас санкции'
             )
         else:
-            return Messages["sanctions_info"].format(
-                "На вас наложили санкции: " + ", ".join([planet.name for planet in sanctioned_planets])
+            return Messages['sanctions_info'].format(
+                'На вас наложили санкции: '
+                + ', '.join([planet.name for planet in sanctioned_planets])
             )
 
     def meteorites_message(self, planet: PlanetDto) -> str:
         if planet.is_invented:
-            word = morph.parse("метеорит")[0]
+            word = morph.parse('метеорит')[0]
             meteorites_count = planet.meteorites()
             word = word.make_agree_with_number(meteorites_count).word
-            return f"*Метеориты:*\n_У вас {meteorites_count} {word}_ ☄️"
+            return f'*Метеориты:*\n_У вас {meteorites_count} {word}_ ☄️'
         else:
-            return "*Метеориты:*\n_У вас не разработана технология отправки метеоритов_"
+            return '*Метеориты:*\n_У вас не разработана технология отправки метеоритов_'
 
     def eco_message(self, eco_rate: int) -> str:
-        return Messages["eco_info"].format(100 - eco_rate)
+        return Messages['eco_info'].format(100 - eco_rate)
 
     def other_planets_message(self, planet: PlanetDto, cities: list[CityDto]) -> str:
         args = [planet.name]
         for city in cities:
             args.extend(
                 [
-                    city.name + (" ❌" if city.development == 0 else ""),
+                    city.name + (' ❌' if city.development == 0 else ''),
                     city.development,
                 ]
             )
-        return Messages["other_planet"].format(*args)
+        return Messages['other_planet'].format(*args)
 
     def already_started(self):
-        return Messages["already_started"]
+        return Messages['already_started']
 
     def not_enough_players(self, n1: int, n2: int):
-        return Messages["not_enough_players"].format(n1, n2)
+        return Messages['not_enough_players'].format(n1, n2)
 
     def choose_lobby(self):
-        return Messages["choose_lobby"]
-    
+        return Messages['choose_lobby']
+
     def choose_number_of_planets(self):
         return Messages['choose_number_of_planets']
 
     def no_games(self):
-        return Messages["no games"]
+        return Messages['no games']
 
     def fivemin(self):
-        return Messages["5 minutes left"]
+        return Messages['5 minutes left']
 
     def onemin(self):
-        return Messages["1 minute left"]
+        return Messages['1 minute left']
 
     def admin_round_end(self, nround: int):
-        return Messages["round_results"].format(nround)
+        return Messages['round_results'].format(nround)
 
     def round_end(self, nround: int):
-        return Messages["end_of_round"].format(nround)
+        return Messages['end_of_round'].format(nround)
 
     def game_results(self):
-        return Messages["game_results"]
+        return Messages['game_results']
 
     def end_of_the_game(self):
-        return Messages["end_of_the_game"]
+        return Messages['end_of_the_game']
 
     def goodbye(self):
-        return Messages["goodbye"]
+        return Messages['goodbye']
 
     def negotiations_ended(self):
-        return Messages["negotiations_ended"]
+        return Messages['negotiations_ended']
 
     def negotiations_ended_admin(self, planet_name: str):
-        return Messages["negotiations_ended_for_admin"].format(planet_name)
+        return Messages['negotiations_ended_for_admin'].format(planet_name)
 
     def wait_for_diplomatist(self, planet_name: str):
-        return Messages["waiting_for_diplomatist"].format(planet_name)
+        return Messages['waiting_for_diplomatist'].format(planet_name)
 
     def neg_accept_for_admin(self, to_planet: str, from_planet: str):
-        return Messages["negotiations_for_admin"].format(to_planet, from_planet)
+        return Messages['negotiations_for_admin'].format(to_planet, from_planet)
 
     def negotiations_accepted(self, planet_name: str):
-        return Messages["negotiations_accepted"].format(planet_name)
+        return Messages['negotiations_accepted'].format(planet_name)
 
     def negotiations_denied(self, planet_name: str):
-        return Messages["negotiations_denied"].format(planet_name)
+        return Messages['negotiations_denied'].format(planet_name)
 
     def wait_for_acception(self, planet_name: str):
-        return Messages["wait_for_acception"].format(planet_name)
+        return Messages['wait_for_acception'].format(planet_name)
 
     def nobody_online(self, planet_name: str):
-        return Messages["nobody_online"].format(planet_name)
+        return Messages['nobody_online'].format(planet_name)
 
     def negotiations_offer(self, planet_name: str):
-        return Messages["negotiations_offer"].format(planet_name)
+        return Messages['negotiations_offer'].format(planet_name)
 
     def how_much_money(self, planet_name: str):
-        return Messages["how_much_money"].format(planet_name)
+        return Messages['how_much_money'].format(planet_name)
 
     def waiting_time_expired(self):
-        return Messages["waiting_time_expired"]
+        return Messages['waiting_time_expired']
 
     def successful_transaction(self, planet_name: str):
-        return Messages["successful_transaction"].format(planet_name)
+        return Messages['successful_transaction'].format(planet_name)
 
     def transaction_notification(self, planet_name: str, amount: int):
-        return Messages["transaction_notification"].format(planet_name, amount)
+        return Messages['transaction_notification'].format(planet_name, amount)
 
     def wrong_answer(self):
-        return Messages["wrong_answer"]
+        return Messages['wrong_answer']
 
     def ending_outside(self):
-        return Messages["ending_outside"]
+        return Messages['ending_outside']
 
     def game_interrupted_report(self):
-        return Messages["game_interrupted_report"]
+        return Messages['game_interrupted_report']
 
     def game_interrupted_message(self):
-        return Messages["game_interrupted_message"]
+        return Messages['game_interrupted_message']
 
     def knight(self):
-        return Messages["knight"]
+        return Messages['knight']
 
     def unknight(self):
-        return Messages["unknight"]
+        return Messages['unknight']
 
     def knighting_for_leader(self, name: str):
-        return Messages["knighting_for_leader"].format(name)
+        return Messages['knighting_for_leader'].format(name)
 
     def unknighting_for_leader(self, name: str):
-        return Messages["unknighting_for_leader"].format(name)
+        return Messages['unknighting_for_leader'].format(name)
 
     def request_for_user(self):
-        return Messages["request_for_user"]
+        return Messages['request_for_user']
 
     def request_for_leader(self, name: str):
-        return Messages["request_for_leader"].format(name)
+        return Messages['request_for_leader'].format(name)
 
     def notknight_for_leader(self, name: str):
-        return Messages["notknight_leader"].format(name)
+        return Messages['notknight_leader'].format(name)
 
     def notknight(self):
-        return Messages["notknight"]
+        return Messages['notknight']
 
     def kick_due_to_admin(self):
-        return Messages["kick_due_to_admin"]
+        return Messages['kick_due_to_admin']
 
     def kick_due_to_not_admin(self):
-        return Messages["kick_due_to_not_admin"]
-    
+        return Messages['kick_due_to_not_admin']
+
     def action_out_of_game(self):
         return Messages['action_out_of_game']
-    
+
     def unexpected_error(self):
         return Messages['unexpected_error']
 

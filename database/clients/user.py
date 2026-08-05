@@ -26,10 +26,7 @@ class UserClient(DatabaseClient):
             if user:
                 return AdminDto.model_validate(user)
 
-        logger.info(
-            "Creating new user with tg_id=%s and is_admin=%s",
-            tg_id, is_admin
-        )
+        logger.info('Creating new user with tg_id=%s and is_admin=%s', tg_id, is_admin)
 
         if is_admin:
             user = Admin(tg_id=tg_id)
@@ -114,7 +111,9 @@ class UserClient(DatabaseClient):
 
         return FailureReason.SUCCESS
 
-    async def _join_admin(self, s: AsyncSession, admin: Admin, game_id: int) -> FailureReason:
+    async def _join_admin(
+        self, s: AsyncSession, admin: Admin, game_id: int
+    ) -> FailureReason:
         if admin.game_id:
             return FailureReason.ALREADY_IN_GAME
 
@@ -160,19 +159,19 @@ class UserClient(DatabaseClient):
         admin.game_id = None
 
         return FailureReason.SUCCESS
-    
+
     async def promote_to_admin(self, s: AsyncSession, player_id: int) -> FailureReason:
         player = await s.get(Player, player_id)
         if player is None:
             return FailureReason.OBJECT_NOT_FOUND
-        
+
         if player.game_id:
             game = await s.get(Game, player.game_id)
             if game.status != GameStatus.WAITING:
                 return FailureReason.WAIT_TILL_GAME_ENDS
-            
+
             await self._kick_player(s, player)
-        
+
         admin = Admin(tg_id=player.tg_id)
         s.add(admin)
         await s.delete(player)
@@ -183,9 +182,9 @@ class UserClient(DatabaseClient):
         admin = await s.get(Admin, admin_id)
         if admin is None:
             return FailureReason.OBJECT_NOT_FOUND
-        
+
         self._kick_admin(admin)
-        
+
         player = Player(tg_id=admin.tg_id)
         s.add(player)
         await s.delete(admin)

@@ -30,12 +30,12 @@ async def method_executor_call(
     result = await method(*args)
     if result != FailureReason.SUCCESS:
         await call.answer(
-            renderer.render(FAILURE_INTERPRETATIONS[result])['text'],
-            True
+            renderer.render(FAILURE_INTERPRETATIONS[result])['text'], True
         )
         return False
     await call.answer()
     return True
+
 
 async def sync_method_executor_call(
     method: Callable[P, FailureReason],
@@ -46,12 +46,12 @@ async def sync_method_executor_call(
     result = method(*args)
     if result != FailureReason.SUCCESS:
         await call.answer(
-            renderer.render(FAILURE_INTERPRETATIONS[result])['text'],
-            True
+            renderer.render(FAILURE_INTERPRETATIONS[result])['text'], True
         )
         return False
     await call.answer()
     return True
+
 
 async def method_executor_msg(
     bot: Bot,
@@ -59,14 +59,14 @@ async def method_executor_msg(
     userid: int,
     renderer: MessageRenderer,
     *args: P.args,
-    reply_markup: Markup = None
+    reply_markup: Markup = None,
 ) -> bool:
     result = await method(*args)
     if result != FailureReason.SUCCESS:
         await bot.send_message(
             userid,
             **renderer.render(FAILURE_INTERPRETATIONS[result]),
-            reply_markup=reply_markup
+            reply_markup=reply_markup,
         )
         return False
     return True
@@ -105,7 +105,7 @@ async def send_all_info(
             planet,
             planet_cities,
             order_info.get(OrderType.SHIELD, []),
-            order_info.get(OrderType.DEVELOP, [])
+            order_info.get(OrderType.DEVELOP, []),
         ),
     )
     messages_client.set_info_message_id(user_id, MessageType.CITY, city_msg.message_id)
@@ -123,12 +123,11 @@ async def send_all_info(
         ),
         reply_markup=ikm,
     )
-    messages_client.set_info_message_id(user_id, MessageType.METEORITES, meteorites_msg.message_id)
+    messages_client.set_info_message_id(
+        user_id, MessageType.METEORITES, meteorites_msg.message_id
+    )
 
-    sanctioned_planets_names = [
-        planet.name
-        for planet in sanctioned_planets
-    ]
+    sanctioned_planets_names = [planet.name for planet in sanctioned_planets]
     sanctions_msg = await bot.send_message(
         user_id,
         **renderer.render(
@@ -139,7 +138,9 @@ async def send_all_info(
             planet, other_planets, order_info.get(OrderType.SANCTIONS, [])
         ),
     )
-    messages_client.set_info_message_id(user_id, MessageType.SANCTIONS, sanctions_msg.message_id)
+    messages_client.set_info_message_id(
+        user_id, MessageType.SANCTIONS, sanctions_msg.message_id
+    )
 
     eco_msg = await bot.send_message(
         user_id,
@@ -168,8 +169,5 @@ async def send_all_info(
             ),
         )
         messages_client.set_planet_message_id(
-            user_id,
-            other_planet.id,
-            MessageType.ATTACK,
-            msg.message_id
+            user_id, other_planet.id, MessageType.ATTACK, msg.message_id
         )

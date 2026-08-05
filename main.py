@@ -6,29 +6,22 @@ import sys
 from aiogram import Bot, Dispatcher
 
 from app.middlewares import DBMiddleware, I18nMiddleware
-from app.handlers import (
-    ingame_router, main_page_router, lobby_router
-)
+from app.handlers import ingame_router, main_page_router, lobby_router
 from database import engine, session_factory
-from database.clients import (
-    GameClient, InfoClient, UserClient
-)
+from database.clients import GameClient, InfoClient, UserClient
 from database.models import ModelBase
 from game.config import game_config
 from storage import redis_client
-from storage.clients import (
-    ActionsClient, MessagesClient
-)
+from storage.clients import ActionsClient, MessagesClient
 from storage.config import redis_config
 
 logging.basicConfig(
     level=logging.DEBUG,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    stream=sys.stdout
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    stream=sys.stdout,
 )
 
 logger = logging.getLogger(__name__)
-
 
 
 async def main():
@@ -45,9 +38,7 @@ async def main():
     logger.info('Creating owner user...')
     async with session_factory() as session, session.begin():
         await UserClient().make_new_user_if_not_exists(
-            session,
-            int(os.environ.get('OWNER')),
-            True
+            session, int(os.environ.get('OWNER')), True
         )
 
     logger.info('Setting up dispatcher')
@@ -66,18 +57,14 @@ async def main():
     i18n_middleware = I18nMiddleware(default_language='ru')
     dp.update.outer_middleware(db_middleware)
     dp.update.outer_middleware(i18n_middleware)
-    dp.include_routers(
-        main_page_router,
-        lobby_router,
-        ingame_router
-    )
+    dp.include_routers(main_page_router, lobby_router, ingame_router)
 
     logger.info('Starting polling...')
     await dp.start_polling(bot)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("Working was interrupted.")
+        print('Working was interrupted.')

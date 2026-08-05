@@ -13,7 +13,6 @@ class GameStatus(StrEnum):
     ENDED = auto()
 
 
-
 class BaseDto(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -54,7 +53,7 @@ class CityDto(BaseDto):
     is_shielded: bool = False
     development: int = 60
     rate_of_life: float | None = None
-    
+
     @property
     def income(self) -> float | None:
         if self.rate_of_life is None:

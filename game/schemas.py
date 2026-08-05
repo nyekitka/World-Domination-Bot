@@ -11,6 +11,7 @@ class OrderType(StrEnum):
     INVENT = auto()
     NEGOTIATE = auto()
 
+
 ORDER_TYPE_TRANSLATIONS = {
     OrderType.ATTACK: 'Атаковать',
     OrderType.DEVELOP: 'Развить',

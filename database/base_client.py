@@ -1,13 +1,6 @@
 import functools
 import logging
-from typing import (
-    Awaitable,
-    Callable,
-    Concatenate,
-    ParamSpec,
-    TypeVar,
-    Self
-)
+from typing import Awaitable, Callable, Concatenate, ParamSpec, TypeVar, Self
 
 from async_lru import alru_cache
 from pydantic import TypeAdapter
@@ -84,17 +77,14 @@ class DatabaseClient:
         return None
 
     async def get_city(
-        self, s: AsyncSession, city_id: int,
-        load_rate: bool = False
+        self, s: AsyncSession, city_id: int, load_rate: bool = False
     ) -> CityDto | None:
         options = ()
         if load_rate:
             options = (joinedload(City.planet).joinedload(Planet.game),)
-        city = (await s.execute(
-            select(City)
-            .options(*options)
-            .where(City.id == city_id)
-        )).scalar_one_or_none()
+        city = (
+            await s.execute(select(City).options(*options).where(City.id == city_id))
+        ).scalar_one_or_none()
         if city:
             return CityDto.model_validate(city)
         return None
@@ -107,25 +97,22 @@ class DatabaseClient:
     ) -> PlanetDto | None:
         options = ()
         if load_development:
-            options = (
-                selectinload(Planet.cities),
-                joinedload(Planet.game)
+            options = (selectinload(Planet.cities), joinedload(Planet.game))
+        planet = (
+            await s.execute(
+                select(Planet).options(*options).where(Planet.id == planet_id)
             )
-        planet = (await s.execute(
-            select(Planet)
-            .options(*options)
-            .where(Planet.id == planet_id)
-        )).scalar_one_or_none()
+        ).scalar_one_or_none()
         if planet:
             return PlanetDto.model_validate(planet)
         return None
-    
+
     async def get_planet_by_city_id(
         self, s: AsyncSession, city_id: int
     ) -> PlanetDto | None:
         city_res = await s.execute(
-            select(Planet).
-            join(City, City.planet_id == Planet.id)
+            select(Planet)
+            .join(City, City.planet_id == Planet.id)
             .where(City.id == city_id)
         )
         city = city_res.scalar_one_or_none()
@@ -133,7 +120,6 @@ class DatabaseClient:
             return CityDto.model_validate(city)
         return None
 
-    
     async def get_player_planet(
         self,
         s: AsyncSession,
@@ -143,52 +129,38 @@ class DatabaseClient:
     ) -> PlanetDto | None:
         options = ()
         if load_development:
-            options = (
-                selectinload(Planet.cities),
-                joinedload(Planet.game)
-            )
+            options = (selectinload(Planet.cities), joinedload(Planet.game))
         result = await s.execute(
             select(Planet)
             .options(*options)
-            .where(
-                Planet.owner_id == player_id,
-                Planet.game_id == game_id
-            )
+            .where(Planet.owner_id == player_id, Planet.game_id == game_id)
         )
         planet = result.scalar_one_or_none()
         if planet:
             return PlanetDto.model_validate(planet)
         return None
 
-    
     async def get_cities_of_planet(
         self,
         s: AsyncSession,
         planet_id: int,
         only_alive: bool = True,
-        with_rates: bool = True
+        with_rates: bool = True,
     ) -> list[CityDto] | None:
         options = ()
         if with_rates:
-            options = (
-                joinedload(City.planet).joinedload(Planet.game),
-            )
+            options = (joinedload(City.planet).joinedload(Planet.game),)
         if only_alive:
             filters = (City.planet_id == planet_id, City.development > 0)
         else:
             filters = (City.planet_id == planet_id,)
 
-        stmt = (
-            select(City)
-            .options(*options)
-            .where(*filters)
-        )
+        stmt = select(City).options(*options).where(*filters)
         result = await s.execute(stmt)
         if result:
             return TypeAdapter(list[CityDto]).validate_python(result.scalars().all())
         return None
 
-    
     async def get_planets_of_game(
         self,
         s: AsyncSession,
@@ -197,15 +169,16 @@ class DatabaseClient:
     ) -> list[PlanetDto] | None:
         options = ()
         if load_development:
-            options = (
-                selectinload(Planet.cities),
-                joinedload(Planet.game)
+            options = (selectinload(Planet.cities), joinedload(Planet.game))
+        planets = (
+            (
+                await s.execute(
+                    select(Planet).options(*options).where(Planet.game_id == game_id)
+                )
             )
-        planets = (await s.execute(
-            select(Planet)
-            .options(*options)
-            .where(Planet.game_id == game_id)
-        )).scalars().all()
+            .scalars()
+            .all()
+        )
 
         logger.debug(f'Planets[0].development: {planets[0].development}')
 
@@ -213,7 +186,9 @@ class DatabaseClient:
             return TypeAdapter(list[PlanetDto]).validate_python(planets)
         return None
 
-    async def _clear_game_cache(self, session: AsyncSession, game_id: int, soft: bool = False) -> None:
+    async def _clear_game_cache(
+        self, session: AsyncSession, game_id: int, soft: bool = False
+    ) -> None:
         self.get_game.cache_invalidate(game_id)
         if soft:
             return
@@ -236,7 +211,9 @@ class DatabaseClient:
     def _rate_of_life_in_city(self, city: CityDto, eco_rate: int) -> float:
         return city.development * eco_rate / 100
 
-    async def _rate_of_life_in_planet(self, s: AsyncSession, planet_id: int, eco_rate: int) -> float:
+    async def _rate_of_life_in_planet(
+        self, s: AsyncSession, planet_id: int, eco_rate: int
+    ) -> float:
         cities = await self.get_cities_of_planet(s, planet_id, False)
         return sum(self._rate_of_life_in_city(city, eco_rate) for city in cities) / len(
             cities
@@ -257,7 +234,6 @@ class DatabaseClient:
             sum(self._city_income(city, eco_rate) for city in cities) * sanc_cofficient
         )
 
-    
     async def get_all_sanctions_on_planet(
         self, s: AsyncSession, planet_id: int
     ) -> list[SanctionDto]:
