@@ -84,7 +84,7 @@ class Messager:
 
     def city_stats_message(self, planet: PlanetDto, cities: list[CityDto]) -> str:
         planet_info = Messages['planet_info'].format(
-            planet.name, planet.balance, planet.development
+            planet.name, planet.balance, planet.rate_of_life
         )
         cities_info = []
         for city in cities:

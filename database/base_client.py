@@ -90,10 +90,10 @@ class DatabaseClient:
         self,
         s: AsyncSession,
         planet_id: int,
-        load_development: bool = True,
+        load_rate_of_life: bool = True,
     ) -> PlanetDto | None:
         options = ()
-        if load_development:
+        if load_rate_of_life:
             options = (selectinload(Planet.cities), joinedload(Planet.game))
         planet = (
             await s.execute(
@@ -122,10 +122,10 @@ class DatabaseClient:
         s: AsyncSession,
         player_id: int,
         game_id: int,
-        load_development: bool = True,
+        load_rate_of_life: bool = True,
     ) -> PlanetDto | None:
         options = ()
-        if load_development:
+        if load_rate_of_life:
             options = (selectinload(Planet.cities), joinedload(Planet.game))
         result = await s.execute(
             select(Planet)
@@ -162,10 +162,10 @@ class DatabaseClient:
         self,
         s: AsyncSession,
         game_id: int,
-        load_development: bool = True,
+        load_rate_of_life: bool = True,
     ) -> list[PlanetDto] | None:
         options = ()
-        if load_development:
+        if load_rate_of_life:
             options = (selectinload(Planet.cities), joinedload(Planet.game))
         planets = (
             (
@@ -177,7 +177,7 @@ class DatabaseClient:
             .all()
         )
 
-        logger.debug(f'Planets[0].development: {planets[0].development}')
+        logger.debug(f'Planets[0].development: {planets[0].rate_of_life}')
 
         if planets:
             return TypeAdapter(list[PlanetDto]).validate_python(planets)

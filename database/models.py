@@ -1,4 +1,5 @@
 import re
+from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import (
@@ -6,7 +7,9 @@ from sqlalchemy import (
     BigInteger,
     Enum,
     ForeignKey,
+    Numeric,
     PrimaryKeyConstraint,
+    cast,
     func,
     inspect,
     select,
@@ -77,20 +80,22 @@ class Planet(ModelBase):
     cities: Mapped[list[City]] = relationship(back_populates='planet')
 
     @hybrid_property
-    def development(self) -> float:
+    def rate_of_life(self) -> Decimal | None:
         state = inspect(self)
 
         if 'cities' in state.unloaded or 'game' in state.unloaded:
             return None
         if len(self.cities) == 0:
-            return 0
-        avg_development = sum(city.development for city in self.cities) / len(
-            self.cities
+            return Decimal('0.0')
+        avg_development = (
+            Decimal(sum(city.development for city in self.cities))
+            / len(self.cities)
         )
-        return avg_development * self.game.ecorate / 100
+        precision = Decimal('0.1')
+        return (avg_development * self.game.ecorate / 100).quantize(precision)
 
-    @development.expression
-    def development(cls):
+    @rate_of_life.expression
+    def rate_of_life(cls):
         avg_development = (
             select(func.avg(City.development))
             .where(City.planet_id == cls.id)
@@ -101,7 +106,10 @@ class Planet(ModelBase):
             select(Game.ecorate / 100).where(Game.id == cls.game_id).scalar_subquery()
         )
 
-        return func.coalesce(avg_development, 0.0) * eco_rate
+        return cast(
+            func.coalesce(avg_development, 0.0) * eco_rate, 
+            Numeric(10, 1)
+        )
 
 
 class City(ModelBase):
@@ -118,12 +126,12 @@ class City(ModelBase):
     planet: Mapped[Planet] = relationship(back_populates='cities')
 
     @hybrid_property
-    def rate_of_life(self):
+    def rate_of_life(self) -> Decimal:
         state = inspect(self)
 
         if 'planet' in state.unloaded:
             return None
-        return self.development * self.planet.game.ecorate / 100
+        return Decimal(self.development) * self.planet.game.ecorate / 100
 
     @rate_of_life.expression
     def rate_of_life(cls):
@@ -133,7 +141,7 @@ class City(ModelBase):
             .join(City, City.planet_id == Planet.id)
             .where(City.id == cls.id)
         )
-        return eco_rate * cls.development / 100
+        return cast(eco_rate * cls.development / 100, Numeric(10, 1))
 
 
 class Order(ModelBase):

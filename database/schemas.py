@@ -1,3 +1,4 @@
+from decimal import Decimal
 from enum import StrEnum, auto
 
 from pydantic import BaseModel, ConfigDict
@@ -42,7 +43,7 @@ class PlanetDto(BaseDto):
     balance: int = 1000
     meteorites: int = 0
     is_invented: bool = False
-    development: float | None = None
+    rate_of_life: Decimal | None = None
 
 
 class CityDto(BaseDto):
@@ -51,7 +52,7 @@ class CityDto(BaseDto):
     planet_id: int
     is_shielded: bool = False
     development: int = 60
-    rate_of_life: float | None = None
+    rate_of_life: Decimal | None = None
 
     @property
     def income(self) -> float | None:
@@ -94,7 +95,7 @@ class GameData(BaseDto):
 
 class PlanetData(BaseDto):
     name: str
-    development: float
+    rate_of_life: float
     cities_data: list[CityData]
 
 

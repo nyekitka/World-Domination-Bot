@@ -1,3 +1,4 @@
+from decimal import Decimal
 from types import SimpleNamespace
 
 import pytest
@@ -52,7 +53,7 @@ def planet() -> PlanetDto:
         name='Земля',
         is_invented=True,
         meteorites=3,
-        development=45.5,
+        rate_of_life=Decimal('45.5'),
     )
 
 
@@ -64,7 +65,7 @@ def planet_not_invented() -> PlanetDto:
         name='Марс',
         is_invented=False,
         meteorites=0,
-        development=10.0,
+        rate_of_life=Decimal('10.0'),
     )
 
 

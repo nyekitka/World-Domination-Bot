@@ -432,7 +432,7 @@ async def test_get_round_info(game_client, session, game_id):
             'planets_data': [
                 {
                     'name': 'Planet',
-                    'development': 10,
+                    'rate_of_life': 10,
                     'cities_data': [{'name': 'City', 'development': 9}],
                 }
             ],
@@ -449,7 +449,7 @@ async def test_get_round_info(game_client, session, game_id):
             planets_data=[
                 PlanetData(
                     name='Planet',
-                    development=10,
+                    rate_of_life=10,
                     cities_data=[
                         CityData(
                             name='City',
@@ -478,7 +478,7 @@ async def test_get_all_planets_and_cities(game_client, session, game_id, pack):
         else:
             pytest.fail(f'Some unknown planet found in result: {planet.name}')
 
-        assert planet.development is not None
+        assert planet.rate_of_life is not None
         for city in cities:
             assert any(
                 city.name == pack_city.name for pack_city in pack_planet.cities

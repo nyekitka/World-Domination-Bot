@@ -92,7 +92,7 @@ common_planet_info:
     __*{{planet.name | escape_md}}*__
 
     *Available budget:* _{{planet.balance}}_ 💵
-    *Avg\. life rate on the planet:* _{{planet.development | string | escape_md}}%_
+    *Avg\. life rate on the planet:* _{{planet.rate_of_life | string | escape_md}}%_
 
     {% for city in cities -%}
     {% if city.development == 0 -%}
