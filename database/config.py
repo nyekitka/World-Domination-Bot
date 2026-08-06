@@ -21,5 +21,13 @@ class DatabaseConfig(BaseSettings):
             f'@{self.HOST}:{self.INNER_PORT}/{self.NAME}'
         )
 
+    @property
+    def database_alembic_url(self):
+        return (
+            f'postgresql+asyncpg://{self.USER}:{self.PASSWORD}'
+            f'@{self.HOST}:{self.INNER_PORT}/{self.NAME}'
+            '?async_fallback=True'
+        )
+
 
 database_config = DatabaseConfig()
