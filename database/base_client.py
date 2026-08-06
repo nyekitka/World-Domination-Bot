@@ -107,14 +107,14 @@ class DatabaseClient:
     async def get_planet_by_city_id(
         self, s: AsyncSession, city_id: int
     ) -> PlanetDto | None:
-        city_res = await s.execute(
+        planet_res = await s.execute(
             select(Planet)
             .join(City, City.planet_id == Planet.id)
             .where(City.id == city_id)
         )
-        city = city_res.scalar_one_or_none()
-        if city:
-            return CityDto.model_validate(city)
+        planet = planet_res.scalar_one_or_none()
+        if planet:
+            return PlanetDto.model_validate(planet)
         return None
 
     async def get_player_planet(
