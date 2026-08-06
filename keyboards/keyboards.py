@@ -133,7 +133,7 @@ def invent_meteorites_keyboard(planet: PlanetDto, chosen: bool) -> InlineKeyboar
 
 def meteorites_keyboard(planet: PlanetDto, chosen: int) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-    for i in range(1, game_config.MAX_METEORITES_TO_BUY):
+    for i in range(1, game_config.MAX_METEORITES_TO_BUY + 1):
         action = Action(
             action_type=ActionType.CREATE,
             planet_id=planet.id,
