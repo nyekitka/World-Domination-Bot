@@ -3,6 +3,7 @@ from enum import StrEnum, auto
 
 from pydantic import BaseModel, ConfigDict
 
+from game.config import game_config
 from game.schemas import OrderType
 
 
@@ -55,10 +56,10 @@ class CityDto(BaseDto):
     rate_of_life: Decimal | None = None
 
     @property
-    def income(self) -> float | None:
+    def income(self) -> int | None:
         if self.rate_of_life is None:
             return None
-        return 3 * self.rate_of_life
+        return int(game_config.INCOME_COEFFICIENT * float(self.rate_of_life))
 
 
 class OrderDto(BaseDto):

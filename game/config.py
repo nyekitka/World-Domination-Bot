@@ -25,6 +25,7 @@ class GameConfig(BaseSettings):
     ECO_BOOST_RATE: int = 20
     INCOME_COEFFICIENT: float = 3
     MAX_METEORITES_TO_BUY: int = 3
+    SANCTIONS_IMPACT: float = 0.6
     TIME_WAITING_AMOUNT_ANSWER: int = 30
 
     @property
