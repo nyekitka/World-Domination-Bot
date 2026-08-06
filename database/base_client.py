@@ -20,7 +20,6 @@ from database.schemas import (
     PlanetDto,
     SanctionDto,
 )
-from game.config import game_config
 
 logger = logging.getLogger(__name__)
 

@@ -9,7 +9,7 @@ from game.config import game_config
 
 
 @pytest.mark.asyncio
-async def test_rate_of_life_and_income_instance_loaded(session, city_id):
+async def test_city_rate_of_life_and_income_instance_loaded(session, city_id):
     """Тест вычислений на уровне Python (инстанса), когда связи загружены."""
     stmt = (
         select(City)
@@ -29,7 +29,7 @@ async def test_rate_of_life_and_income_instance_loaded(session, city_id):
 
 
 @pytest.mark.asyncio
-async def test_rate_of_life_and_income_instance_unloaded(session, city_id):
+async def test_city_rate_of_life_and_income_instance_unloaded(session, city_id):
     stmt = select(City).where(City.id == city_id)
     city = (await session.execute(stmt)).scalar_one()
 
@@ -38,7 +38,7 @@ async def test_rate_of_life_and_income_instance_unloaded(session, city_id):
 
 
 @pytest.mark.asyncio
-async def test_rate_of_life_and_income_expression(session, city_id, game_id):
+async def test_city_rate_of_life_and_income_expression(session, city_id, game_id):
     city = await session.get(City, city_id)
     city.development = 50
     game = await session.get(Game, city_id)
@@ -57,7 +57,7 @@ async def test_rate_of_life_and_income_expression(session, city_id, game_id):
 
 
 @pytest.mark.asyncio
-async def test_rate_of_life_instance_loaded(session, planet_id):
+async def test_planet_rate_of_life_instance_loaded(session, planet_id):
     stmt = (
         select(Planet)
         .options(joinedload(Planet.game), joinedload(Planet.cities))
@@ -78,7 +78,7 @@ async def test_rate_of_life_instance_loaded(session, planet_id):
 
 
 @pytest.mark.asyncio
-async def test_rate_of_life_instance_unloaded_and_empty(session, game_id):
+async def test_planet_rate_of_life_instance_unloaded_and_empty(session, game_id):
     stmt = select(Planet).limit(1)
     planet = (await session.execute(stmt)).scalar_one()
     assert planet.rate_of_life is None
@@ -98,7 +98,7 @@ async def test_rate_of_life_instance_unloaded_and_empty(session, game_id):
 
 
 @pytest.mark.asyncio
-async def test_rate_of_life_and_income_expression(
+async def test_planet_rate_of_life_and_income_expression(
     session, planet_id, planet_id_2, game_id
 ):
     stmt = select(Planet).options(selectinload(Planet.cities)).where(Planet.id == planet_id)
