@@ -1,0 +1,30 @@
+name: Linter CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Poetry
+      run: pipx install poetry
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.14'
+        cache: 'poetry'
+
+    - name: Install environment
+      run: poetry install --no-interaction
+
+    - name: Linter check
+      run: make lint
