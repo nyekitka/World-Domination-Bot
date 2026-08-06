@@ -9,7 +9,16 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from database.base_client import DatabaseClient
 from database.config import database_config
-from database.models import Admin, City, Game, Planet, Player, RoundInfo, Sanction
+from database.models import (
+    Admin,
+    City,
+    Game,
+    Order,
+    Planet,
+    Player,
+    RoundInfo,
+    Sanction,
+)
 from database.schemas import (
     AdminDto,
     CityData,
@@ -260,20 +269,62 @@ class GameClient(DatabaseClient):
         planet.balance = money
         return FailureReason.SUCCESS
 
+    def _save_orders(
+        self,
+        s: AsyncSession,
+        game: Game,
+        orders: dict[int, OrderInfo],
+    ):
+        for planet_id, order_info in orders.items():
+            for order_type, arguments in order_info.items():
+                if isinstance(arguments, list):
+                    orders = [
+                        Order(
+                            planet_id=planet_id,
+                            round=game.round,
+                            action=order_type,
+                            argument=argument
+                        )
+                        for argument in arguments
+                    ]
+                    s.add_all(orders)
+                elif isinstance(arguments, int):
+                    s.add(
+                        Order(
+                            planet_id=planet_id,
+                            round=game.round,
+                            action=order_type,
+                            argument=arguments
+                        )
+                    )
+                elif arguments:
+                    s.add(
+                        Order(
+                            planet_id=planet_id,
+                            round=game.round,
+                            action=order_type,
+                            argument=1,
+                        )
+                    )
+
+
     async def end_current_round(
         self,
         s: AsyncSession,
         game_id: int,
         orders: dict[int, OrderInfo],
     ) -> FailureReason:
-        await self._clear_game_cache(s, game_id)
-
         game = await s.get(Game, game_id)
+
+        self._save_orders(s, game, orders)
+
         if not game:
             return FailureReason.OBJECT_NOT_FOUND
 
         if game.status != GameStatus.ROUND:
             return FailureReason.ROUND_IS_NOT_GOING
+
+        await self._clear_game_cache(s, game_id)
 
         orders_by_action = {
             action: []
@@ -282,6 +333,7 @@ class GameClient(DatabaseClient):
         }
 
         for planet_id in orders: # noqa: PLC0206
+
             await s.execute(
                 update(Planet)
                 .where(Planet.id == planet_id)

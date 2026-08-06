@@ -8,6 +8,7 @@ from database.models import (
     Admin,
     City,
     Game,
+    Order,
     Planet,
     Player,
     RoundInfo,
@@ -17,6 +18,7 @@ from database.schemas import (
     CityData,
     GameData,
     GameStatus,
+    OrderDto,
     PlanetData,
     RoundInfoDto,
     SanctionDto,
@@ -300,6 +302,17 @@ async def test_end_current_round(
         },
     }
 
+    orders = [
+        OrderDto(planet_id=planet_id, action=OrderType.SHIELD, round=2, argument=city_id),
+        OrderDto(planet_id=planet_id, action=OrderType.DEVELOP, round=2, argument=city_id),
+        OrderDto(planet_id=planet_id, action=OrderType.SANCTIONS, round=2, argument=planet_id_2),
+        OrderDto(planet_id=planet_id_2, action=OrderType.ATTACK, round=2, argument=city_id),
+        OrderDto(planet_id=planet_id_2, action=OrderType.CREATE, round=2, argument=2),
+        OrderDto(planet_id=planet_id, action=OrderType.ECO, round=2, argument=1),
+        OrderDto(planet_id=planet_id, action=OrderType.INVENT, round=2, argument=1),
+        OrderDto(planet_id=planet_id_2, action=OrderType.ECO, round=2, argument=1),
+    ]
+
     game = await session.get(Game, game_id)
     game.round = 2
     game.status = GameStatus.ROUND
@@ -332,6 +345,10 @@ async def test_end_current_round(
 
     await game_client.end_current_round(session, game_id, orders_info)
     await session.commit()
+
+    for order in orders:
+        result = await session.get(Order, order.model_dump())
+        assert result is not None
 
     mock_create_meteorites.assert_any_call(session, planet_id_2, 2)
     mock_develop_cities.assert_any_call(session, city_id)
