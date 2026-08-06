@@ -14,7 +14,6 @@ services:
       
     volumes:
       - postgres_data:/var/lib/postgresql
-      - ./init_database.sql:/docker-entrypoint-initdb.d/init_database.sql
     ports:
       - "${DATABASE_OUTER_PORT}:${DATABASE_INNER_PORT}"
     healthcheck:

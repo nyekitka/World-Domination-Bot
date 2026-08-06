@@ -8,7 +8,7 @@ from database.clients import GameClient, UserClient
 from database.clients.info import InfoClient
 from database.models import Admin, City, Game, ModelBase, Planet, Player
 from database.schemas import GameStatus
-from presets.pack import Pack, PackCity, PackPlanet
+from packs.pack import Pack, PackCity, PackPlanet
 
 
 @pytest.fixture()

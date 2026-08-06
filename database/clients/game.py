@@ -25,7 +25,7 @@ from database.schemas import (
 )
 from game.config import game_config
 from game.schemas import FailureReason, OrderInfo, OrderType
-from presets.pack import Pack
+from packs.pack import Pack
 
 logger = logging.getLogger(__name__)
 

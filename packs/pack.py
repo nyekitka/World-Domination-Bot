@@ -1,6 +1,6 @@
 from pydantic import BaseModel, TypeAdapter
 
-pack_file_path = './presets/packs.json'
+pack_file_path = './packs/packs.json'
 
 
 class PackCity(BaseModel):

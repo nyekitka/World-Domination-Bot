@@ -15,7 +15,7 @@ from database.clients.user import UserClient
 from database.schemas import AdminDto, GameDto, GameStatus, PlanetDto
 from keyboards import keyboards as kb
 from messages.renderer import MessageRenderer
-from presets.pack import packs
+from packs.pack import packs
 from storage.clients.actions import ActionsClient
 from storage.clients.messages import MessagesClient
 
