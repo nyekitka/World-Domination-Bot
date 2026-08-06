@@ -7,6 +7,7 @@ from sqlalchemy import (
     BigInteger,
     Enum,
     ForeignKey,
+    Integer,
     Numeric,
     PrimaryKeyConstraint,
     cast,
@@ -99,6 +100,7 @@ class Planet(ModelBase):
         avg_development = (
             select(func.avg(City.development))
             .where(City.planet_id == cls.id)
+            .correlate(cls)
             .scalar_subquery()
         )
 
@@ -109,6 +111,47 @@ class Planet(ModelBase):
         return cast(
             func.coalesce(avg_development, 0.0) * eco_rate, 
             Numeric(10, 1)
+        )
+
+    @hybrid_property
+    def income(self) -> int | None:
+        raise NotImplementedError
+
+    @income.expression
+    def income(cls):
+        game_round = (
+            select(Game.round)
+            .where(Game.id == cls.game_id)
+            .correlate(cls)
+            .scalar_subquery()
+        )
+        num_planets = (
+            select(Game.num_planets)
+            .where(Game.id == cls.game_id)
+            .correlate(cls)
+            .scalar_subquery()
+        )
+
+        cities_income = (
+            select(func.sum(City.income))
+            .where(City.planet_id == cls.id)
+            .correlate(cls)
+            .scalar_subquery()
+        )
+        num_sanctions = (
+            select(func.count(Sanction.planet_from))
+            .where(
+                Sanction.planet_to == cls.id,
+                Sanction.num_round == game_round - 1
+            )
+            .correlate(cls)
+            .scalar_subquery()
+        )
+
+        return cast(
+            cities_income
+            * (1 - game_config.SANCTIONS_IMPACT * num_sanctions / num_planets),
+            Integer
         )
 
 
@@ -126,7 +169,7 @@ class City(ModelBase):
     planet: Mapped[Planet] = relationship(back_populates='cities')
 
     @hybrid_property
-    def rate_of_life(self) -> Decimal:
+    def rate_of_life(self) -> Decimal | None:
         state = inspect(self)
 
         if 'planet' in state.unloaded:
@@ -141,10 +184,22 @@ class City(ModelBase):
         eco_rate = (
             select(Game.ecorate)
             .join(Planet, Planet.game_id == Game.id)
-            .join(City, City.planet_id == Planet.id)
-            .where(City.id == cls.id)
+            .where(Planet.id == cls.planet_id)
+            .correlate(cls)
+            .scalar_subquery()
         )
         return cast(eco_rate * cls.development / 100, Numeric(10, 1))
+
+    @hybrid_property
+    def income(self) -> int | None:
+        if self.rate_of_life is None:
+            return None
+
+        return int(game_config.INCOME_COEFFICIENT * float(self.rate_of_life))
+
+    @income.expression
+    def income(cls):
+        return game_config.INCOME_COEFFICIENT * cls.rate_of_life
 
 
 class Order(ModelBase):

@@ -20,7 +20,6 @@ from database.schemas import (
     PlanetDto,
     SanctionDto,
 )
-from game.config import game_config
 
 logger = logging.getLogger(__name__)
 
@@ -205,31 +204,6 @@ class DatabaseClient:
         for city_id in all_cities:
             self.get_game_by_city_id.cache_invalidate(city_id)
 
-    def _rate_of_life_in_city(self, city: CityDto, eco_rate: int) -> float:
-        return city.development * eco_rate / 100
-
-    async def _rate_of_life_in_planet(
-        self, s: AsyncSession, planet_id: int, eco_rate: int
-    ) -> float:
-        cities = await self.get_cities_of_planet(s, planet_id, False)
-        return sum(self._rate_of_life_in_city(city, eco_rate) for city in cities) / len(
-            cities
-        )
-
-    def _city_income(self, city: CityDto, eco_rate: int) -> float:
-        return game_config.INCOME_COEFFICIENT * self._rate_of_life_in_city(
-            city, eco_rate
-        )
-
-    async def _planet_income(
-        self, s: AsyncSession, planet_id: int, eco_rate: int, number_of_planets: int
-    ) -> float:
-        cities = await self.get_cities_of_planet(s, planet_id, False)
-        sanctions = await self.get_all_sanctions_on_planet(s, planet_id)
-        sanc_cofficient = (number_of_planets - len(sanctions)) / (len(sanctions) + 1)
-        return (
-            sum(self._city_income(city, eco_rate) for city in cities) * sanc_cofficient
-        )
 
     async def get_all_sanctions_on_planet(
         self, s: AsyncSession, planet_id: int

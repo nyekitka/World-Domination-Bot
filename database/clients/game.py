@@ -282,6 +282,11 @@ class GameClient(DatabaseClient):
         }
 
         for planet_id in orders: # noqa: PLC0206
+            await s.execute(
+                update(Planet)
+                .where(Planet.id == planet_id)
+                .values({Planet.balance: Planet.balance + Planet.income})
+            )
             await self.create_meteorites(
                 s, planet_id, orders[planet_id].get(OrderType.CREATE, 0)
             )
@@ -410,18 +415,6 @@ class GameClient(DatabaseClient):
         if not all(pl.owner_id is not None for pl in planets):
             return FailureReason.NOT_ENOUGH_PLAYERS
 
-        if game.status == GameStatus.MEETING:
-            for planet in planets:
-                income = await self._planet_income(
-                    s, planet.id, game.ecorate, len(planets)
-                )
-                await s.execute(
-                    
-                        update(Planet)
-                        .where(Planet.id == planet.id)
-                        .values({Planet.balance: Planet.balance + income})
-                    
-                )
         game.round = 1 if game.round is None else game.round + 1
         game.status = GameStatus.ROUND
         return FailureReason.SUCCESS
