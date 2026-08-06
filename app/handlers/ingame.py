@@ -693,7 +693,7 @@ async def set_amount_of_money(
     to_planet = data['to_planet']
 
     # check current balance which is stored
-    current_balance = actions_client.get_balance(game.id, actions_client.MONEY_KEY)
+    current_balance = actions_client.get_balance(from_planet.id, actions_client.MONEY_KEY)
     if amount > current_balance:
         await message.answer(**renderer.render('not_enough_money_for_transaction'))
         return
@@ -718,13 +718,14 @@ async def set_amount_of_money(
         return
 
     actions_client.set_balance(
-        from_planet.id, actions_client.MONEY_KEY, current_balance - amount
+        from_planet.id, current_balance - amount, actions_client.MONEY_KEY,
     )
+    to_planet_balance = actions_client.get_balance(to_planet.id, actions_client.MONEY_KEY)
     actions_client.set_balance(
-        to_planet.id, actions_client.MONEY_KEY, current_balance + amount
+        to_planet.id, to_planet_balance + amount, actions_client.MONEY_KEY,
     )
-    from_planet.balance -= amount
-    to_planet.balance += amount
+    from_planet.balance = current_balance - amount
+    to_planet.balance = to_planet_balance + amount
 
     from_city_id = messages_client.get_info_message_id(
         from_planet.owner_id, MessageType.CITY

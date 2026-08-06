@@ -200,7 +200,11 @@ def other_planets_keyboard(
         planet_id=planet.id,
         argument=other_planet.id,
     )
-    transaction_action = Action(action_type=ActionType.TRANSACTION, planet_id=planet.id)
+    transaction_action = Action(
+        action_type=ActionType.TRANSACTION,
+        planet_id=planet.id,
+        argument=other_planet.id,
+    )
     builder.add(
         InlineKeyboardButton(
             text='Переговоры 📞',
