@@ -9,7 +9,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from database.schemas import CityDto, GameDto, PlanetDto
 from game.config import game_config
 from keyboards.schemas import Action, ActionType
-from presets.pack import packs
+from packs.pack import packs
 
 # Клавиатура админа в начале
 
