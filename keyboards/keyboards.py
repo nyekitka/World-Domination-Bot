@@ -45,23 +45,9 @@ def city_keyboard(
 ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     cities.sort(key=lambda x: x.name)
-    if nround == 1:
-        for city in cities:
-            str1 = '✅' if city.id in developed_ids else ''
-            action = Action(
-                action_type=ActionType.DEVELOP,
-                planet_id=planet.id,
-                argument=city.id,
-            )
-            builder.add(
-                InlineKeyboardButton(
-                    text=f'{str1}📈 {city.name} ({game_config.DEVELOPMENT_COST} 💵)',
-                    callback_data=action.model_dump_json(),
-                )
-            )
-        return builder.adjust(2).as_markup()
-
     for city in cities:
+        if city.development == 0:
+            continue
         str1, str2 = '', ''
         if city.id in developed_ids:
             str1 = '✅'
@@ -82,11 +68,14 @@ def city_keyboard(
                 text=f'{str1}📈 {city.name} ({game_config.DEVELOPMENT_COST} 💵)',
                 callback_data=develop_action.model_dump_json(),
             ),
-            InlineKeyboardButton(
-                text=f'{str2}🛡️ {city.name} ({game_config.SHIELD_COST} 💵)',
-                callback_data=shield_action.model_dump_json(),
-            ),
         )
+        if nround > 1:
+            builder.add(
+                InlineKeyboardButton(
+                    text=f'{str2}🛡️ {city.name} ({game_config.SHIELD_COST} 💵)',
+                    callback_data=shield_action.model_dump_json(),
+                ),
+            )
     return builder.adjust(2).as_markup()
 
 
