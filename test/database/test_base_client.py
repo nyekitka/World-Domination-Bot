@@ -88,3 +88,12 @@ async def test_get_planets_of_game(database_client, session, game_id, pack):
     planet_names = [planet.name for planet in planets]
     for planet in pack.planets:
         assert planet.name in planet_names
+
+
+@pytest.mark.asyncio
+async def test_get_planet_by_city_id(
+    database_client, session, city_id, planet_id
+):
+    result = await database_client.get_planet_by_city_id(session, city_id)
+    assert result.id == planet_id
+
