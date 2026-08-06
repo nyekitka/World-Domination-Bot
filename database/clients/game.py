@@ -96,10 +96,10 @@ class GameClient(DatabaseClient):
 
     @alru_cache(ttl=database_config.EXPIRE_CACHE)
     async def get_all_planets_in_game(
-        self, s: AsyncSession, game_id: int, load_development: bool = True
+        self, s: AsyncSession, game_id: int, load_rate_of_life: bool = True
     ) -> list[PlanetDto]:
         options = ()
-        if load_development:
+        if load_rate_of_life:
             options = (selectinload(Planet.cities), joinedload(Planet.game))
         results = await s.execute(
             select(Planet).options(*options).where(Planet.game_id == game_id)
@@ -346,7 +346,7 @@ class GameClient(DatabaseClient):
             planets_data.append(
                 PlanetData(
                     name=planet.name,
-                    development=planet.development,
+                    rate_of_life=float(planet.rate_of_life),
                     cities_data=cities_data,
                 )
             )

@@ -92,7 +92,7 @@ common_planet_info:
     __*{{planet.name | escape_md}}*__
 
     *Доступный бюджет:* _{{planet.balance}}_ 💵
-    *Сред\. ур\. жизни на планете:* _{{planet.development | string | escape_md}}%_
+    *Сред\. ур\. жизни на планете:* _{{planet.rate_of_life | string | escape_md}}%_
 
     {% for city in cities -%}
     {% if city.development == 0 -%}

@@ -20,10 +20,10 @@ async def render_stats(request: HttpRequest, game_id: int, round: int) -> HttpRe
     max_development = 0
     info = dumped_stats['info']
     for planet in info['planets_data']:
-        max_development = max(max_development, planet['development'])
+        max_development = max(max_development, planet['rate_of_life'])
     for planet in info['planets_data']:
         planet['bar_height'] = (
-            planet['development'] / max_development * 100 if max_development != 0 else 5
+            planet['rate_of_life'] / max_development * 100 if max_development != 0 else 5
         )
 
     return HttpResponse(template.render(info, request))

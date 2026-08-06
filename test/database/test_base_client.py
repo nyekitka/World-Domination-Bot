@@ -44,12 +44,12 @@ async def test_get_planet(database_client, session, planet_id):
     assert not planet.meteorites
     assert not planet.is_invented
     assert (
-        planet.development
+        planet.rate_of_life
         == game_config.DEFAULT_DEVELOPMENT * game_config.DEFAULT_GAME_ECO_RATE / 100
     )
 
     same_planet = await database_client.get_planet(session, planet_id, False)
-    assert same_planet.development is None
+    assert same_planet.rate_of_life is None
 
 
 @pytest.mark.asyncio
