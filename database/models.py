@@ -131,7 +131,10 @@ class City(ModelBase):
 
         if 'planet' in state.unloaded:
             return None
-        return Decimal(self.development) * self.planet.game.ecorate / 100
+        precision = Decimal('0.1')
+        return (
+            Decimal(self.development) * self.planet.game.ecorate / 100
+        ).quantize(precision)
 
     @rate_of_life.expression
     def rate_of_life(cls):
