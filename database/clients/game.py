@@ -448,6 +448,7 @@ class GameClient(DatabaseClient):
     async def start_new_round(
         self, s: AsyncSession, initiator_id: int
     ) -> FailureReason:
+        self._clear_game_cache()
         admin = await s.get(Admin, initiator_id)
         if admin is None:
             return FailureReason.OBJECT_NOT_FOUND
