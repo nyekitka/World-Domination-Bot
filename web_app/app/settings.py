@@ -51,7 +51,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'stats',
+    'web_app.stats',
 ]
 
 MIDDLEWARE = [
@@ -62,11 +62,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'app.middleware.DBClientMiddleware',
+    'web_app.app.middleware.DBClientMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
-ROOT_URLCONF = 'app.urls'
+ROOT_URLCONF = 'web_app.app.urls'
 
 TEMPLATES = [
     {
