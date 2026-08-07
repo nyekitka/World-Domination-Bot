@@ -278,7 +278,7 @@ class GameClient(DatabaseClient):
         for planet_id, order_info in orders.items():
             for order_type, arguments in order_info.items():
                 if isinstance(arguments, list):
-                    orders = [
+                    orders_list = [
                         Order(
                             planet_id=planet_id,
                             round=game.round,
@@ -287,23 +287,14 @@ class GameClient(DatabaseClient):
                         )
                         for argument in arguments
                     ]
-                    s.add_all(orders)
-                elif isinstance(arguments, int):
-                    s.add(
-                        Order(
-                            planet_id=planet_id,
-                            round=game.round,
-                            action=order_type,
-                            argument=arguments
-                        )
-                    )
+                    s.add_all(orders_list)
                 elif arguments:
                     s.add(
                         Order(
                             planet_id=planet_id,
                             round=game.round,
                             action=order_type,
-                            argument=1,
+                            argument=arguments
                         )
                     )
 
