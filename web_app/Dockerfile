@@ -18,7 +18,7 @@ RUN apt-get update \
 COPY database ./database
 COPY game ./game
 COPY web_app/ ./
-COPY presets ./presets
+COPY packs ./packs
 
 COPY web_app/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
