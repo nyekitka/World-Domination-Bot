@@ -77,15 +77,14 @@ services:
       dockerfile: web_app/Dockerfile
       context: .
     volumes:
-      - ./web_app:/web_app/web_app
-      - ./database:/web_app/database
+      - .:/web_app
     depends_on:
       db:
         condition: service_healthy
     env_file:
       - .env
     environment:
-      - DJANGO_SETTINGS_MODULE=app.settings
+      - DJANGO_SETTINGS_MODULE=web_app.app.settings
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
       - DJANGO_HOST=${DJANGO_HOST}
       - DJANGO_PORT=${DJANGO_PORT}
@@ -97,7 +96,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-    command: ["uvicorn", "app.asgi:application", "--host", "${DJANGO_HOST}", "--port", "${DJANGO_PORT}", "--reload"]
+    command: ["uvicorn", "web_app.app.asgi:application", "--host", "${DJANGO_HOST}", "--port", "${DJANGO_PORT}", "--reload"]
   
   redis:
     image: redis:latest

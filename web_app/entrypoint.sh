@@ -1,6 +1,6 @@
 #!/bin/sh
 set -e
 
-python manage.py collectstatic --noinput
+python web_app/manage.py collectstatic --noinput
 
 exec "$@"

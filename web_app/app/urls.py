@@ -22,6 +22,6 @@ from .views import health_check
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('<int:game_id>/<int:round>/', include('stats.urls')),
+    path('<int:game_id>/<int:round>/', include('web_app.stats.urls')),
     path('health/', health_check),
 ]

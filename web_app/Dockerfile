@@ -2,6 +2,10 @@ FROM python:3.14
 
 WORKDIR /web_app
 
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    POETRY_VIRTUALENVS_CREATE=false
+
 RUN pip install -U pip setuptools
 RUN pip install poetry
 
@@ -15,12 +19,8 @@ RUN apt-get update \
     && apt-get install postgresql-contrib -y \
     && apt-get install postgresql-client -y
 
-COPY database ./database
-COPY game ./game
-COPY web_app/ ./
-COPY packs ./packs
+COPY . .
 
-COPY web_app/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x web_app/entrypoint.sh
 
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/bin/sh", "web_app/entrypoint.sh"]

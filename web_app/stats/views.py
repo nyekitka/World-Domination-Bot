@@ -19,6 +19,7 @@ async def render_stats(request: HttpRequest, game_id: int, round: int) -> HttpRe
 
     max_development = 0
     info = dumped_stats['info']
+    info['anomaly_level'] = 100 - info['eco_rate']
     for planet in info['planets_data']:
         max_development = max(max_development, planet['rate_of_life'])
     for planet in info['planets_data']:
