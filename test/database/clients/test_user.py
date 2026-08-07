@@ -2,7 +2,7 @@ import pytest
 from pytest_lazy_fixtures import lf
 
 from database.models import Admin, Game, Planet, Player
-from database.schemas import GameStatus
+from database.schemas import AdminDto, GameStatus
 from game.schemas import FailureReason
 
 
@@ -217,3 +217,23 @@ async def test_is_user_admin(user_client, session, admin_id, player_id):
 
     res = await user_client.is_user_admin(session, player_id)
     assert res is False
+
+
+@pytest.mark.parametrize(
+    'new_admin_id',
+    (67,)
+)
+@pytest.mark.asyncio
+async def test_get_all_admins(
+    user_client, admin_id, new_admin_id,
+    session,
+):
+    new_admin = Admin(tg_id=new_admin_id)
+    session.add(new_admin)
+    await session.commit()
+
+    result = await user_client.get_all_admins(session)
+    assert result == [
+        AdminDto(tg_id=admin_id),
+        AdminDto(tg_id=new_admin_id)
+    ]

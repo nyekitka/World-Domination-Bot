@@ -1,5 +1,6 @@
 import logging
 
+from pydantic import TypeAdapter
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -193,3 +194,8 @@ class UserClient(DatabaseClient):
         self.is_user_admin.cache_invalidate(admin_id)
 
         return FailureReason.SUCCESS
+
+    async def get_all_admins(self, s: AsyncSession) -> list[AdminDto]:
+        admins_result = await s.execute(select(Admin))
+        admins = admins_result.scalars().all()
+        return TypeAdapter(list[AdminDto]).validate_python(admins)
