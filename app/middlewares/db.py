@@ -1,4 +1,5 @@
 import logging
+import os
 import traceback
 from collections.abc import Awaitable, Callable
 from typing import Any
@@ -36,6 +37,7 @@ class DBMiddleware(BaseMiddleware):
         self.session_factory = session_factory
         self.actions_client = redis_actions_client
         self.messages_client = redis_messages_client
+        self.owner_id = int(os.getenv('OWNER'))
 
     async def __call__(
         self,
@@ -48,6 +50,7 @@ class DBMiddleware(BaseMiddleware):
         data['actions_client'] = self.actions_client
         data['messages_client'] = self.messages_client
         data['info_client'] = self.info_client
+        data['owner_id'] = self.owner_id
 
         async with self.session_factory() as session:
             data['session'] = session

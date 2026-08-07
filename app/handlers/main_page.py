@@ -74,7 +74,7 @@ async def request(
     )
 
 
-@main_page_router.callback_query(InlineButtonFilter('accept_knight'), OwnerFilter())
+@main_page_router.callback_query(InlineButtonFilter('accept_request'), OwnerFilter())
 async def accept_knight(
     call: types.CallbackQuery,
     user_client: UserClient,
@@ -100,7 +100,7 @@ async def accept_knight(
         )
 
 
-@main_page_router.callback_query(InlineButtonFilter('refuse_knight'), OwnerFilter())
+@main_page_router.callback_query(InlineButtonFilter('refuse_request'), OwnerFilter())
 async def refuse_knight(
     call: types.CallbackQuery,
     renderer: MessageRenderer,

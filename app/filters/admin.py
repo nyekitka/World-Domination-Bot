@@ -1,3 +1,4 @@
+import logging
 from typing import Self
 
 from aiogram import types
@@ -27,5 +28,7 @@ class AdminFilter(Filter):
 
 
 class OwnerFilter(Filter):
-    async def __call__(self, message: types.Message, owner_id: int) -> bool:
-        return message.from_user.id == owner_id
+    async def __call__(
+        self, obj: types.Message | types.CallbackQuery, owner_id: int
+    ) -> bool:
+        return obj.from_user.id == owner_id

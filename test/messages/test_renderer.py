@@ -943,11 +943,11 @@ def test_render_promote_notification_for_user(renderer_ru, renderer_en):
 
 def test_render_refuse_request_notification_for_user(renderer_ru, renderer_en):
     assert renderer_ru.render('refuse_request_notification_for_user') == {
-        'text': '👎 Верховный лидер лишил вас статуса администратора.',
+        'text': 'Верховный лидер посчитал вас недостойным статуса администратора.',
         'parse_mode': None,
     }
     assert renderer_en.render('refuse_request_notification_for_user') == {
-        'text': '👎 The Supreme Leader has stripped you of administrator status.',
+        'text': 'The Supreme Leader has deemed you unworthy of administrator status.',
         'parse_mode': None,
     }
 
@@ -971,11 +971,11 @@ def test_render_refuse_request_notification_for_leader(
 
 def test_render_fire_admin_notification_for_user(renderer_ru, renderer_en):
     assert renderer_ru.render('fire_admin_notification_for_user') == {
-        'text': 'Верховный лидер посчитал вас недостойным статуса администратора.',
+        'text': '👎 Верховный лидер лишил вас статуса администратора.',
         'parse_mode': None,
     }
     assert renderer_en.render('fire_admin_notification_for_user') == {
-        'text': 'The Supreme Leader has deemed you unworthy of administrator status.',
+        'text': '👎 The Supreme Leader has stripped you of administrator status.',
         'parse_mode': None,
     }
 

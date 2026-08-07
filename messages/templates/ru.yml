@@ -275,13 +275,13 @@ promote_notification_for_user:
   template: 👑 Верховный лидер назначил вас администратором!
   markdown: false
 refuse_request_notification_for_user:
-  template: 👎 Верховный лидер лишил вас статуса администратора.
+  template: Верховный лидер посчитал вас недостойным статуса администратора.
   markdown: false
 refuse_request_notification_for_leader:
   template: Вы отказали пользователю {{user.first_name}}.
   markdown: false
 fire_admin_notification_for_user:
-  template: Верховный лидер посчитал вас недостойным статуса администратора.
+  template: 👎 Верховный лидер лишил вас статуса администратора.
   markdown: false
 promote_notification_for_leader:
   template: Вы успешно назначили {{user.first_name}} администратором!
