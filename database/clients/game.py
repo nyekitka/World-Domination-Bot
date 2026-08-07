@@ -348,7 +348,16 @@ class GameClient(DatabaseClient):
             for action in (OrderType.ATTACK, OrderType.DEVELOP, OrderType.SHIELD):
                 orders_by_action[action].extend(orders[planet_id].get(action, []))
 
-        for action, objs in orders_by_action.items():
+        action_by_priorities = (
+            OrderType.SHIELD,
+            OrderType.DEVELOP,
+            OrderType.INVENT,
+            OrderType.SANCTIONS,
+            OrderType.ATTACK,
+        )
+
+        for action in action_by_priorities:
+            objs = orders_by_action[action]
             match action:
                 case OrderType.DEVELOP:
                     await self.develop_cities(s, *objs)
