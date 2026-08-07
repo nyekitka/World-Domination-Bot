@@ -245,6 +245,7 @@ async def handle_action(
             await handle_negotiate_action(**data)
         case ActionType.TRANSACTION:
             await handle_transaction_action(**data)
+            return
         case ActionType.ACCEPT_NEGOTIATIONS:
             await handle_accept_negotiations_action(**data)
         case ActionType.REFUSE_NEGOTIATIONS:
