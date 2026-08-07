@@ -1,12 +1,12 @@
 import logging
 from collections import Counter
 
-from async_lru import alru_cache
 from pydantic import TypeAdapter
 from sqlalchemy import func, insert, not_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
+from database.alru_cache import alru_cache
 from database.base_client import DatabaseClient
 from database.config import database_config
 from database.models import (
@@ -87,7 +87,7 @@ class GameClient(DatabaseClient):
             update(Game).where(Game.id == game_id).values(status=GameStatus.ENDED)
         )
 
-        await self._clear_game_cache(s, game_id, True)
+        self._clear_game_cache()
 
     async def get_all_active_players(
         self, s: AsyncSession, game_id: int
@@ -324,8 +324,6 @@ class GameClient(DatabaseClient):
         if game.status != GameStatus.ROUND:
             return FailureReason.ROUND_IS_NOT_GOING
 
-        await self._clear_game_cache(s, game_id)
-
         orders_by_action = {
             action: []
             for action in OrderType
@@ -375,16 +373,15 @@ class GameClient(DatabaseClient):
         await self.eco_update(s, game.id, orders)
 
         await s.execute(
-            
-                update(Game)
-                .where(Game.id == game_id)
-                .values(
-                    {
-                        Game.status: GameStatus.MEETING,
-                    }
-                )
-            
+            update(Game)
+            .where(Game.id == game_id)
+            .values(
+                {
+                    Game.status: GameStatus.MEETING,
+                }
+            ) 
         )
+        self._clear_game_cache()
 
     async def save_round_info(self, s: AsyncSession, game_id: int) -> FailureReason:
         game = await s.get(Game, game_id)
