@@ -94,7 +94,7 @@ class UserClient(DatabaseClient):
             return FailureReason.GAME_ENDED
 
         planet = await s.execute(
-            select(Planet).where(Planet.owner_id == player.tg_id)
+            select(Planet).where(Planet.owner_id == player.tg_id, Planet.game_id == game_id)
         )
         if planet.all():
             player.game_id = game_id
