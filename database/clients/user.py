@@ -3,6 +3,7 @@ import logging
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from database.alru_cache import alru_cache
 from database.base_client import DatabaseClient
 from database.models import Admin, Game, Planet, Player
 from database.schemas import AdminDto, GameStatus, PlayerDto, UserDto
@@ -62,6 +63,7 @@ class UserClient(DatabaseClient):
 
         return user
 
+    @alru_cache()
     async def is_user_admin(self, s: AsyncSession, tg_id: int) -> bool:
         user = await s.get(Admin, tg_id)
         return user is not None
@@ -174,6 +176,7 @@ class UserClient(DatabaseClient):
         admin = Admin(tg_id=player.tg_id)
         s.add(admin)
         await s.delete(player)
+        self.is_user_admin.cache_invalidate(player_id)
 
         return FailureReason.SUCCESS
 
@@ -187,5 +190,6 @@ class UserClient(DatabaseClient):
         player = Player(tg_id=admin.tg_id)
         s.add(player)
         await s.delete(admin)
+        self.is_user_admin.cache_invalidate(admin_id)
 
         return FailureReason.SUCCESS

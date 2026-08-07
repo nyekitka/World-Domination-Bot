@@ -1,12 +1,11 @@
 import logging
-from typing import ParamSpec, TypeVar
 
-from async_lru import alru_cache
 from pydantic import TypeAdapter
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
+from database.alru_cache import alru_cache
 from database.config import database_config
 from database.models import (
     City,
@@ -22,10 +21,6 @@ from database.schemas import (
 )
 
 logger = logging.getLogger(__name__)
-
-ReturnType = TypeVar('ReturnType')
-ParamsType = ParamSpec('ParamsType')
-ClientType = TypeVar('ClientType', bound='DatabaseClient')
 
 
 class DatabaseClient:
@@ -72,6 +67,7 @@ class DatabaseClient:
 
         return None
 
+    @alru_cache(ttl=database_config.EXPIRE_CACHE)
     async def get_city(
         self, s: AsyncSession, city_id: int, load_rate: bool = False
     ) -> CityDto | None:
@@ -85,6 +81,7 @@ class DatabaseClient:
             return CityDto.model_validate(city)
         return None
 
+    @alru_cache(ttl=database_config.EXPIRE_CACHE)
     async def get_planet(
         self,
         s: AsyncSession,
@@ -103,6 +100,7 @@ class DatabaseClient:
             return PlanetDto.model_validate(planet)
         return None
 
+    @alru_cache(ttl=database_config.EXPIRE_CACHE)
     async def get_planet_by_city_id(
         self, s: AsyncSession, city_id: int
     ) -> PlanetDto | None:
@@ -116,6 +114,7 @@ class DatabaseClient:
             return PlanetDto.model_validate(planet)
         return None
 
+    @alru_cache(ttl=database_config.EXPIRE_CACHE)
     async def get_player_planet(
         self,
         s: AsyncSession,
@@ -136,6 +135,7 @@ class DatabaseClient:
             return PlanetDto.model_validate(planet)
         return None
 
+    @alru_cache(ttl=database_config.EXPIRE_CACHE)
     async def get_cities_of_planet(
         self,
         s: AsyncSession,
@@ -157,6 +157,7 @@ class DatabaseClient:
             return TypeAdapter(list[CityDto]).validate_python(result.scalars().all())
         return None
 
+    @alru_cache(ttl=database_config.EXPIRE_CACHE)
     async def get_planets_of_game(
         self,
         s: AsyncSession,
@@ -176,33 +177,21 @@ class DatabaseClient:
             .all()
         )
 
-        logger.debug(f'Planets[0].development: {planets[0].rate_of_life}')
-
         if planets:
             return TypeAdapter(list[PlanetDto]).validate_python(planets)
         return None
 
-    async def _clear_game_cache(
-        self, session: AsyncSession, game_id: int, soft: bool = False
-    ) -> None:
-        self.get_game.cache_invalidate(game_id)
-        if soft:
-            return
 
-        res_planets = await session.execute(
-            select(Planet).where(Planet.game_id == Game.id)
-        )
-        all_planets = [planet.id for planet in res_planets.scalars().all()]
-        res_cities = await session.execute(
-            select(City).where(City.planet_id.in_(all_planets))
-        )
-        all_cities = [city.id for city in res_cities.scalars().all()]
-
-        for planet_id in all_planets:
-            self.get_game_by_planet_id.cache_invalidate(planet_id)
-
-        for city_id in all_cities:
-            self.get_game_by_city_id.cache_invalidate(city_id)
+    def _clear_game_cache(self) -> None:
+        self.get_game.cache_clear()
+        self.get_game_by_planet_id.cache_clear()
+        self.get_game_by_city_id.cache_clear()
+        self.get_city.cache_clear()
+        self.get_planet.cache_clear()
+        self.get_planet_by_city_id.cache_clear()
+        self.get_player_planet.cache_clear()
+        self.get_cities_of_planet.cache_clear()
+        self.get_planets_of_game.cache_clear()
 
 
     async def get_all_sanctions_on_planet(
