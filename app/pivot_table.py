@@ -1,3 +1,4 @@
+from pathlib import Path
 
 import pandas as pd
 
@@ -11,6 +12,9 @@ def make_pivot_table(
     cities: list[CityDto],
     order_info: list[dict[int, OrderInfo]],
 ) -> bool:
+    wrapped_path = Path(path)
+    wrapped_path.parent.mkdir(parents=True, exist_ok=True)
+
     writer = pd.ExcelWriter(path)
 
     planets_map = {planet.id: planet for planet in planets}
@@ -46,7 +50,7 @@ def make_pivot_table(
                 elif order_type == OrderType.ATTACK:
                     df.loc[row_name, planet.name] = ',\n'.join(
                         [
-                            f'{cities_map[city_id].name} ({planets_map[cities_map[city_id].planet_id]})'
+                            f'{cities_map[city_id].name} ({planets_map[cities_map[city_id].planet_id].name})'
                             for city_id in order_info[i][planet_id].get(order_type, [])
                         ]
                     )
@@ -57,5 +61,5 @@ def make_pivot_table(
                             for city_id in order_info[i][planet_id].get(order_type, [])
                         ]
                     )
-        df.to_excel(writer, f'{round} раунд')
+        df.to_excel(writer, sheet_name=f'{round} раунд')
     writer.close()

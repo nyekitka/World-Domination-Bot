@@ -110,9 +110,10 @@ async def end_handler(
         await bot.send_document(
             admin.tg_id,
             FSInputFile(
-                f'tmp/excel/game_{game.id}_results.xlsx', filename='Результаты игры'
+                f'tmp/excel/game_{game.id}_results.xlsx', filename='Результаты игры.xlsx'
             ),
             caption=renderer.render('game_results')['text'],
+            reply_markup=kb.start_keyboard(True),
         )
 
     for player in all_players:
@@ -120,9 +121,14 @@ async def end_handler(
             player.tg_id,
             **renderer.render('end_of_the_game'),
         )
-        await bot.send_message(player.tg_id, **renderer.render('goodbye'))
+        await bot.send_message(
+            player.tg_id,
+            **renderer.render('goodbye'),
+            reply_markup=kb.start_keyboard(False)
+        )
 
     await game_client.end_game(session, game.id)
+    await session.commit()
 
 
 def get_round_notifier(
