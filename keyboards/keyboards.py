@@ -172,6 +172,8 @@ def other_planets_keyboard(
     other_cities.sort(key=lambda x: x.name)
     if nround > 1:
         for city in other_cities:
+            if city.development == 0:
+                continue
             add = '✅ ' if city.id in attacked_cities_ids else ''
             attack_action = Action(
                 action_type=ActionType.ATTACK,
