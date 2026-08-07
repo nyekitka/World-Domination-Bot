@@ -275,13 +275,13 @@ promote_notification_for_user:
   template: 👑 The Supreme Leader has appointed you as administrator!
   markdown: false
 refuse_request_notification_for_user:
-  template: 👎 The Supreme Leader has stripped you of administrator status.
+  template: The Supreme Leader has deemed you unworthy of administrator status.
   markdown: false
 refuse_request_notification_for_leader:
   template: You have declined user {{user.first_name}}.
   markdown: false
 fire_admin_notification_for_user:
-  template: The Supreme Leader has deemed you unworthy of administrator status.
+  template: 👎 The Supreme Leader has stripped you of administrator status.
   markdown: false
 promote_notification_for_leader:
   template: You have successfully appointed {{user.first_name}} as administrator!

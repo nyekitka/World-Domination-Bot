@@ -300,8 +300,8 @@ def request_keyboard(id: int):
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text='Принять', callback_data=f'knight {id}'),
-                InlineKeyboardButton(text='Отклонить', callback_data=f'notknight {id}'),
+                InlineKeyboardButton(text='Принять', callback_data=f'accept_request {id}'),
+                InlineKeyboardButton(text='Отклонить', callback_data=f'refuse_request {id}'),
             ]
         ]
     )

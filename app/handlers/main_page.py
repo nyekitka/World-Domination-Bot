@@ -74,7 +74,7 @@ async def request(
     )
 
 
-@main_page_router.callback_query(InlineButtonFilter('accept_knight'), OwnerFilter())
+@main_page_router.callback_query(InlineButtonFilter('accept_request'), OwnerFilter())
 async def accept_knight(
     call: types.CallbackQuery,
     user_client: UserClient,
@@ -100,7 +100,7 @@ async def accept_knight(
         )
 
 
-@main_page_router.callback_query(InlineButtonFilter('refuse_knight'), OwnerFilter())
+@main_page_router.callback_query(InlineButtonFilter('refuse_request'), OwnerFilter())
 async def refuse_knight(
     call: types.CallbackQuery,
     renderer: MessageRenderer,
@@ -137,27 +137,38 @@ async def fire_admin(
         message.from_user.id,
         username,
     )
-    user = await message.bot.get_chat(username)
-    db_user = await user_client.get_user(session, user.id)
-    was_in_game = db_user.game_id is not None
+    admins = await user_client.get_all_admins(session)
+    tg_admin = None
+    db_admin = None
+    for admin in admins:
+        tg_user = await message.bot.get_chat(admin.tg_id)
+        if tg_user.username == username[1:]:
+            tg_admin = tg_user
+            db_admin = admin
+            break
+    else:
+        await message.answer(**renderer.render('object_not_found'))
+        return
+    
+    was_in_game = db_admin.game_id is not None
     res = await method_executor_msg(
         message.bot,
         user_client.fire_admin,
         message.from_user.id,
         renderer,
         session,
-        user.id,
+        tg_admin.id,
     )
     if not res:
         return
 
     await message.bot.send_message(
-        user.id, **renderer.render('fire_admin_notification_for_user')
+        tg_admin.id, **renderer.render('fire_admin_notification_for_user')
     )
     if was_in_game:
         await message.bot.send_message(
-            user.id, **renderer.render('kick_due_to_not_admin')
+            tg_admin.id, **renderer.render('kick_due_to_not_admin')
         )
     await message.answer(
-        **renderer.render('fire_admin_notification_for_leader', user=user)
+        **renderer.render('fire_admin_notification_for_leader', user=tg_admin)
     )
