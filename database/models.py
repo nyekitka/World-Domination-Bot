@@ -195,7 +195,7 @@ class City(ModelBase):
         if self.rate_of_life is None:
             return None
 
-        return int(round(game_config.INCOME_COEFFICIENT * float(self.rate_of_life)))
+        return round(game_config.INCOME_COEFFICIENT * float(self.rate_of_life))
 
     @income.expression
     def income(cls):
