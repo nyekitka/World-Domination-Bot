@@ -699,10 +699,10 @@ async def set_amount_of_money(
         return
 
     from_planet_cities = await game_client.get_cities_of_planet(
-        session, from_planet.id, False, False
+        session, from_planet.id, False,
     )
     to_planet_cities = await game_client.get_cities_of_planet(
-        session, to_planet.id, False, False
+        session, to_planet.id, False,
     )
     res = await method_executor_msg(
         message.bot,
