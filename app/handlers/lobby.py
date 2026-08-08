@@ -173,6 +173,7 @@ async def leave_lobby(
         renderer,
         session,
         tg_id,
+        reply_markup=kb.start_keyboard(isinstance(user, AdminDto)),
     )
     if not res:
         return
@@ -226,7 +227,7 @@ async def chosen_lobby_admin(
         return
     await call.message.answer(
         **renderer.render('on_success_enter_admin', game=game),
-        reply_markup=kb.ingame_keyboard(True),
+        reply_markup=kb.ingame_keyboard(True, game),
     )
     await state.clear()
 
@@ -257,7 +258,7 @@ async def chosen_lobby(
     planet = await game_client.get_player_planet(session, tg_id, game.id)
     await call.message.answer(
         **renderer.render('on_success_enter_player', game=game, planet=planet),
-        reply_markup=kb.ingame_keyboard(False),
+        reply_markup=kb.ingame_keyboard(False, game),
     )
     if game.status == GameStatus.WAITING:
         await notify_lobby_on_join_leave(

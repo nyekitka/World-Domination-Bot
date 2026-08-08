@@ -6,12 +6,10 @@ from aiogram.types import (
 )
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from database.schemas import CityDto, GameDto, PlanetDto
+from database.schemas import CityDto, GameDto, GameStatus, PlanetDto
 from game.config import game_config
 from keyboards.schemas import Action, ActionType
 from packs.pack import packs
-
-# Клавиатура админа в начале
 
 
 def start_keyboard(isadmin: bool):
@@ -270,8 +268,14 @@ def number_of_planets_keyboard(pack: str):
     )
 
 
-# Клавиатура админа в игре
-def ingame_keyboard(isadmin: bool):
+def ingame_keyboard(isadmin: bool, game: GameDto | None = None):
+    if game is not None:
+        if game.status in (GameStatus.ROUND, GameStatus.MEETING):
+            return None
+        elif game.status == GameStatus.ENDED and isadmin:
+            return ReplyKeyboardMarkup(
+                keyboard=[[KeyboardButton(text='Выйти из лобби')]]
+            )
     if isadmin:
         return ReplyKeyboardMarkup(
             keyboard=[
@@ -282,10 +286,6 @@ def ingame_keyboard(isadmin: bool):
     else:
         return ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Выйти из лобби')]])
 
-
-conversations_admin_keyboard = ReplyKeyboardMarkup(
-    keyboard=[[KeyboardButton(text='Начать следующий раунд')]]
-)
 
 
 # Клавиатура выбора паков
@@ -319,3 +319,11 @@ def round_stats_keyboard(game: GameDto) -> InlineKeyboardMarkup:
             ]
         ]
     )
+
+def get_reply_markup_keyboard(
+    is_admin: bool, is_in_game: bool
+) -> ReplyKeyboardMarkup:
+    if is_in_game:
+        return ingame_keyboard(is_admin)
+    
+    return start_keyboard(is_admin)

@@ -44,14 +44,10 @@ async def start(
         user = await user_client.make_new_user(session, tg_id, False)
 
     is_admin = isinstance(user, AdminDto)
-    keyboard = (
-        kb.start_keyboard(is_admin)
-        if user.game_id is None
-        else kb.ingame_keyboard(is_admin)
-    )
+
     await message.answer(
         **renderer.render('on_start', is_admin=is_admin, user=user, name=name),
-        reply_markup=keyboard,
+        reply_markup=kb.get_reply_markup_keyboard(is_admin, user.game_id is not None),
     )
 
 
@@ -96,7 +92,8 @@ async def accept_knight(
             **renderer.render('promote_notification_for_leader', user=user)
         )
         await call.bot.send_message(
-            id, **renderer.render('promote_notification_for_user')
+            id, **renderer.render('promote_notification_for_user'),
+            reply_markup=kb.get_reply_markup_keyboard(True, False)
         )
 
 
@@ -163,7 +160,8 @@ async def fire_admin(
         return
 
     await message.bot.send_message(
-        tg_admin.id, **renderer.render('fire_admin_notification_for_user')
+        tg_admin.id, **renderer.render('fire_admin_notification_for_user'),
+        reply_markup=kb.get_reply_markup_keyboard(False, False)
     )
     if was_in_game:
         await message.bot.send_message(
