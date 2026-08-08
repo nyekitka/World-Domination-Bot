@@ -96,7 +96,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-    command: ["uvicorn", "web_app.app.asgi:application", "--host", "${DJANGO_HOST}", "--port", "${DJANGO_PORT}", "--reload"]
+    command: ["uvicorn", "web_app.app.asgi:application", "--host", "${DJANGO_HOST}", "--port", "${DJANGO_PORT}"]
   
   redis:
     image: redis:latest
