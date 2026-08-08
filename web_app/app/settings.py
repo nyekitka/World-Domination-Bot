@@ -68,7 +68,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'web_app.stats.middlewares.db.DBClientMiddleware',
     'web_app.stats.middlewares.verifier.VerifierMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
 ROOT_URLCONF = 'web_app.app.urls'
