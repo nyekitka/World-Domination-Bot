@@ -14,6 +14,8 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from database.config import database_config
+
 
 class DjangoSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix='DJANGO_')
@@ -62,7 +64,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'web_app.app.middleware.DBClientMiddleware',
+    'web_app.stats.middlewares.db.DBClientMiddleware',
+    'web_app.stats.middlewares.verifier.VerifierMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
@@ -89,7 +92,16 @@ WSGI_APPLICATION = 'app.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {}
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': database_config.NAME,
+        'USER': database_config.USER,
+        'PASSWORD': database_config.PASSWORD,
+        'HOST': database_config.HOST,
+        'PORT': database_config.INNER_PORT,
+    }
+}
 
 
 # Password validation

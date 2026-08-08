@@ -53,6 +53,7 @@ services:
     environment:
       - BOT_TOKEN=${BOT_TOKEN}
       - OWNER=${OWNER}
+      - WEB_APP_URL=${WEB_APP_URL}
     ports:
       - "8000:8000"
     volumes:
@@ -89,7 +90,7 @@ services:
       - DJANGO_HOST=${DJANGO_HOST}
       - DJANGO_PORT=${DJANGO_PORT}
     ports:
-      - "${DJANGO_PORT}:${DJANGO_PORT}"
+      - "80:${DJANGO_PORT}"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:${DJANGO_PORT}/health/')"]
       interval: 2m

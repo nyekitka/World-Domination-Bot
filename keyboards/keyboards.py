@@ -1,8 +1,11 @@
+import os
+
 from aiogram.types import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     KeyboardButton,
     ReplyKeyboardMarkup,
+    WebAppInfo,
 )
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
@@ -10,6 +13,8 @@ from database.schemas import CityDto, GameDto, GameStatus, PlanetDto
 from game.config import game_config
 from keyboards.schemas import Action, ActionType
 from packs.pack import packs
+
+WEB_APP_URL = os.getenv('WEB_APP_URL')
 
 
 def start_keyboard(isadmin: bool):
@@ -313,8 +318,7 @@ def round_stats_keyboard(game: GameDto) -> InlineKeyboardMarkup:
             [
                 InlineKeyboardButton(
                     text='📊 Открыть статистику после раунда',
-                    url='https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-                    # web_app=WebAppInfo(url=f'https://{django_settings.HOST}:{django_settings.PORT}/{game.id}/{game.round}')
+                    web_app=WebAppInfo(url=f'{WEB_APP_URL}/{game.id}/{game.round}')
                 )
             ]
         ]

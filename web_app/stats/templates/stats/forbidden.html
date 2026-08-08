@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ошибка 403 — Форма отказа в доступе</title>
+<style>
+  :root{
+    --paper: #ece7d9;
+    --paper-dark: #ddd6c2;
+    --ink: #2b2823;
+    --ink-faded: #59544a;
+    --stamp-red: #a6332f;
+    --line: #b8b09a;
+  }
+
+  * { box-sizing: border-box; }
+
+  body{
+    margin:0;
+    min-height:100vh;
+    background: var(--paper-dark);
+    background-image:
+      repeating-linear-gradient(0deg, rgba(0,0,0,0.015) 0px, rgba(0,0,0,0.015) 1px, transparent 1px, transparent 3px);
+    color: var(--ink);
+    font-family: "Courier New", "Consolas", monospace;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding: 32px 16px;
+  }
+
+  .sheet{
+    position:relative;
+    width:100%;
+    max-width: 640px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.4) inset,
+      0 20px 45px rgba(0,0,0,0.22);
+    padding: 48px 44px 40px;
+    overflow: hidden;
+  }
+
+  .sheet::before{
+    content:"";
+    position:absolute;
+    inset:10px;
+    border: 1px dashed var(--line);
+    pointer-events:none;
+  }
+
+  .letterhead{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 14px;
+    margin-bottom: 30px;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--ink-faded);
+    text-transform: uppercase;
+  }
+
+  .letterhead .form-id{
+    text-align:right;
+    line-height:1.5;
+  }
+
+  .code{
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 84px;
+    font-weight: 700;
+    line-height: 0.9;
+    letter-spacing: -0.02em;
+    margin: 0 0 6px;
+    color: var(--ink);
+  }
+
+  h1{
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 28px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .lead{
+    font-size: 14px;
+    line-height: 1.7;
+    margin: 0 0 22px;
+    color: var(--ink);
+  }
+
+  .section-label{
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-faded);
+    margin: 0 0 12px;
+    display:flex;
+    align-items:center;
+    gap: 10px;
+  }
+
+  .section-label::after{
+    content:"";
+    flex:1;
+    height:1px;
+    background: var(--line);
+  }
+
+  ol{
+    margin: 0 0 28px;
+    padding: 0;
+    list-style: none;
+    counter-reset: req;
+  }
+
+  ol li{
+    counter-increment: req;
+    display:flex;
+    gap: 12px;
+    font-size: 14px;
+    line-height: 1.6;
+    padding: 10px 0;
+    border-bottom: 1px dotted var(--line);
+  }
+
+  ol li:last-child{ border-bottom:none; }
+
+  ol li::before{
+    content: counter(req) ".";
+    flex: 0 0 auto;
+    font-weight: 700;
+    color: var(--ink-faded);
+    min-width: 18px;
+  }
+
+  .term{
+    font-size: 13px;
+    color: var(--ink-faded);
+    border-top: 1px solid var(--ink);
+    padding-top: 16px;
+    display:flex;
+    justify-content:space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .term strong{
+    color: var(--ink);
+    font-weight: 700;
+  }
+
+  .stamp{
+    position: absolute;
+    right: 34px;
+    bottom: 40px;
+    width: 168px;
+    height: 168px;
+    border: 4px solid var(--stamp-red);
+    border-radius: 50%;
+    color: var(--stamp-red);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    transform: rotate(-16deg);
+    opacity: 0.88;
+    mix-blend-mode: multiply;
+    font-family: Georgia, serif;
+    pointer-events:none;
+    animation: stampIn 0.5s cubic-bezier(.2,1.4,.4,1) 0.35s both;
+  }
+
+  .stamp::before{
+    content:"";
+    position:absolute;
+    inset: 10px;
+    border: 1px solid var(--stamp-red);
+    border-radius: 50%;
+  }
+
+  .stamp span{
+    font-weight: 700;
+    font-size: 20px;
+    letter-spacing: 0.08em;
+  }
+
+  @keyframes stampIn{
+    0%{ opacity:0; transform: rotate(-16deg) scale(2.2); }
+    60%{ opacity:0.9; }
+    100%{ opacity:0.88; transform: rotate(-16deg) scale(1); }
+  }
+
+  @media (max-width: 520px){
+    .sheet{ padding: 32px 22px 28px; }
+    .code{ font-size: 58px; }
+    .stamp{
+      position: static;
+      margin: 28px auto 0;
+      transform: rotate(-8deg);
+    }
+    .letterhead{ flex-direction:column; gap:8px; }
+    .letterhead .form-id{ text-align:left; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .stamp{ animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<main class="sheet">
+  <div class="letterhead">
+    <div>Бюро&nbsp;пропусков<br>Отдел&nbsp;бесконечных&nbsp;согласований</div>
+    <div class="form-id">Форма №403-К<br>Экз.&nbsp;1&nbsp;из&nbsp;3</div>
+  </div>
+
+  <div class="code">403</div>
+  <h1>Недостаточно справок</h1>
+
+  <p class="lead">
+    Ваш запрос рассмотрен и отклонён по формальному признаку.
+    Для получения доступа необходимо предоставить полный комплект документов:
+  </p>
+
+  <p class="section-label">Требуемые документы</p>
+  <ol>
+    <li>Заявление в трёх экземплярах</li>
+    <li>Справка о наличии справки</li>
+    <li>Согласие на отказ в доступе</li>
+  </ol>
+
+  <p class="term">
+    <span>Срок рассмотрения:</span>
+    <strong>3–5 рабочих жизней</strong>
+  </p>
+
+  <div class="stamp"><span>ОТКАЗАНО</span></div>
+</main>
+
+</body>
+</html>
