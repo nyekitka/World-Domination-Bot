@@ -1,12 +1,11 @@
+import os
 from collections.abc import Awaitable, Callable
 from inspect import iscoroutinefunction
-import os
 
 from asgiref.sync import markcoroutinefunction
 from django.http import HttpRequest, HttpResponse, JsonResponse
 
 from web_app.stats.auth import verify_telegram_init_data
-
 
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 

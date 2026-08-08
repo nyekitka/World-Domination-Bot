@@ -14,7 +14,6 @@ from game.config import game_config
 from keyboards.schemas import Action, ActionType
 from packs.pack import packs
 
-
 WEB_APP_URL = os.getenv('WEB_APP_URL')
 
 

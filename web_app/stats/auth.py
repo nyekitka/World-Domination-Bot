@@ -7,7 +7,7 @@ from urllib.parse import parse_qsl
 def verify_telegram_init_data(init_data: str, bot_token: str) -> dict | None:
     try:
         parsed_data = dict(parse_qsl(init_data, keep_blank_values=True))
-    except Exception:
+    except Exception: # noqa: BLE001
         return None
 
     received_hash = parsed_data.pop('hash', None)
