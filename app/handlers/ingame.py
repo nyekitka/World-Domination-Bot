@@ -170,11 +170,13 @@ async def end_the_game(
 
     for admin in admins_list:
         await message.bot.send_message(
-            admin.tg_id, **renderer.render('game_interrupted_report')
+            admin.tg_id, **renderer.render('game_interrupted_report'),
+            reply_markup=kb.start_keyboard(True)
         )
     for player in players_list:
         await message.bot.send_message(
-            player.tg_id, **renderer.render('game_interrupted_message')
+            player.tg_id, **renderer.render('game_interrupted_message'),
+            reply_markup=kb.start_keyboard(False)
         )
     await game_client.end_game(session, game.id)
 
