@@ -54,6 +54,11 @@ async def start_round(
 
     user = await user_client.get_user(session, message.from_user.id)
     active_admins = await game_client.get_all_active_admins(session, user.game_id)
+    active_players = await game_client.get_all_active_players(session, user.game_id)
+    acitve_players_ids = [
+        player.tg_id
+        for player in active_players
+    ]
     game: GameDto = await game_client.get_game(session, user.game_id)
 
     for admin in active_admins:
@@ -72,18 +77,19 @@ async def start_round(
         actions_client.set_balance(
             planet.id, planet.meteorites, actions_client.METEORITES_KEY
         )
-        sanctioned_planets = await game_client.get_sanctioned_planets(session, pl_id)
-        await send_all_info(
-            bot=message.bot,
-            game=game,
-            planets_and_cities=all_planets_and_cities.copy(),
-            planet_id=pl_id,
-            order_info={},
-            user_id=planet.owner_id,
-            messages_client=messages_client,
-            sanctioned_planets=sanctioned_planets,
-            renderer=renderer,
-        )
+        if planet.owner_id in acitve_players_ids:
+            sanctioned_planets = await game_client.get_sanctioned_planets(session, pl_id)
+            await send_all_info(
+                bot=message.bot,
+                game=game,
+                planets_and_cities=all_planets_and_cities.copy(),
+                planet_id=pl_id,
+                order_info={},
+                user_id=planet.owner_id,
+                messages_client=messages_client,
+                sanctioned_planets=sanctioned_planets,
+                renderer=renderer,
+            )
     round_notifier = get_round_notifier(
         bot=message.bot,
         game=game,
