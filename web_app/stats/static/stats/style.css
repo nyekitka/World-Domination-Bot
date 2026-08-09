@@ -48,13 +48,29 @@ body {
 
 .city, .percentage {
     text-align: center;
-    padding: 5px;
+    color: white
 }
 
 .dead-city, .dead-percentage {
     text-align: center;
     color: gray;
-    padding: 5px;
+}
+
+.city, .dead-city {
+    font-size: 20px;
+    padding: 2px 4px;
+    line-height: 1.1;
+    word-break: break-word;
+}
+
+.dead-city {
+    text-decoration: line-through;
+}
+
+.percentage, .dead-percentage {
+    padding: 2px;
+    font-size: 24px;
+    font-weight: bold;
 }
 
 .chart-wrapper {
@@ -68,21 +84,25 @@ body {
     height: 600px;
     background-color: #f0f0f0;
     border-radius: 10px;
-    justify-content: space-between;
+    justify-content: space-around;
+    gap: 20px;
     padding: 20px;
     align-items: flex-end;
     margin-left: 20px;
 }
 
 .bar {
-    width: 20%;
+    flex: 1;
+    max-width: 120px;
+    min-width: 40px;
+    width: 60px;
     background-color: #007BFF;
     position: relative;
     display: flex;
     flex-direction: column-reverse;
     align-items: center;
     border-radius: 5px;
-    margin: 5px;
+    margin: 0;
 }
 
 .value, .label {
@@ -110,7 +130,7 @@ body {
     flex-direction: column;
     color: #fff;
     overflow: hidden;
-    font-size: 28px;
+    font-size: 16px;
     margin-top: 10px;
 }
 
