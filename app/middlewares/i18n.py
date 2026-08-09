@@ -1,5 +1,6 @@
 from aiogram import BaseMiddleware
 
+from features.config import feature_config
 from messages.renderer import MessageRenderer
 
 
@@ -12,6 +13,11 @@ class I18nMiddleware(BaseMiddleware):
         }
 
     async def __call__(self, handler, event, data):
+        if not feature_config.I18N:
+            language = self.default_language
+            data['renderer'] = self.message_renderers[language]
+            return await handler(event, data)
+        
         user = data.get('event_from_user')
         language = self.default_language
         if user and hasattr(user, 'language_code') and user.language_code:
