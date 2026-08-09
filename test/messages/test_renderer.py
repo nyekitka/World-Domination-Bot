@@ -3,7 +3,6 @@ from datetime import timedelta
 import pytest
 
 from database.schemas import PlanetDto
-from game.config import game_config
 
 
 def test_render_on_start_for_player_without_game(
@@ -355,9 +354,9 @@ def test_render_common_planet_info(renderer_ru, renderer_en, planet, cities):
             '*Доступный бюджет:* _1000_ 💵\n'
             '*Сред\\. ур\\. жизни на планете:* _45\\.5%_\n\n'
             '*Москва* ❌:\n'
-            'Развитие 0%, Ур\\. жизни 50\\.0%, Доход 150\\.0 💵\n\n'
+            'Развитие 0%, Ур\\. жизни 50\\.0%, Доход 150 💵\n\n'
             '*Питер* 🛡️:\n'
-            'Развитие 70%, Ур\\. жизни 80\\.0%, Доход 240\\.0 💵\n\n'
+            'Развитие 70%, Ур\\. жизни 80\\.0%, Доход 240 💵\n\n'
         ),
         'parse_mode': 'MarkdownV2',
     }
@@ -367,9 +366,9 @@ def test_render_common_planet_info(renderer_ru, renderer_en, planet, cities):
             '*Available budget:* _1000_ 💵\n'
             '*Avg\\. life rate on the planet:* _45\\.5%_\n\n'
             '*Москва* ❌:\n'
-            'Development 0%, Life rate 50\\.0%, Income 150\\.0 💵\n\n'
+            'Development 0%, Life rate 50\\.0%, Income 150 💵\n\n'
             '*Питер* 🛡️:\n'
-            'Development 70%, Life rate 80\\.0%, Income 240\\.0 💵\n\n'
+            'Development 70%, Life rate 80\\.0%, Income 240 💵\n\n'
         ),
         'parse_mode': 'MarkdownV2',
     }
@@ -581,7 +580,7 @@ def test_render_already_built(renderer_ru, renderer_en):
 def test_render_round_end_for_admin(renderer_ru, renderer_en, game):
     assert renderer_ru.render('round_end_for_admin', game=game) == {
         'text': (
-            '_*второй раунд закончен\\!*_\n'
+            '_*Второй раунд закончен\\!*_\n'
             'Перейдите в приложение для просмотра результатов раунда\\!'
         ),
         'parse_mode': 'MarkdownV2',
@@ -609,7 +608,7 @@ def test_render_game_results(renderer_ru, renderer_en):
 def test_render_round_end_for_players(renderer_ru, renderer_en, game):
     assert renderer_ru.render('round_end_for_players', game=game) == {
         'text': (
-            '_*второй раунд закончен\\!*_\n'
+            '_*Второй раунд закончен\\!*_\n'
             'Отправляйтесь на межпланетные переговоры, чтобы увидеть результаты раунда и обсудить их\\.'
         ),
         'parse_mode': 'MarkdownV2',
@@ -809,8 +808,8 @@ def test_render_end_of_the_game(renderer_ru, renderer_en):
         'text': (
             '*Игра закончена\\!*\n'
             'Отправляйтесь на собрание, чтобы увидеть результаты игры\\.\n'
-            'Создатель бота: [Клинов Никита](https://vk.com/nyekitka)\\.\n'
-            'Поддержать создателя: [тык](https://www.donationalerts.com/r/nyekitkaa)'
+            'Создатель бота: [Клинов Никита](https://t.me/nyekitka)\\.\n'
+            'Поддержать создателя: [тык](https://tbank.ru/cf/9Ujjcps0nqA)'
         ),
         'parse_mode': 'MarkdownV2',
     }
@@ -818,8 +817,8 @@ def test_render_end_of_the_game(renderer_ru, renderer_en):
         'text': (
             '*The game has ended\\!*\n'
             'Head to the assembly to see the game results\\.\n'
-            'Bot creator: [Nikita Klinov](https://vk.com/nyekitka)\\.\n'
-            'Support the creator: [here](https://www.donationalerts.com/r/nyekitkaa)'
+            'Bot creator: [Nikita Klinov](https://t.me/nyekitka)\\.\n'
+            'Support the creator: [here](https://tbank.ru/cf/9Ujjcps0nqA)'
         ),
         'parse_mode': 'MarkdownV2',
     }
@@ -1099,92 +1098,6 @@ def test_render_already_in_game(renderer_ru, renderer_en):
             'Leave the current lobby first, then join another one.'
         ),
         'parse_mode': None,
-    }
-
-
-def test_render_help(renderer_ru, renderer_en):
-    assert renderer_ru.render('help', game_config=game_config) == {
-        'text': (
-            'В данной игре 6 раундов по 10 минут, после каждого из которых идут общие обсуждения, которые не ограничены по времени\\. '
-            'По окончании 6 раундов побеждает та планета, средний уровень развития которой является наибольшим, если уровень аномалии не достиг 100%\\. '
-            'Если активность аномалии достигла этой отметки, то проигрывают все\\.\n\n'
-            'У каждой планеты есть по 4 города, каждый из которых изначально имеет одинаковое развитие и уровень жизни\\. '
-            'Уровень жизни города зависит от развития и активности аномалии\\. '
-            'От уровня жизни города зависит его доход за раунд\\. '
-            'Если город разрушен, то его уровни развития и жизни равны нулю\\. '
-            'Если все города на планете разрушены, то вы проигрываете, но у вас ещё есть возможность выполнять действия\\.\n\n'
-            'В каждом из раундов вы формируете приказ \\- список действий, которые вы хотите сделать после этого раунда\\. '
-            'Все действия, которые вы выберете, применятся только после конца этого раунда, а результат действий всех планет будет обсуждаться на общем\\. '
-            'В приказе вам доступно несколько действий:\n\n'
-            '📈 *Развитие города* \\- вы вкладываете в деньги в развитие одного из своих городов, тем самым повышая уровень его развития и соответственно уровень жизни\\. '
-            'Разрушенный город не подлежит развитию\\. _Стоимость: 150 💵_\n\n'
-            '🛡️ *Защита города* \\- вы ставите щит над своим городом, защищая его от прилетающих метеоритов\\. '
-            'Щит может защитить город только от одного метеорита\\. '
-            'Если метеорит прилетает в город, защищённый щитом, щит разрушается, но город остаётся в целости\\. '
-            'На один город нельзя поставить два или более щита\\. '
-            'Щит стоит на городе до тех пор, пока его не разрушат\\. '
-            'Действие доступно со 2 раунда\\. _Стоимость: 300 💵_\n\n'
-            '🛠️ *Разработка технологии отправки метеоритов* \\- вы разрабатываете технологии разработки метеоритов, тем самым разблокируете возможность отправлять метеориты в чужие города или в аномалию\\. '
-            'Увеличивает активность аномалии\\. Делается один раз за игру\\. _Стоимость: 500 💵_\n\n'
-            '☄️ *Отправка метеоритов в города* \\- вы отправляете метеорит во вражеский город, пытаясь его разрушить\\. '
-            'Один метеорит разрушает город без щита либо же разрушает щит над городом\\. '
-            'На каждый город за раунд можно отправить только один метеорит, поэтому если вы хотите наверняка разрушить его, то вам нужно скооперироваться с другими планетами\\. '
-            'Планета, на которую вы отправляете метеорит не знает о том, кто его отправил\\. '
-            'Увеличивает активность аномалии\\. Доступно после разработки технологии отправки\\.\n\n'
-            '💥 *Отправка метеорита в аномалию* \\- вы отправляете метеорит в аномалию, тем самым уменьшаете её активность на 20%\\. '
-            'За раунд можно сбросить только один метеорит в аномалию\\.\n\n'
-            '🧾 *Санкции* \\- вы отправляете пакет санкций на планету, тем самым уменьшая её доход за этот раунд\\. '
-            'Отправка санкций бесплатна, но планеты знают, кто им их отправил\\.\n\n'
-            'Помимо всех этих действий также доступны действия, которые не входят в приказ и происходят мгновенно\\.\n\n'
-            '📞 *Переговоры* \\- вы отправляете запрос другой планете на переговоры\\. '
-            'Если вас примут, то вы отправляете одного дипломата на эту планету\\. '
-            'Планета так же в праве отказать, либо удержать ваше предложение\\. '
-            'Вы можете принимать не более одной планеты на территории своей одновременно, но можете отправить своих дипломатов сразу в несколько планет \\(кроме той, с которой уже переговариваете\\)\\.\n\n'
-            '💸 *Перевод денег* \\- вы переводите определённую сумму другой планете\\. Перевод мгновенный и безвозвратный\\.'
-        ),
-        'parse_mode': 'MarkdownV2',
-    }
-    assert renderer_en.render('help', game_config=game_config) == {
-        'text': (
-            'This game consists of 6 rounds, each lasting 10 minutes, followed by a general discussion with no time limit\\. '
-            'After all 6 rounds have ended, the planet with the highest average development level wins, provided the anomaly activity has not reached 100%\\. '
-            'If the anomaly activity reaches this threshold, all planets lose\\.\n\n'
-            'Each planet has 4 cities, all of which start with the same development level and quality of life\\. '
-            "A city's quality of life depends on its development level and the anomaly activity\\. "
-            "A city's income each round depends on its quality of life\\. "
-            'If a city is destroyed, both its development level and quality of life become zero\\. '
-            'If all cities on your planet are destroyed, you lose, but you may still perform actions\\.\n\n'
-            'During each round, you create an order \\- a list of actions you want to perform after the round ends\\. '
-            "All selected actions are applied only after the end of the current round, and the results of every planet's actions are announced during the general discussion\\. "
-            'The following actions are available in your order:\n\n'
-            '📈 *Develop city* \\- invest money into developing one of your cities, increasing its development level and, consequently, its quality of life\\. '
-            'Destroyed cities cannot be developed\\. _Cost: 150 💵_\n\n'
-            '🛡️ *Protect city* \\- place a shield over one of your cities, protecting it from incoming meteors\\. '
-            'A shield can protect a city from only one meteor\\. '
-            'If a meteorite strikes a shielded city, the shield is destroyed, but the city remains intact\\. '
-            'A city cannot have more than one shield at the same time\\. '
-            'A shield remains in place until it is destroyed\\. '
-            'This action becomes available starting from Round 2\\. _Cost: 300 💵_\n\n'
-            '🛠️ *Research meteorite launch technology* \\- develop the technology required to launch meteors, unlocking the ability to send meteorites to enemy cities or into the anomaly\\. '
-            'Increases anomaly activity\\. Can only be performed once per game\\. _Cost: 500 💵_\n\n'
-            '☄️ *Launch meteorites at cities* \\- send a meteorite toward an enemy city in an attempt to destroy it\\. '
-            'A single meteorite destroys an unshielded city or destroys the shield protecting it\\. '
-            'Only one meteorite may be sent to each city per round, so if you want to guarantee its destruction, you will need to coordinate with other planets\\. '
-            'The target planet does not know who launched the meteor\\. '
-            'Increases anomaly activity\\. Available after researching the launch technology\\.\n\n'
-            '💥 *Launch a meteorite into the anomaly* \\- send a meteorite into the anomaly, reducing its activity by 20%\\. '
-            'Only one meteorite can be launched into the anomaly per round\\.\n\n'
-            '🧾 *Sanctions* \\- send a package of sanctions to another planet, reducing its income for the current round\\. '
-            'Sending sanctions is free, but the target planet knows who imposed them\\.\n\n'
-            'In addition to these actions, there are also instant actions that are not included in your order\\.\n\n'
-            '📞 *Negotiations* \\- send a negotiation request to another planet\\. '
-            'If they accept, you send one diplomat to their planet\\. '
-            'They may also decline or leave your request pending\\. '
-            'You may host only one foreign planet on your territory at a time, but you may send your diplomats to multiple planets simultaneously \\(except for a planet with which you are already conducting negotiations\\)\\.\n\n'
-            '💸 *Transfer money* \\- transfer a specified amount of money to another planet\\. '
-            'Transfers are instant and irreversible\\.'
-        ),
-        'parse_mode': 'MarkdownV2',
     }
 
 

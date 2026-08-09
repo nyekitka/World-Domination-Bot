@@ -22,8 +22,10 @@ async def help(
     message: types.Message,
     renderer: MessageRenderer,
 ):
-    await message.answer(
-        **renderer.render('help', game_config=game_config),
+    await message.answer_rich(
+        types.InputRichMessage(
+            markdown=renderer.render('help', game_config=game_config)['text']
+        )
     )
 
 
