@@ -238,8 +238,8 @@ end_of_the_game:
   template: |-
     *The game has ended\!*
     Head to the assembly to see the game results\.
-    Bot creator: [Nikita Klinov](https://vk.com/nyekitka)\.
-    Support the creator: [here](https://www.donationalerts.com/r/nyekitkaa)
+    Bot creator: [Nikita Klinov](https://t.me/nyekitka)\.
+    Support the creator: [here](https://tbank.ru/cf/9Ujjcps0nqA)
   markdown: true
 goodbye:
   template: You have been automatically logged out, because your game has ended.
@@ -317,32 +317,6 @@ already_in_game:
     You are already in a lobby.
     Leave the current lobby first, then join another one.
   markdown: false
-help:
-  template: |-
-    This game consists of {{game_config.ROUND_NUM}} rounds, each lasting {{game_config.timedelta_round_length | time_filter('en')}}, followed by a general discussion with no time limit\. After all {{game_config.ROUND_NUM}} rounds have ended, the planet with the highest average development level wins, provided the anomaly activity has not reached 100%\. If the anomaly activity reaches this threshold, all planets lose\.
-
-    Each planet has 4 cities, all of which start with the same development level and quality of life\. A city's quality of life depends on its development level and the anomaly activity\. A city's income each round depends on its quality of life\. If a city is destroyed, both its development level and quality of life become zero\. If all cities on your planet are destroyed, you lose, but you may still perform actions\.
-
-    During each round, you create an order \- a list of actions you want to perform after the round ends\. All selected actions are applied only after the end of the current round, and the results of every planet's actions are announced during the general discussion\. The following actions are available in your order:
-
-    📈 *Develop city* \- invest money into developing one of your cities, increasing its development level and, consequently, its quality of life\. Destroyed cities cannot be developed\. _Cost: {{game_config.DEVELOPMENT_COST}} 💵_
-
-    🛡️ *Protect city* \- place a shield over one of your cities, protecting it from incoming meteors\. A shield can protect a city from only one meteor\. If a meteorite strikes a shielded city, the shield is destroyed, but the city remains intact\. A city cannot have more than one shield at the same time\. A shield remains in place until it is destroyed\. This action becomes available starting from Round 2\. _Cost: {{game_config.SHIELD_COST}} 💵_
-
-    🛠️ *Research meteorite launch technology* \- develop the technology required to launch meteors, unlocking the ability to send meteorites to enemy cities or into the anomaly\. Increases anomaly activity\. Can only be performed once per game\. _Cost: {{game_config.INVENTION_COST}} 💵_
-
-    ☄️ *Launch meteorites at cities* \- send a meteorite toward an enemy city in an attempt to destroy it\. A single meteorite destroys an unshielded city or destroys the shield protecting it\. Only one meteorite may be sent to each city per round, so if you want to guarantee its destruction, you will need to coordinate with other planets\. The target planet does not know who launched the meteor\. Increases anomaly activity\. Available after researching the launch technology\.
-
-    💥 *Launch a meteorite into the anomaly* \- send a meteorite into the anomaly, reducing its activity by {{game_config.ECO_BOOST_RATE}}%\. Only one meteorite can be launched into the anomaly per round\.
-
-    🧾 *Sanctions* \- send a package of sanctions to another planet, reducing its income for the current round\. Sending sanctions is free, but the target planet knows who imposed them\.
-
-    In addition to these actions, there are also instant actions that are not included in your order\.
-
-    📞 *Negotiations* \- send a negotiation request to another planet\. If they accept, you send one diplomat to their planet\. They may also decline or leave your request pending\. You may host only one foreign planet on your territory at a time, but you may send your diplomats to multiple planets simultaneously \(except for a planet with which you are already conducting negotiations\)\.
-
-    💸 *Transfer money* \- transfer a specified amount of money to another planet\. Transfers are instant and irreversible\.
-  markdown: true
 untimely_negotiations:
   template: Now is not the time for negotiations!
   markdown: false
@@ -391,3 +365,195 @@ different_games:
 wait_till_game_ends:
   template: This operation cannot be performed because the player is in the game. Wait until it's over.
   markdown: false
+help: 
+  template: |-
+    # 🌍 Game Rules
+
+    Each planet has 4 cities. Your goal is to end the game with **the highest possible average standard of living across your cities**.
+
+    The game consists of {{ game_config.ROUND_NUM }} {{ 'round' | make_agree_with(game_config.ROUND_NUM, 'en') }} of {{ game_config.timedelta_round_length | time_filter('en') }} each.
+
+    After each round, all planets take part in shared interplanetary negotiations to discuss the round's results. Negotiations have no time limit.
+
+    After the final round, the planet with the highest **average standard of living across its four cities** wins.
+
+    If the anomaly's activity reaches 100%, **everyone loses**. If a planet has all of its cities destroyed, its standard of living becomes 0, so it can no longer win, but it keeps participating in the game.
+
+    <details>
+    <summary>🌆 Cities and Development</summary>
+
+    Each city starts with **{{ game_config.DEFAULT_DEVELOPMENT }}% development**.
+
+    📈 *Developing a city* increases its development by **{{ game_config.DEVELOPMENT_BOOST }}%**. There is no maximum development level.
+
+    A city's standard of living depends on:
+
+    - its development
+    - the anomaly's activity, which is shared across all planets
+
+    The higher a city's development and the lower the anomaly's activity, the higher its standard of living.
+
+    If a city is destroyed, its development and standard of living become **0 forever**. A destroyed city cannot be rebuilt.
+
+    A planet's standard of living is the average standard of living across its four cities. Destroyed cities are counted as 0 as well.
+    </details>
+
+    <details>
+    <summary>💰 Economy</summary>
+
+    At the start of each round, a planet earns income from its cities. Income depends on their development and the anomaly's activity.
+
+    Destroyed cities generate no income.
+
+    A planet's income is also reduced by sanctions imposed on it in the **previous round**.
+
+    Every planet starts the game with **{{ game_config.DEFAULT_BALANCE }} 💵**.
+
+    Money can be spent on:
+
+    - developing cities
+    - shields
+    - researching meteorite technology
+    - buying meteorites
+    - transfers to other planets
+
+    You cannot spend more money than you have. When you choose a paid action, its cost is reserved from your balance immediately.
+    </details>
+
+    <details>
+    <summary>☄️ Anomaly</summary>
+
+    The anomaly's activity is a **shared indicator for all planets**. At the start of the game it is **{{ 100 - game_config.DEFAULT_GAME_ECO_RATE }}%**.
+
+    The higher its activity, the lower the standard of living and income of all cities.
+
+    The anomaly's activity increases when:
+
+    - researching meteorite technology
+    - buying meteorites
+    - sending meteorites at cities or at the anomaly
+
+    You can lower its activity by sending a meteorite into the anomaly. One meteorite lowers its activity by {{ game_config.ECO_BOOST_RATE }}%.
+
+    Activity cannot exceed 100%.
+
+    Once it reaches **100%**, the standard of living of all cities becomes 0, and **all planets lose**.
+    </details>
+
+    <details>
+    <summary>📜 Orders</summary>
+
+    During a round, you build up an **order** — a set of actions you want to carry out.
+
+    Actions in an order aren't executed right away. **All orders are executed at the end of the round.**
+
+    Developing cities and setting up shields happen **before meteorite strikes**. So a shield placed during the current round can still protect a city from a meteorite in that same round.
+
+    After orders are executed, players see the round's results and move on to interplanetary negotiations.
+    </details>
+
+    <details>
+    <summary>📈 Order Actions: Development, Shields, Technology</summary>
+
+    ### 📈 Develop a City
+
+    Invest {{ game_config.DEVELOPMENT_COST }} 💵 in one of your cities to increase its development by {{ game_config.DEVELOPMENT_BOOST }}%.
+    A destroyed city cannot be developed.
+    You can order at most one development per city per round.
+
+    ### 🛡️ Shield a City
+
+    Place a shield over one of your cities.
+    A shield protects a city from **one meteorite**. Once a meteorite hits, the shield is destroyed but the city stays intact.
+    If two or more meteorites hit a city in a single round, the city is destroyed regardless of any shield.
+    You can have at most one shield on a city at a time. You can order a new shield for an already-shielded city: if the old shield gets destroyed this round, the new one stays; if the old one doesn't get destroyed, the money for the new shield is wasted.
+    This action becomes available from round 2 onward.
+    *Cost: {{ game_config.SHIELD_COST }} 💵*
+
+    ### 🛠️ Research Meteorite Technology
+
+    Research the technology needed to send meteorites.
+    This is a one-time action per game. Once researched, you can buy meteorites.
+    The technology becomes available **starting next round**, so you can't buy or use meteorites in the same round you research it.
+    *Cost: {{ game_config.INVENTION_COST }} 💵*
+    </details>
+
+    <details>
+    <summary>☄️ Meteorites and Sanctions</summary>
+
+    ### ☄️ Buy Meteorites
+
+    Once the technology is researched, you can buy meteorites.
+    You can buy at most **{{ game_config.MAX_METEORITES_TO_BUY }} {{ 'meteorite' | make_agree_with(game_config.MAX_METEORITES_TO_BUY, 'en') }}** per round:
+
+    {% for i in range(1, game_config.MAX_METEORITES_TO_BUY + 1) -%}
+    - {{ i }} {{ 'meteorite' | make_agree_with(i, 'en') }} — {{ i * game_config.CREATE_COST }} 💵
+    {% endfor %}
+    Purchased meteorites become available **starting next round**. You can stockpile unused meteorites for as long as you like.
+    Buying each meteorite increases the anomaly's activity.
+
+    ### ☄️ Send a Meteorite at a City
+
+    Send a meteorite at another planet's city.
+
+    - The meteorite destroys the city if it has no shield
+    - If the city has a shield, the meteorite destroys the shield but not the city
+    - If two or more meteorites hit the city, it is destroyed
+    - A planet can send only **one meteorite per city per round**
+    - The sender of a meteorite is unknown to the planet under attack
+
+    So to guarantee a city's destruction, multiple planets can coordinate an attack.
+
+    Sending a meteorite increases the anomaly's activity.
+
+    ### 💥 Send a Meteorite at the Anomaly
+
+    Send one meteorite into the shared anomaly to lower its activity by {{ game_config.ECO_BOOST_RATE }}%.
+    You can send **at most one meteorite** into the anomaly per round.
+
+    ### 🧾 Sanctions
+
+    Send a sanctions package to another planet to reduce its income in the **next round**.
+
+    - Sending sanctions is free
+    - You cannot send more than one sanctions package to the same planet in a round
+    - You can send sanctions to several different planets at once
+
+    A planet knows who sent it sanctions.
+    </details>
+
+    <details>
+    <summary>📞 Out-of-Order Actions</summary>
+
+    These actions happen **immediately**, without waiting for the round to end.
+
+    ### 📞 Negotiations
+
+    Send another planet a request for negotiations.
+    If accepted, one of your diplomats travels to the other planet's territory. The receiving planet can also decline or leave the offer unanswered for a while.
+    A planet can host at most **one diplomat** at a time on its territory, but it can send its own diplomats to several other planets at once.
+    Negotiations don't grant any in-game advantages — they're a way to communicate, make deals, coordinate attacks, form alliances, and exchange information.
+    Negotiations end automatically when the round ends.
+
+    ### 💸 Money Transfer
+
+    Transfer any amount of available money to another planet.
+    The transfer happens **instantly and irreversibly**.
+    </details>
+
+    <details>
+    <summary>⚠️ Important Rules</summary>
+
+    - All actions in an order are executed at the end of the round
+    - Paid actions reserve money immediately when added to an order
+    - Purchased meteorites and researched technology become available only starting next round
+    - A city can receive only one meteorite from each planet per round
+    - A shield protects against only one meteorite
+    - Destroyed cities cannot be rebuilt
+    - A planet with destroyed cities keeps participating in the game, even if all 4 cities are destroyed
+    - The anomaly's activity is shared across all planets
+    - At 100% anomaly activity, everyone loses
+    - If the average standard of living is tied, there is no winner — it's recorded as a draw
+    - The winner is determined after the final round
+    </details>
+  markdown: true
