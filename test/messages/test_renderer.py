@@ -3,7 +3,6 @@ from datetime import timedelta
 import pytest
 
 from database.schemas import PlanetDto
-from game.config import game_config
 
 
 def test_render_on_start_for_player_without_game(
