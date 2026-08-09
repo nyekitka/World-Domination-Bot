@@ -173,7 +173,7 @@ already_built:
   markdown: false
 round_end_for_admin:
   template: |-
-    _*{{game.round | ordinal('ru')}} раунд закончен\!*_
+    _*{{game.round | ordinal('ru') | capitalize}} раунд закончен\!*_
     Перейдите в приложение для просмотра результатов раунда\!
   markdown: true
 game_results:
@@ -181,7 +181,7 @@ game_results:
   markdown: false
 round_end_for_players:
   template: |-
-    _*{{game.round | ordinal('ru')}} раунд закончен\!*_
+    _*{{game.round | ordinal('ru') | capitalize}} раунд закончен\!*_
     Отправляйтесь на межпланетные переговоры, чтобы увидеть результаты раунда и обсудить их\.
   markdown: true
 how_much_money:

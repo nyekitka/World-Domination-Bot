@@ -355,9 +355,9 @@ def test_render_common_planet_info(renderer_ru, renderer_en, planet, cities):
             '*Доступный бюджет:* _1000_ 💵\n'
             '*Сред\\. ур\\. жизни на планете:* _45\\.5%_\n\n'
             '*Москва* ❌:\n'
-            'Развитие 0%, Ур\\. жизни 50\\.0%, Доход 150\\.0 💵\n\n'
+            'Развитие 0%, Ур\\. жизни 50\\.0%, Доход 150 💵\n\n'
             '*Питер* 🛡️:\n'
-            'Развитие 70%, Ур\\. жизни 80\\.0%, Доход 240\\.0 💵\n\n'
+            'Развитие 70%, Ур\\. жизни 80\\.0%, Доход 240 💵\n\n'
         ),
         'parse_mode': 'MarkdownV2',
     }
@@ -367,9 +367,9 @@ def test_render_common_planet_info(renderer_ru, renderer_en, planet, cities):
             '*Available budget:* _1000_ 💵\n'
             '*Avg\\. life rate on the planet:* _45\\.5%_\n\n'
             '*Москва* ❌:\n'
-            'Development 0%, Life rate 50\\.0%, Income 150\\.0 💵\n\n'
+            'Development 0%, Life rate 50\\.0%, Income 150 💵\n\n'
             '*Питер* 🛡️:\n'
-            'Development 70%, Life rate 80\\.0%, Income 240\\.0 💵\n\n'
+            'Development 70%, Life rate 80\\.0%, Income 240 💵\n\n'
         ),
         'parse_mode': 'MarkdownV2',
     }
@@ -581,7 +581,7 @@ def test_render_already_built(renderer_ru, renderer_en):
 def test_render_round_end_for_admin(renderer_ru, renderer_en, game):
     assert renderer_ru.render('round_end_for_admin', game=game) == {
         'text': (
-            '_*второй раунд закончен\\!*_\n'
+            '_*Второй раунд закончен\\!*_\n'
             'Перейдите в приложение для просмотра результатов раунда\\!'
         ),
         'parse_mode': 'MarkdownV2',
@@ -609,7 +609,7 @@ def test_render_game_results(renderer_ru, renderer_en):
 def test_render_round_end_for_players(renderer_ru, renderer_en, game):
     assert renderer_ru.render('round_end_for_players', game=game) == {
         'text': (
-            '_*второй раунд закончен\\!*_\n'
+            '_*Второй раунд закончен\\!*_\n'
             'Отправляйтесь на межпланетные переговоры, чтобы увидеть результаты раунда и обсудить их\\.'
         ),
         'parse_mode': 'MarkdownV2',
