@@ -4,11 +4,8 @@ from collections import Counter
 from pydantic import TypeAdapter
 from sqlalchemy import func, insert, not_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, selectinload
 
-from database.alru_cache import alru_cache
 from database.base_client import DatabaseClient
-from database.config import database_config
 from database.models import (
     Admin,
     City,
@@ -22,7 +19,6 @@ from database.models import (
 from database.schemas import (
     AdminDto,
     CityData,
-    CityDto,
     GameData,
     GameDto,
     GameStatus,
