@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.filters.admin import AdminFilter
-from app.filters.buttons import ReplyButtonFilter
+from app.filters.buttons import InlineButtonFilter, ReplyButtonFilter
 from app.filters.state import BotStates
 from app.handlers.round_loop import get_round_notifier
 from app.utils import method_executor_msg, send_all_info, sync_method_executor_call
@@ -326,10 +326,16 @@ async def handle_attack_action(
     all_cities = await game_client.get_cities_of_planet(
         session, other_planet.id, with_rates=False
     )
+    all_planets_in_game = await game_client.get_planets_of_game(session, planet.game_id, False)
+    other_planet_ids = [
+        planet_in_game.id
+        for planet_in_game in all_planets_in_game
+        if planet_in_game.id != planet.id
+    ]
 
     await call.message.edit_reply_markup(
         reply_markup=kb.other_planets_keyboard(
-            game.round, planet, other_planet, all_cities, attacked_cities
+            game.round, planet, other_planet, all_cities, attacked_cities, other_planet_ids
         )
     )
 
@@ -786,3 +792,44 @@ async def set_amount_of_money(
         ),
     )
     await state.clear()
+
+
+@ingame_router.callback_query(InlineButtonFilter('other_planet_info'))
+async def switch_other_planet(
+    call: types.CallbackQuery,
+    game_client: GameClient,
+    actions_client: ActionsClient,
+    session: AsyncSession,
+    renderer: MessageRenderer,
+):
+    _, planet_id, other_planet_id = call.data.split()
+
+    planet = await game_client.get_planet(session, int(planet_id), False)
+    game = await game_client.get_game(session, planet.game_id)
+    other_planet = await game_client.get_planet(session, int(other_planet_id), False)
+    other_planet_cities = await game_client.get_cities_of_planet(session, int(other_planet_id), False)
+    planets_in_game = await game_client.get_planets_of_game(session, planet.game_id, False)
+
+    other_planet_ids = [
+        planet_in_game.id
+        for planet_in_game in planets_in_game
+        if planet_in_game.id != planet.id
+    ]
+    attacked_cities_ids = actions_client.get_attacked_cities(planet.id)
+
+    await call.answer()
+    await call.message.edit_text(
+        **renderer.render(
+            'other_planet_info',
+            planet=other_planet,
+            cities=other_planet_cities,
+        ),
+        reply_markup=kb.other_planets_keyboard(
+            game.round,
+            planet,
+            other_planet,
+            other_planet_cities,
+            attacked_cities_ids,
+            other_planet_ids,
+        )
+    )

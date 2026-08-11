@@ -170,9 +170,13 @@ def other_planets_keyboard(
     other_planet: PlanetDto,
     other_cities: list[CityDto],
     attacked_cities_ids: list[int],
+    other_planet_ids: list[int],
 ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
+
     other_cities.sort(key=lambda x: x.name)
+    other_planet_ids.sort()
+
     if nround > 1:
         for city in other_cities:
             if city.development == 0:
@@ -209,7 +213,31 @@ def other_planets_keyboard(
             callback_data=transaction_action.model_dump_json(),
         ),
     )
-    return builder.adjust(2).as_markup()
+    builder.adjust(2)
+    planet_index = other_planet_ids.index(other_planet.id)
+
+    if len(other_planet_ids) > 1:
+        paginator = [
+            InlineKeyboardButton(
+                text='⬅️',
+                callback_data=(
+                    'other_planet_info '
+                    f'{planet.id} '
+                    f'{other_planet_ids[planet_index - 1]}'
+                )
+            ),
+            InlineKeyboardButton(
+                text='➡️',
+                callback_data=(
+                    'other_planet_info '
+                    f'{planet.id} '
+                    f'{other_planet_ids[(planet_index + 1) % len(other_planet_ids)]}'
+                ),
+            ),
+        ]
+        builder.row(*paginator)
+    return builder.as_markup()
+
 
 
 def negotiations_offer_keyboard(planet: PlanetDto, from_planet: PlanetDto):
