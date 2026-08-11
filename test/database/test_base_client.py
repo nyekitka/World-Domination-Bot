@@ -97,3 +97,23 @@ async def test_get_planet_by_city_id(
     result = await database_client.get_planet_by_city_id(session, city_id)
     assert result.id == planet_id
 
+
+@pytest.mark.asyncio
+async def test_get_all_planets_and_cities(database_client, session, game_id, pack):
+    result = await database_client.get_all_planets_and_cities(session, game_id)
+    for planet_id in result:
+        planet, cities = result[planet_id]
+        pack_planet = None
+        for p in pack.planets:
+            if p.name == planet.name:
+                pack_planet = p
+                break
+        else:
+            pytest.fail(f'Some unknown planet found in result: {planet.name}')
+
+        assert planet.rate_of_life is not None
+        for city in cities:
+            assert any(
+                city.name == pack_city.name for pack_city in pack_planet.cities
+            )
+            assert city.rate_of_life is not None

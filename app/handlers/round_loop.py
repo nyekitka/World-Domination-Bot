@@ -40,7 +40,7 @@ async def end_handler(
     session: AsyncSession,
     renderer: MessageRenderer,
 ):
-    all_planets: list[PlanetDto] = await game_client.get_all_planets_in_game(
+    all_planets: list[PlanetDto] = await game_client.get_planets_of_game(
         session, game.id
     )
     orders = {

@@ -114,15 +114,6 @@ async def test_get_all_active_admins(
 
 
 @pytest.mark.asyncio
-async def test_get_all_planets_in_game(game_client, session, game_id, pack):
-    planets = await game_client.get_all_planets_in_game(session, game_id)
-
-    actual_planet_names = {planet.name for planet in planets}
-    true_planet_names = {planet.name for planet in pack.planets}
-    assert actual_planet_names == true_planet_names
-
-
-@pytest.mark.asyncio
 async def test_build_shield_for_cities(game_client, session, city_id, city_id_2):
     await game_client.build_shield_for_cities(session, city_id, city_id_2)
 
@@ -480,27 +471,6 @@ async def test_get_round_info(game_client, session, game_id):
 
     result = await game_client.get_round_info(session, game_id, 1)
     assert result == expected_result
-
-
-@pytest.mark.asyncio
-async def test_get_all_planets_and_cities(game_client, session, game_id, pack):
-    result = await game_client.get_all_planets_and_cities(session, game_id)
-    for planet_id in result:
-        planet, cities = result[planet_id]
-        pack_planet = None
-        for p in pack.planets:
-            if p.name == planet.name:
-                pack_planet = p
-                break
-        else:
-            pytest.fail(f'Some unknown planet found in result: {planet.name}')
-
-        assert planet.rate_of_life is not None
-        for city in cities:
-            assert any(
-                city.name == pack_city.name for pack_city in pack_planet.cities
-            )
-            assert city.rate_of_life is not None
 
 
 @pytest.mark.parametrize(
