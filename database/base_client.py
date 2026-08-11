@@ -181,6 +181,29 @@ class DatabaseClient:
             return TypeAdapter(list[PlanetDto]).validate_python(planets)
         return None
 
+    @alru_cache(ttl=database_config.EXPIRE_CACHE)
+    async def get_all_planets_and_cities(
+        self, s: AsyncSession, game_id: int
+    ) -> dict[int, tuple[PlanetDto, list[CityDto]]]:
+        planets_result = await s.execute(
+            select(Planet)
+            .where(Planet.game_id == game_id)
+            .options(
+                selectinload(Planet.cities)
+                .joinedload(City.planet)
+                .joinedload(Planet.game),
+                joinedload(Planet.game),
+            )
+        )
+        planets = planets_result.scalars().all()
+        result = {}
+        for planet in planets:
+            planet_dto = PlanetDto.model_validate(planet)
+            cities_dto = TypeAdapter(list[CityDto]).validate_python(planet.cities)
+            result[planet_dto.id] = (planet_dto, cities_dto)
+
+        return result
+
 
     def _clear_game_cache(self) -> None:
         self.get_game.cache_clear()
@@ -192,6 +215,7 @@ class DatabaseClient:
         self.get_player_planet.cache_clear()
         self.get_cities_of_planet.cache_clear()
         self.get_planets_of_game.cache_clear()
+        self.get_all_planets_and_cities.cache_clear()
 
 
     async def get_all_sanctions_on_planet(

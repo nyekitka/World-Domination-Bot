@@ -103,17 +103,6 @@ class GameClient(DatabaseClient):
         admins = result.scalars().all()
         return TypeAdapter(list[AdminDto]).validate_python(admins)
 
-    @alru_cache(ttl=database_config.EXPIRE_CACHE)
-    async def get_all_planets_in_game(
-        self, s: AsyncSession, game_id: int, load_rate_of_life: bool = True
-    ) -> list[PlanetDto]:
-        options = ()
-        if load_rate_of_life:
-            options = (selectinload(Planet.cities), joinedload(Planet.game))
-        results = await s.execute(
-            select(Planet).options(*options).where(Planet.game_id == game_id)
-        )
-        return TypeAdapter(list[PlanetDto]).validate_python(results.scalars().all())
 
     async def build_shield_for_cities(self, s: AsyncSession, *city_ids: int) -> None:
         if len(city_ids) == 0:
@@ -422,28 +411,6 @@ class GameClient(DatabaseClient):
             return None
 
         return RoundInfoDto.model_validate(round_info)
-
-    async def get_all_planets_and_cities(
-        self, s: AsyncSession, game_id: int
-    ) -> dict[int, tuple[PlanetDto, list[CityDto]]]:
-        planets_result = await s.execute(
-            select(Planet)
-            .where(Planet.game_id == game_id)
-            .options(
-                selectinload(Planet.cities)
-                .joinedload(City.planet)
-                .joinedload(Planet.game),
-                joinedload(Planet.game),
-            )
-        )
-        planets = planets_result.scalars().all()
-        result = {}
-        for planet in planets:
-            planet_dto = PlanetDto.model_validate(planet)
-            cities_dto = TypeAdapter(list[CityDto]).validate_python(planet.cities)
-            result[planet_dto.id] = (planet_dto, cities_dto)
-
-        return result
 
     async def start_new_round(
         self, s: AsyncSession, initiator_id: int
