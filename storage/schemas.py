@@ -22,10 +22,10 @@ INFO_MESSAGE_TYPES = (
     MessageType.METEORITES,
     MessageType.SANCTIONS,
     MessageType.ECO,
+    MessageType.ATTACK,
 )
 
 PLANET_MESSAGE_TYPES = (
     MessageType.NEGOTIATIONS_END,
     MessageType.NEGOTIATIONS_NOTIFICATION,
-    MessageType.ATTACK,
 )

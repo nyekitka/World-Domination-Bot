@@ -152,22 +152,27 @@ async def send_all_info(
     )
     messages_client.set_info_message_id(user_id, MessageType.ECO, eco_msg.message_id)
 
-    for other_planet, other_cities in planets_and_cities.values():
-        msg = await bot.send_message(
-            user_id,
-            **renderer.render(
-                'other_planet_info',
-                planet=other_planet,
-                cities=other_cities,
-            ),
-            reply_markup=kb.other_planets_keyboard(
-                game.round,
-                planet,
-                other_planet,
-                other_cities,
-                order_info.get(OrderType.ATTACK, []),
-            ),
-        )
-        messages_client.set_planet_message_id(
-            user_id, other_planet.id, MessageType.ATTACK, msg.message_id
-        )
+    first_planet_id = min(planets_and_cities.keys())
+    first_planet, first_planet_cities = planets_and_cities[first_planet_id]
+
+    msg = await bot.send_message(
+        user_id,
+        **renderer.render(
+            'other_planet_info',
+            planet=first_planet,
+            cities=first_planet_cities,
+        ),
+        reply_markup=kb.other_planets_keyboard(
+            game.round,
+            planet,
+            first_planet,
+            first_planet_cities,
+            order_info.get(OrderType.ATTACK, []),
+            list(planets_and_cities.keys()),
+        ),
+    )
+    messages_client.set_info_message_id(
+        user_id,
+        MessageType.ATTACK,
+        msg.message_id,
+    )
