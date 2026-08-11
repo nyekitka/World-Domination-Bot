@@ -326,7 +326,7 @@ async def handle_attack_action(
     all_cities = await game_client.get_cities_of_planet(
         session, other_planet.id, with_rates=False
     )
-    all_planets_in_game = await game_client.get_all_planets_in_game(session, planet.game_id, False)
+    all_planets_in_game = await game_client.get_planets_of_game(session, planet.game_id, False)
     other_planet_ids = [
         planet_in_game.id
         for planet_in_game in all_planets_in_game
@@ -808,7 +808,7 @@ async def switch_other_planet(
     game = await game_client.get_game(session, planet.game_id)
     other_planet = await game_client.get_planet(session, int(other_planet_id), False)
     other_planet_cities = await game_client.get_cities_of_planet(session, int(other_planet_id), False)
-    planets_in_game = await game_client.get_all_planets_in_game(session, planet.game_id, False)
+    planets_in_game = await game_client.get_planets_of_game(session, planet.game_id, False)
 
     other_planet_ids = [
         planet_in_game.id
