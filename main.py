@@ -1,10 +1,10 @@
 import asyncio
 import logging
-import os
 import sys
 
 from aiogram import Bot, Dispatcher
 
+from app.config import bot_config
 from app.handlers import ingame_router, lobby_router, main_page_router
 from app.middlewares import DBMiddleware, I18nMiddleware
 from database import engine, session_factory
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 async def main():
     logger.info('Starting the bot...')
-    bot_token = os.environ.get('BOT_TOKEN')
+    bot_token = bot_config.TOKEN
 
     bot = Bot(token=bot_token)
     dp = Dispatcher()
@@ -38,7 +38,7 @@ async def main():
     logger.info('Creating owner user...')
     async with session_factory() as session, session.begin():
         await UserClient().make_new_user_if_not_exists(
-            session, int(os.environ.get('OWNER')), True
+            session, int(bot_config.OWNER), True
         )
 
     logger.info('Setting up dispatcher')

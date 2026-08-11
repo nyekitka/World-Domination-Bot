@@ -51,8 +51,6 @@ services:
     env_file:
       - .env
     environment:
-      - BOT_TOKEN=${BOT_TOKEN}
-      - OWNER=${OWNER}
       - WEB_APP_URL=${WEB_APP_URL}
     ports:
       - "8000:8000"
