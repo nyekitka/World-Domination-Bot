@@ -5,9 +5,9 @@ from inspect import iscoroutinefunction
 from asgiref.sync import markcoroutinefunction
 from django.http import HttpRequest, HttpResponse, JsonResponse
 
+from app.config import bot_config
 from web_app.stats.auth import verify_telegram_init_data
 
-BOT_TOKEN = os.getenv('BOT_TOKEN')
 
 class VerifierMiddleware:
     async_capable = True
@@ -33,7 +33,7 @@ class VerifierMiddleware:
             return JsonResponse({'error': 'Forbidden'}, status=403)
 
         tg_data = verify_telegram_init_data(
-            init_data, BOT_TOKEN
+            init_data, bot_config.TOKEN
         )
 
         if not tg_data:

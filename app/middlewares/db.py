@@ -8,6 +8,7 @@ from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.config import bot_config
 from database.clients import (
     GameClient,
     InfoClient,
@@ -37,7 +38,7 @@ class DBMiddleware(BaseMiddleware):
         self.session_factory = session_factory
         self.actions_client = redis_actions_client
         self.messages_client = redis_messages_client
-        self.owner_id = int(os.getenv('OWNER'))
+        self.owner_id = int(bot_config.OWNER)
 
     async def __call__(
         self,
