@@ -1,7 +1,9 @@
 import asyncio
 import logging
+import os
 import sys
 
+import django
 from aiogram import Bot, Dispatcher
 
 from app.config import bot_config
@@ -22,6 +24,9 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'web_app.app.settings')
+django.setup()
 
 
 async def main():

@@ -2,10 +2,29 @@ from collections.abc import Awaitable, Callable
 from inspect import iscoroutinefunction
 
 from asgiref.sync import markcoroutinefunction
-from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
+from django.http import HttpRequest, HttpResponse
 
 from app.config import bot_config
-from web_app.stats.auth import verify_telegram_init_data
+from web_app.app.settings import django_settings
+
+
+def unsign_auth_token(token: str | None) -> int | None:
+    if token is None:
+        return None
+
+    signer = TimestampSigner(key=bot_config.TOKEN)
+
+    try:
+        user_id = signer.unsign(token, max_age=django_settings.EXPIRE_LINK_SECONDS)
+        return int(user_id)
+    except (BadSignature, SignatureExpired):
+        return None
+
+
+def sign_user_id(user_id: int) -> str:
+    signer = TimestampSigner(key=bot_config.TOKEN)
+    return signer.sign(str(user_id))
 
 
 class VerifierMiddleware:
@@ -18,25 +37,10 @@ class VerifierMiddleware:
             markcoroutinefunction(self)
 
     async def __call__(self, request: HttpRequest):
-        if not request.path.startswith('/api/'):
+        if request.path == '/health':
             return await self.get_response(request)
 
-        auth_header = request.headers.get('Authorization', '')
-        init_data = (
-            auth_header.replace('tma ', '')
-            if auth_header.startswith('tma ')
-            else request.GET.get('_tgData')
-        )
+        token = request.GET.get('auth_token')
+        request.user_id = unsign_auth_token(token)
 
-        if not init_data:
-            return JsonResponse({'error': 'Forbidden'}, status=403)
-
-        tg_data = verify_telegram_init_data(
-            init_data, bot_config.TOKEN
-        )
-
-        if not tg_data:
-            return JsonResponse({'error': 'Forbidden'}, status=403)
-
-        request.telegram_user = tg_data.get('user')
         return await self.get_response(request)
