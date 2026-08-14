@@ -309,8 +309,8 @@ def test_eco_boost(
     [
         (False, None, FailureReason.SUCCESS),
         (True, None, FailureReason.ALREADY_NEGOTIATING),
-        (False, '2', FailureReason.SUCCESS),
-        (False, '1', FailureReason.BILATERAL_NEGOTIATIONS),
+        (False, '1', FailureReason.SUCCESS),
+        (False, '2', FailureReason.BILATERAL_NEGOTIATIONS),
     ],
 )
 def test_make_negotiations(
@@ -328,8 +328,8 @@ def test_make_negotiations(
     assert result == expected_result
     if expected_result == FailureReason.SUCCESS:
         mock_actions_storage.client.set.assert_called_once_with(
-            name=f'negotiate:{planet_id}',
-            value=str(other_planet_id),
+            name=f'negotiate:{other_planet_id}',
+            value=str(planet_id),
             ex=mock_actions_storage.ex,
         )
 
