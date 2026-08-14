@@ -220,11 +220,20 @@ class GameClient(DatabaseClient):
         if amount <= 0:
             return FailureReason.NEGATIVE_AMOUNT
 
-        planet_from = await s.get(Planet, planet_from_id)
+        planet_from = (await s.execute(
+            select(Planet)
+            .where(Planet.id == planet_from_id)
+            .with_for_update()
+        )).scalar_one()
+
         if planet_from.balance < amount:
             return FailureReason.NOT_ENOUGH_MONEY
 
-        planet_to = await s.get(Planet, planet_to_id)
+        planet_to = (await s.execute(
+            select(Planet)
+            .where(Planet.id == planet_to_id)
+            .with_for_update()
+        )).scalar_one()
         if planet_from.game_id != planet_to.game_id:
             return FailureReason.DIFFERENT_GAMES
 

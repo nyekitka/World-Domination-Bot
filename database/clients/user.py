@@ -101,10 +101,13 @@ class UserClient(DatabaseClient):
             player.game_id = game_id
             return FailureReason.SUCCESS
 
-        free_planets = await s.execute(
-            select(Planet).where(Planet.game_id == game_id, Planet.owner_id == None)
+        free_planet = await s.execute(
+            select(Planet)
+            .where(Planet.game_id == game_id, Planet.owner_id.is_(None))
+            .with_for_update()
+            .limit(1)
         )
-        planet = free_planets.scalars().first()
+        planet = free_planet.scalar_one_or_none()
         if not planet:
             return FailureReason.GAME_IS_FULL
 
@@ -141,14 +144,17 @@ class UserClient(DatabaseClient):
         if player.game_id is None:
             return FailureReason.NOT_IN_GAME
 
-        game = await s.get(Game, player.game_id)
+        game = (await s.execute(
+            select(Game)
+            .where(Game.id == player.game_id)
+            .with_for_update()
+        )).scalar_one()
+
         if game.status == GameStatus.WAITING:
-            await s.execute(
-                
-                    update(Planet)
-                    .where(Planet.owner_id == player.tg_id)
-                    .values(owner_id=None)
-                
+            await s.execute(      
+                update(Planet)
+                .where(Planet.owner_id == player.tg_id)
+                .values(owner_id=None)
             )
         player.game_id = None
 
