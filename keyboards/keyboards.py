@@ -5,14 +5,14 @@ from aiogram.types import (
     InlineKeyboardMarkup,
     KeyboardButton,
     ReplyKeyboardMarkup,
-    WebAppInfo,
 )
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from database.schemas import CityDto, GameDto, GameStatus, PlanetDto
+from database.schemas import AdminDto, CityDto, GameDto, GameStatus, PlanetDto
 from game.config import game_config
 from keyboards.schemas import Action, ActionType
 from packs.pack import packs
+from web_app.stats.middlewares.verifier import sign_user_id
 
 WEB_APP_URL = os.getenv('WEB_APP_URL')
 
@@ -340,13 +340,13 @@ def request_keyboard(id: int):
     )
 
 
-def round_stats_keyboard(game: GameDto) -> InlineKeyboardMarkup:
+def round_stats_keyboard(game: GameDto, for_user: AdminDto) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
                     text='📊 Открыть статистику после раунда',
-                    web_app=WebAppInfo(url=f'{WEB_APP_URL}/{game.id}/{game.round}')
+                    url=f'{WEB_APP_URL}/{game.id}/{game.round}?auth_token={sign_user_id(for_user.tg_id)}'
                 )
             ]
         ]

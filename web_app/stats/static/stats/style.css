@@ -164,14 +164,3 @@ body {
 .upper-half-6 {
     background-color: yellowgreen;
 }
-
-.hidden {
-    display: none !important;
-}
-
-.state-message {
-    text-align: center;
-    font-size: 1.2rem;
-    padding: 50px 20px;
-    color: #ffffff;
-}
