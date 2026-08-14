@@ -23,6 +23,7 @@ class DjangoSettings(BaseSettings):
     HOST: str
     PORT: int
     SECRET_KEY: str
+    EXPIRE_LINK_SECONDS: int = 86400
 
 
 django_settings = DjangoSettings()
