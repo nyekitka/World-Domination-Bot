@@ -3,8 +3,8 @@ import logging
 import os
 import sys
 
-from aiogram import Bot, Dispatcher
 import django
+from aiogram import Bot, Dispatcher
 
 from app.config import bot_config
 from app.handlers import ingame_router, lobby_router, main_page_router

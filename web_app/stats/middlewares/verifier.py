@@ -3,7 +3,7 @@ from inspect import iscoroutinefunction
 
 from asgiref.sync import markcoroutinefunction
 from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
-from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.http import HttpRequest, HttpResponse
 
 from app.config import bot_config
 from web_app.app.settings import django_settings
