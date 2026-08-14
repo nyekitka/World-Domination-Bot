@@ -527,7 +527,7 @@ async def handle_accept_negotiations_action(
 ):
     from_planet = await game_client.get_planet(session, action.argument, False)
     result = await sync_method_executor_call(
-        actions_client.make_negotiations, call, renderer, from_planet.id, planet.id
+        actions_client.make_negotiations, call, renderer, planet.id, from_planet.id,
     )
     if not result:
         return
@@ -615,7 +615,7 @@ async def handle_end_negotiations_action(
         actions_client.end_negotiations,
         call,
         renderer,
-        from_planet,
+        planet,
     )
     if not result:
         return
