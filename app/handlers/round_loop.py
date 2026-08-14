@@ -82,7 +82,7 @@ async def end_handler(
                 'round_end_for_admin',
                 game=game,
             ),
-            reply_markup=kb.round_stats_keyboard(game),
+            reply_markup=kb.round_stats_keyboard(game, admin),
         )
 
     await session.commit()

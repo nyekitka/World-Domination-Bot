@@ -1,7 +1,6 @@
-import logging
 
 from asgiref.sync import sync_to_async
-from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 from django.template import loader
 
