@@ -151,18 +151,18 @@ class ActionsClient(BaseClient):
         return self.get(OrderType.ECO, planet_id) == b'1'
 
     def make_negotiations(self, planet_from: int, planet_to: int) -> FailureReason:
-        if self.exists(OrderType.NEGOTIATE, planet_from):
+        if self.exists(OrderType.NEGOTIATE, planet_to):
             return FailureReason.ALREADY_NEGOTIATING
 
-        side_negotiator = self.get(OrderType.NEGOTIATE, planet_to)
-        if side_negotiator is not None and int(side_negotiator) == planet_from:
+        side_negotiator = self.get(OrderType.NEGOTIATE, planet_from)
+        if side_negotiator is not None and int(side_negotiator) == planet_to:
             return FailureReason.BILATERAL_NEGOTIATIONS
 
-        self.set(planet_to, OrderType.NEGOTIATE, planet_from)
+        self.set(planet_from, OrderType.NEGOTIATE, planet_to)
         return FailureReason.SUCCESS
 
-    def end_negotiations(self, planet_from: int) -> FailureReason:
-        self.delete(OrderType.NEGOTIATE, planet_from)
+    def end_negotiations(self, planet_to: int) -> FailureReason:
+        self.delete(OrderType.NEGOTIATE, planet_to)
         return FailureReason.SUCCESS
 
     def get_balance(self, planet_id: int, balance_key: str) -> int:
