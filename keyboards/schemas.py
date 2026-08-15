@@ -24,9 +24,24 @@ class Action(BaseModel):
     argument: int | None = None
 
 
-def validate_action_json(json: str) -> bool:
+def validate_action(action_data: str) -> bool:
     try:
-        Action.model_validate_json(json)
+        action_type, planet_id, argument = action_data.split(':')
+        int(planet_id)
+        if argument != 'None':
+            int(argument)
+        ActionType(action_type)
         return True
-    except ValueError:
+    except Exception: # noqa: BLE001
         return False
+
+def get_action_data(action: Action) -> str:
+    return f'{action.action_type}:{action.planet_id}:{action.argument}'
+
+def get_action_from_data(action_data: str) -> Action:
+    action_type, planet_id, argument = action_data.split(':')
+    return Action(
+        action_type=action_type,
+        planet_id=int(planet_id),
+        argument=None if argument == 'None' else int(argument),
+    )
