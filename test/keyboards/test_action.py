@@ -1,6 +1,12 @@
 import pytest
 
-from keyboards.schemas import Action, ActionType, get_action_data, get_action_from_data, validate_action
+from keyboards.schemas import (
+    Action,
+    ActionType,
+    get_action_data,
+    get_action_from_data,
+    validate_action,
+)
 
 
 @pytest.mark.parametrize(
