@@ -286,5 +286,6 @@ async def chosen_lobby(
             user_id=tg_id,
             messages_client=messages_client,
             sanctioned_planets=sanctioned_planets,
+            renderer=renderer,
         )
     await state.clear()
