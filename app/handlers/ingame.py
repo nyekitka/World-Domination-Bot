@@ -17,7 +17,7 @@ from database.clients.user import UserClient
 from database.schemas import GameDto, GameStatus, PlanetDto, UserDto
 from game.config import game_config
 from keyboards import keyboards as kb
-from keyboards.schemas import Action, ActionType, validate_action_json
+from keyboards.schemas import Action, ActionType, get_action_from_data, validate_action
 from messages.renderer import MessageRenderer
 from storage.clients.actions import ActionsClient
 from storage.clients.messages import MessagesClient
@@ -187,7 +187,7 @@ async def end_the_game(
     await game_client.end_game(session, game.id)
 
 
-@ingame_router.callback_query(lambda call: validate_action_json(call.data))
+@ingame_router.callback_query(lambda call: validate_action(call.data))
 async def handle_action(
     call: types.CallbackQuery,
     state: FSMContext,
@@ -198,7 +198,7 @@ async def handle_action(
     session: AsyncSession,
     renderer: MessageRenderer,
 ):
-    action = Action.model_validate_json(call.data)
+    action = get_action_from_data(call.data)
     logger.info(
         'ingame_router.handle_action: User id=%s is performing action %s',
         call.from_user.id,
