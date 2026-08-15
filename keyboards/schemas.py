@@ -32,7 +32,7 @@ def validate_action(action_data: str) -> bool:
             int(argument)
         ActionType(action_type)
         return True
-    except Exception:
+    except Exception: # noqa: BLE001
         return False
 
 def get_action_data(action: Action) -> str:
