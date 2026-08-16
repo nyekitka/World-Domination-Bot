@@ -5,7 +5,7 @@ from redis import Redis
 
 
 class BaseClient:
-    def __init__(self, client: Redis, ex: int, sep: str = ':'):
+    def __init__(self, client: Redis, ex: int | None = None, sep: str = ':'):
         self.client = client
         self.ex = ex
         self.sep = sep
@@ -62,3 +62,11 @@ class BaseClient:
     def exists(self, *name_args: Any) -> bool:
         name = self._create_name(*name_args)
         return bool(self.client.exists(name))
+
+    def increment(self, *name_args: Any) -> int:
+        name = self._create_name(*name_args)
+        return self.client.incr(name)
+
+    def decrement(self, *name_args: Any) -> int:
+        name = self._create_name(*name_args)
+        return self.client.decr(name)
