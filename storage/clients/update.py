@@ -26,7 +26,7 @@ class _UpdateContextManager:
         self,
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
-        exc_tb: TracebackType,
+        exc_tb: TracebackType | None,
     ):
         count_val = self.client.decrement(self.user_id, self.money_key)
         if count_val <= 0:
