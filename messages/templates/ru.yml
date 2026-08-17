@@ -557,3 +557,6 @@ help:
     - Победитель определяется после последнего раунда
     </details>
   markdown: true
+too_fast:
+  template: Не так быстро, ковбой!
+  markdown: false
