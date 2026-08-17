@@ -431,7 +431,7 @@ help:
 
     - researching meteorite technology
     - buying meteorites
-    - sending meteorites at cities or at the anomaly
+    - sending meteorites at cities
 
     You can lower its activity by sending a meteorite into the anomaly. One meteorite lowers its activity by {{ game_config.ECO_BOOST_RATE }}%.
 
