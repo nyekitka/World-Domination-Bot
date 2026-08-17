@@ -9,6 +9,7 @@ from aiogram import Bot, Dispatcher
 from app.config import bot_config
 from app.handlers import ingame_router, lobby_router, main_page_router
 from app.middlewares import DBMiddleware, I18nMiddleware
+from app.middlewares.throttle import ThrottleMiddleware
 from database import engine, session_factory
 from database.clients import GameClient, InfoClient, UserClient
 from database.models import ModelBase
@@ -60,8 +61,13 @@ async def main():
         ),
     )
     i18n_middleware = I18nMiddleware(default_language='ru')
+    throttle_middleware = ThrottleMiddleware(
+        throttle=bot_config.THROTTLE,
+        cache_maxsize=bot_config.THROTTLE_CACHE_MAXSIZE,
+    )
     dp.update.outer_middleware(db_middleware)
     dp.update.outer_middleware(i18n_middleware)
+    dp.update.outer_middleware(throttle_middleware)
     dp.include_routers(main_page_router, lobby_router, ingame_router)
 
     logger.info('Starting polling...')

@@ -6,5 +6,7 @@ class BotConfig(BaseSettings):
 
     TOKEN: str
     OWNER: str
+    THROTTLE: float
+    THROTTLE_CACHE_MAXSIZE: int
 
 bot_config = BotConfig()
