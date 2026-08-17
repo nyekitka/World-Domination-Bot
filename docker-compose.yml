@@ -46,8 +46,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      web_app:
-        condition: service_healthy
+      ngrok:
+        condition: service_started
     env_file:
       - .env
     environment:
@@ -111,6 +111,21 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+  
+  ngrok:
+    image: ngrok/ngrok:latest
+    restart: unless-stopped
+    command:
+      - "http"
+      - "web_app:8080"
+      - "--url=${NGROK_DOMAIN}"
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+    ports:
+      - "4040:4040"
+    depends_on:
+      web_app:
+        condition: service_healthy
     
 volumes:
   postgres_data:
