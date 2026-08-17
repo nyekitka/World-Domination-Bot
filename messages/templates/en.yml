@@ -557,3 +557,6 @@ help:
     - The winner is determined after the final round
     </details>
   markdown: true
+too_fast:
+  template: Slow down, cowboy!
+  markdown: false
