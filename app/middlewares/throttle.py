@@ -1,6 +1,7 @@
 from collections.abc import Awaitable, Callable
 from datetime import datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject, Update
@@ -30,7 +31,9 @@ class ThrottleMiddleware(BaseMiddleware):
             return await handler(event, data)
         
         user = data.get('event_from_user')
-        current_time = datetime.now()
+        current_time = datetime.now(
+            tz=ZoneInfo('Europe/Moscow'),
+        )
         renderer = self.message_renderers[self.default_language]
         if (
             hasattr(user, 'language_code')
