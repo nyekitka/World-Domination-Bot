@@ -19,21 +19,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-  
-  test-db:
-    image: postgres:latest
-    container_name: test_db
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 123
-    volumes:
-      - test_postgres_data:/var/lib/postgresql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready", "-U", "postgres", "-d", "test_db",]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   app:
     build: .
@@ -48,23 +33,33 @@ services:
         condition: service_started
     environment:
       - WEB_APP_URL=${WEB_APP_URL}
+      - BOT_TOKEN=${BOT_TOKEN}
+      - BOT_OWNER=${BOT_OWNER}
+      - BOT_THROTTLE=${BOT_THROTTLE}
+      - BOT_THROTTLE_CACHE_MAXSIZE=${BOT_THROTTLE_CACHE_MAXSIZE}
+      - DATABASE_NAME=${DATABASE_NAME}
+      - DATABASE_USER=${DATABASE_USER}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - DATABASE_HOST=${DATABASE_HOST}
+      - DATABASE_OUTER_PORT=${DATABASE_OUTER_PORT}
+      - DATABASE_INNER_PORT=${DATABASE_INNER_PORT}
+      - DATABASE_POOL_SIZE=${DATABASE_POOL_SIZE}
+      - REDIS_OUTER_PORT=${REDIS_OUTER_PORT}
+      - REDIS_INNER_PORT=${REDIS_INNER_PORT}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_DB=${REDIS_DB}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+      - NGROK_DOMAIN=${NGROK_DOMAIN}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - DJANGO_HOST=${DJANGO_HOST}
+      - DJANGO_PORT=${DJANGO_PORT}
     ports:
       - "8000:8000"
     volumes:
       - .:/app
     command: ["python", "main.py"]
   
-  test:
-    build:
-      dockerfile: test/Dockerfile
-      context: .
-    depends_on:
-      test-db:
-        condition: service_healthy
-    container_name: test_app
-    volumes:
-      - .:/test
-    
   web_app:
     build:
       dockerfile: web_app/Dockerfile
@@ -79,6 +74,17 @@ services:
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
       - DJANGO_HOST=${DJANGO_HOST}
       - DJANGO_PORT=${DJANGO_PORT}
+      - DATABASE_NAME=${DATABASE_NAME}
+      - DATABASE_USER=${DATABASE_USER}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - DATABASE_HOST=${DATABASE_HOST}
+      - DATABASE_OUTER_PORT=${DATABASE_OUTER_PORT}
+      - DATABASE_INNER_PORT=${DATABASE_INNER_PORT}
+      - DATABASE_POOL_SIZE=${DATABASE_POOL_SIZE}
+      - BOT_TOKEN=${BOT_TOKEN}
+      - BOT_OWNER=${BOT_OWNER}
+      - BOT_THROTTLE=${BOT_THROTTLE}
+      - BOT_THROTTLE_CACHE_MAXSIZE=${BOT_THROTTLE_CACHE_MAXSIZE}
     ports:
       - "80:${DJANGO_PORT}"
     healthcheck:
