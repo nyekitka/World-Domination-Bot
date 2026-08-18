@@ -5,8 +5,6 @@ services:
     image: postgres:latest
     container_name: wd_db
     restart: always
-    env_file:
-      - .env
     environment:
       POSTGRES_DB: "${DATABASE_NAME}"
       PGUSER: "${DATABASE_USER}"
@@ -48,8 +46,6 @@ services:
         condition: service_healthy
       ngrok:
         condition: service_started
-    env_file:
-      - .env
     environment:
       - WEB_APP_URL=${WEB_APP_URL}
     ports:
@@ -66,8 +62,6 @@ services:
       test-db:
         condition: service_healthy
     container_name: test_app
-    env_file:
-      - .env
     volumes:
       - .:/test
     
@@ -80,8 +74,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    env_file:
-      - .env
     environment:
       - DJANGO_SETTINGS_MODULE=web_app.app.settings
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
