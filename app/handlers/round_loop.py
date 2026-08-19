@@ -57,6 +57,7 @@ async def end_handler(
         await game_client.update_planet_balance(
             session, planet.id, current_money, current_meteorites
         )
+        actions_client.end_negotiations(planet.id)
 
     all_players = await game_client.get_all_active_players(session, game.id)
     for player in all_players:
