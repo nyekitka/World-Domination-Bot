@@ -478,7 +478,7 @@ async def test_get_round_info(game_client, session, game_id):
     [(1, [lf('planet_id_2'), lf('planet_id_3')]), (2, [])],
 )
 @pytest.mark.asyncio
-async def test_get_sanctioned_planets(
+async def test_get_planets_imposed_sanctions(
     game_client,
     session,
     planet_id,
@@ -493,14 +493,14 @@ async def test_get_sanctioned_planets(
 
     sanctions = [
         Sanction(
-            planet_from=planet_id, planet_to=other_planet, num_round=sanction_round
+            planet_from=other_planet, planet_to=planet_id, num_round=sanction_round
         )
         for other_planet in (planet_id_2, planet_id_3)
     ]
     session.add_all(sanctions)
     await session.commit()
 
-    result = await game_client.get_sanctioned_planets(session, planet_id)
+    result = await game_client.get_planets_imposed_sanctions(session, planet_id)
     sanctioned_ids = [planet.id for planet in result]
     assert sanctioned_ids == expected_result
 

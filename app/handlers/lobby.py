@@ -274,7 +274,7 @@ async def chosen_lobby(
             session, game.id
         )
         order_info = actions_client.get_order_info(planet.id)
-        sanctioned_planets = await game_client.get_sanctioned_planets(
+        sanctioned_planets = await game_client.get_planets_imposed_sanctions(
             session, planet.id
         )
         await send_all_info(

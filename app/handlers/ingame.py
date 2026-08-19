@@ -78,7 +78,7 @@ async def start_round(
             planet.id, planet.meteorites, actions_client.METEORITES_KEY
         )
         if planet.owner_id in acitve_players_ids:
-            sanctioned_planets = await game_client.get_sanctioned_planets(session, pl_id)
+            sanctioned_planets = await game_client.get_planets_imposed_sanctions(session, pl_id)
             await send_all_info(
                 bot=message.bot,
                 game=game,
