@@ -3,8 +3,11 @@ from collections.abc import Awaitable, Callable
 from typing import Any, ParamSpec
 from zoneinfo import ZoneInfo
 
+from apscheduler.jobstores.redis import RedisJobStore
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.date import DateTrigger
+
+from app.config import bot_config
 
 P = ParamSpec('P')
 
@@ -28,7 +31,13 @@ class Notifier:
         self.kwargs = handler_kwargs
 
     async def run_loop(self):
-        scheduler = AsyncIOScheduler()
+        scheduler = AsyncIOScheduler(
+            jobstores={
+                'default': RedisJobStore(
+                    db=bot_config.APSCHEDULER_STORE_INDEX,
+                )
+            }
+        )
         scheduler.start()
         now = datetime.datetime.now(
             tz=ZoneInfo('Europe/Moscow')
@@ -44,5 +53,6 @@ class Notifier:
             scheduler.add_job(
                 func=executor,
                 trigger=DateTrigger(now + datetime.timedelta(seconds=secs)),
+                misfire_grace_time=None,
                 args=(key,),
             )

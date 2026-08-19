@@ -8,5 +8,6 @@ class BotConfig(BaseSettings):
     OWNER: str
     THROTTLE: float
     THROTTLE_CACHE_MAXSIZE: int
+    APSCHEDULER_STORE_INDEX: int
 
 bot_config = BotConfig()
