@@ -441,7 +441,7 @@ class GameClient(DatabaseClient):
         game.status = GameStatus.ROUND
         return FailureReason.SUCCESS
 
-    async def get_sanctioned_planets(
+    async def get_planets_imposed_sanctions(
         self, s: AsyncSession, planet_id: int
     ) -> list[PlanetDto]:
         """
@@ -462,9 +462,9 @@ class GameClient(DatabaseClient):
             return []
         sanctioned_planets_result = await s.execute(
             select(Planet)
-            .join(Sanction, Sanction.planet_to == Planet.id)
+            .join(Sanction, Sanction.planet_from == Planet.id)
             .where(
-                Sanction.planet_from == planet_id, Sanction.num_round == num_round - 1
+                Sanction.planet_to == planet_id, Sanction.num_round == num_round - 1
             )
         )
         sanction_planets = sanctioned_planets_result.scalars().all()
